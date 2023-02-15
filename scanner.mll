@@ -7,7 +7,7 @@ let digits = digit+
 let char = ['a'-'z' 'A'-'Z' '0'-'9']
 let digit = ['0'-'9']
 let string = "char*"
-let ascii = [ -~]
+(* let ascii = [ -~] *)
 
 
 rule token = parse
@@ -22,9 +22,9 @@ rule token = parse
 | ';'      { SEMI }
 | ','      { COMMA }
 | '+'      { PLUS }
-| '++'     { PLUSPLUS }
+| "++"     { PLUSPLUS }
 | '-'      { MINUS }
-| '--'     { MINUSMINUS }
+| "--"     { MINUSMINUS }
 | '*'      { TIMES }
 | '/'      { DIVIDE }
 | '%'      { MOD }
@@ -41,7 +41,7 @@ rule token = parse
 | "|"      { VLINE }
 
 
-# Thread specific tokens
+(* Thread specific tokens *)
 | "->"     	  { ARROW }
 | "<<"         { SEND }
 | ">>"         { GET }
@@ -53,7 +53,7 @@ rule token = parse
 
 
 
-# Conditions
+(* Conditions *)
 | "if"     { IF }
 | "else"   { ELSE }
 | "for"    { FOR }
@@ -61,11 +61,11 @@ rule token = parse
 | "break"  { BREAK }
 
 
-# Built-in functions
+(* Built-in functions *)
 | "exit"  { EXIT }
 | "print"  { PRINT }
 
-# Types
+(* Types *)
 | "int"    { INT }
 | "bool"   { BOOL }
 | "float"  { FLOAT }
@@ -82,3 +82,6 @@ rule token = parse
 | eof { EOF }
 | _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
+and comment = parse
+  "*/" { token lexbuf }
+| _    { comment lexbuf }
