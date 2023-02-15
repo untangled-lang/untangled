@@ -13,7 +13,9 @@ open Ast
 %token INT BOOL FLOAT SEM WCARD
 %token <int> ILIT
 %token <bool> BLIT
-%token <string> ID FLIT SLIT
+%token <string> ID 
+%token <string> FLIT
+%token <string> SLIT
 
 // Built-in Functions
 %token EXIT PRINT
@@ -44,12 +46,17 @@ program:
   decls EOF { $1 }
 
 decls:
-   /* nothing */ { ([], [])               }
- | decls vdecl { (($2 :: fst $1), snd $1) }
- | decls tdecl { (fst $1, ($2 :: snd $1)) }
+  /* nothing */ { ([], []) }
+  | decls vdecl { (($2 :: fst $1), snd $1) }
+  | decls tdecl { (fst $1, ($2 :: snd $1)) }
 
 vdecl:
-   typ ID SEMI { ($1, $2) }
+  typ ID SEMI { ($1, $2) }
+
+typ:
+  INT { Int }
+  | BOOL { Bool }
+  | FLOAT { Float } 
 
 expr:
   ILIT          { Literal($1)            }
@@ -74,7 +81,7 @@ expr:
   | LPAREN expr RPAREN { $2                   }
 
 expr_opt:
-    /* nothing */ { Noexpr }
+  /* nothing */ { Noexpr }
   | expr          { $1 }
 
 stmt_list:
@@ -91,11 +98,10 @@ stmt:
                                             { For($3, $5, $7, $9)   }
   | WHILE LPAREN expr RPAREN stmt           { While($3, $5)         }
 
-tdecl: THREAD_DEF ID LBRACE stmt_list RBRACE { {
-    tname = $2;
-    body = $4; } }
+tdecl: THREAD_DEF ID LBRACE stmt_list RBRACE
+    { { tname = $2; body = $4; } }
 
 
-receive: RECEIVE LBRACE pattern_list RBRACE {
-  (* TODO: *)
-}
+// receive: RECEIVE LBRACE pattern_list RBRACE {
+//   (* TODO: *)
+// }

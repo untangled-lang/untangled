@@ -43,3 +43,4 @@ type thread_decl = {
 }
 
 type program = bind list * thread_decl list
+(* type program = bind *)

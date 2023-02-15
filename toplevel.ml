@@ -2,12 +2,11 @@ open Ast
 
 let rec eval ast = 
   match ast with
-  | Literal(i) -> string_of_int i
-  | _ -> "something else"
+  (vdecls, tdecls) -> 
+    List.iter (fun (_, v) -> print_string v) vdecls 
+  (* | _ -> print_string "Something else" *)
 
-
+  
 let () =
   let lex_buf = Lexing.from_channel stdin in
-  let ast = Parser.program Scanner.token lex_buf in
-  let test = eval ast in
-  print_endline(test);
+  let ast = Parser.program Scanner.token lex_buf in eval ast

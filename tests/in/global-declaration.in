@@ -1,0 +1,8 @@
+/*
+ * Scanned and parsed a list of global declarations.
+ * This file should produce no output.
+ */
+
+int x;
+bool y;
+float z;
