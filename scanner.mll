@@ -1,12 +1,11 @@
 { open Parser }
 
 let digit = ['0' - '9']
+let char = ['a'-'z' 'A'-'Z']
+
 let digits = digit+
-
-
-let char = ['a'-'z' 'A'-'Z' '0'-'9']
-let digit = ['0'-'9']
-let string = "char*"
+let chars = char+
+let string = char*
 (* let ascii = [ -~] *)
 
 
@@ -40,7 +39,6 @@ rule token = parse
 | "!"      { NOT }
 | "|"      { VLINE }
 
-
 (* Thread specific tokens *)
 | "->"     	  { ARROW }
 | "<<"         { SEND }
@@ -51,15 +49,12 @@ rule token = parse
 | "thread"     { THREAD }
 | "spawn"      { SPAWN }
 
-
-
 (* Conditions *)
 | "if"     { IF }
 | "else"   { ELSE }
 | "for"    { FOR }
 | "while"  { WHILE }
 | "break"  { BREAK }
-
 
 (* Built-in functions *)
 | "exit"  { EXIT }

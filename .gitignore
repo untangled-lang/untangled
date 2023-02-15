@@ -1,4 +1,5 @@
 _build
 *.native
-result/*
-test/*
+
+# Tests
+tests/out/*
