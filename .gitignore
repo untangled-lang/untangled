@@ -1,5 +1,2 @@
 _build
 *.native
-
-# Tests
-tests/out/*
