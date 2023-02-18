@@ -1,1 +1,3 @@
-zyx
+float z;
+bool y;
+int x;
