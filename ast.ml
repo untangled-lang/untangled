@@ -9,14 +9,15 @@ type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
 
 type uop = Neg | Not | Plusplus | Minmin
 
-type typ = Unit | Bool | Int | Float | String | Thread | Tuple of typ * typ | Array of typ
+type typ = Unit | Bool | Int | Float | String | Thread | Tuple of typ * typ | Array of typ * int
 
 type bind = typ * string
 
 type expr =
   IntLit of int
-| FloatLiteral of string
+| FloatLit of string
 | BoolLit of bool
+| StringLit of string
 | Id of string
 | Binop of expr * op * expr
 | Unop of uop * expr

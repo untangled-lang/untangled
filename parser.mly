@@ -54,15 +54,20 @@ vdecl:
   typ ID SEMI { ($1, $2) }
 
 typ:
-  INT { Int }
+    INT { Int }
   | BOOL { Bool }
   | FLOAT { Float } 
-  | LPAREN typ COMMA typ RPAREN { Tuple($2, $4) }
+  | LPAREN typ COMMA typ RPAREN { Tuple($2, $4) } // TODO: support more than a 2-tuple?
+  | LPAREN RPAREN { Unit } // TODO: ?
+  | STRING { String }
+  | THREAD { Thread }
+  | typ LBRACKET ILIT RBRACKET { Array ($1, $3) }
 
 expr:
-  ILIT          { Literal($1)            }
-  | FLIT	     { Fliteral($1)           }
+    ILIT             { IntLit($1)             }
+  | FLIT	           { FloatLit($1)           }
   | BLIT             { BoolLit($1)            }
+  | SLIT             { StringLit($1)          } // TODO: string literals
   | ID               { Id($1)                 }
   | expr PLUS   expr { Binop($1, Add,   $3)   }
   | expr MINUS  expr { Binop($1, Sub,   $3)   }

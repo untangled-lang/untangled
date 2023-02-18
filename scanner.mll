@@ -1,11 +1,10 @@
 { open Parser }
 
 let digit = ['0' - '9']
-let char = ['a'-'z' 'A'-'Z']
+let character = [' ' '!' '#'-'~']
 
 let digits = digit+
-let chars = char+
-let string = char*
+let string = character*
 (* let ascii = [ -~] *)
 
 rule token = parse
@@ -23,12 +22,15 @@ rule token = parse
   | "int" { INT }
   | "bool" { BOOL }
   | "float" { FLOAT }
+  | "string" { STRING }
+  | "thread" { THREAD }
   | "true" { BLIT(true) }
   | "false" { BLIT(false) }
-  
+  | string as lxm { SLIT(lxm) }
+
   | ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
   | eof { EOF }
-  | _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
+  | _ as other_char { raise (Failure("illegal character " ^ Char.escaped other_char)) }
 
 and comment = parse
   "*/" { token lexbuf }
