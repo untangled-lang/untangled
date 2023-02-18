@@ -12,6 +12,13 @@ rule token = parse
   [' ' '\t' '\r' '\n'] { token lexbuf }
   | "/*" { comment lexbuf }
   | ';' { SEMI }
+  | '(' { LPAREN }
+  | ')' { RPAREN }
+  | '{' { LBRACE }
+  | '}' { RBRACE }
+  | '[' { LBRACKET }
+  | ']' { RBRACKET }
+  | ',' { COMMA }
 
   | "int" { INT }
   | "bool" { BOOL }

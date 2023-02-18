@@ -6,3 +6,4 @@
 int x;
 bool y;
 float z;
+(int, (int, float)) tup;

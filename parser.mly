@@ -57,6 +57,7 @@ typ:
   INT { Int }
   | BOOL { Bool }
   | FLOAT { Float } 
+  | LPAREN typ COMMA typ RPAREN { Tuple($2, $4) }
 
 expr:
   ILIT          { Literal($1)            }
