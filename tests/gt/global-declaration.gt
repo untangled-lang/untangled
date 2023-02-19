@@ -1,4 +1,0 @@
-(int, (int, float)) tup;
-float z;
-bool y;
-int x;

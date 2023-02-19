@@ -1,10 +1,7 @@
 # Tests
 
-`in` directory contains all the testing inputs.
+Every test is defined by a ".unt" input file in untangled language, and an ".ast" file containing
+the ground truth output; the two files have the same name.
 
-`out` directory contains the output of a given test.
-
-`gt` directory contains the groundtruth output.
-
-All files in the abovementioned directory have the same name, except their
-extensions will be `.in`, `.out`, and `.gt`, respectively.
+Run `test.py` to run all tests. The actual output will be stored in the `output` directory for
+manual comparison with the ground truth output files.

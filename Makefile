@@ -6,4 +6,4 @@ toplevel.native: toplevel.ml ast.ml parser.mly scanner.mll
 .PHONY: clean toplevel.native
 
 clean:
-	rm tests/out/*
+	find tests | grep ".output$$" | xargs rm
