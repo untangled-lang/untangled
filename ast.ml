@@ -154,7 +154,7 @@ let rec string_of_stmt statement =
   | Break -> "break;"
   | Continue -> "continue;"
   | If(e, s, Block([])) -> "if (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
-  | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ")" ^ string_of_stmt s1 ^
+  | If(e, s1, s2) ->  "if (" ^ string_of_expr e ^ ") " ^ string_of_stmt s1 ^
                       " else " ^ string_of_stmt s2
   | For(e1, e2, e3, s) ->
       "for (" ^ string_of_stmt e1 ^ " " ^ string_of_expr e2 ^ "; " ^
