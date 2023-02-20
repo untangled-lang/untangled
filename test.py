@@ -12,7 +12,7 @@ import glob
 
 PWD = os.getcwd()
 
-BINARY = f"toplevel.native"
+BINARY = f"untangled.native"
 TESTS_DIR = f"{PWD}/tests"
 
 class Format:
