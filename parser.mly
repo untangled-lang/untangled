@@ -2,26 +2,25 @@
 open Ast
 %}
 
-%token SEMI LPAREN RPAREN LBRACE RBRACE COMMA PLUS MINUS TIMES DIVIDE ASSIGN
-%token LBRACKET RBRACKET PLUSPLUS MINUSMINUS MOD
-%token NOT EQ NEQ LT LEQ GT GEQ AND OR VLINE
-// Conditions
-%token IF ELSE WHILE FOR BREAK
-%token SEMAPHORE
+%token SEMI LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET COMMA
+%token PLUS MINUS TIMES DIVIDE MOD
+%token ASSIGN PLUSASSIGN MINUSASSIGN TIMESASSIGN DIVIDEASSIGN MODASSIGN
+%token NOT EQ NEQ LT LEQ GT GEQ AND OR PLUSPLUS MINUSMINUS
+%token IF ELSE WHILE FOR BREAK CONTINUE
 
 // Types
-%token INT BOOL FLOAT SEM WCARD
+%token INT BOOL FLOAT SEM WCARD STRING VOID
 %token <int> ILIT
 %token <bool> BLIT
-%token <string> ID 
+%token <string> ID
 %token <string> FLIT
 %token <string> SLIT
 
-// Built-in Functions
-%token EXIT PRINT
+// Function-specific tokens
+%token RETURN
 
-// Thread specific tokens
-%token ARROW SEND GET RECEIVE PARENT THREAD_DEF THREAD SPAWN
+// Thread-specific tokens
+%token ARROW SEND RECEIVE PARENT THREAD_DEF THREAD SEMAPHORE SPAWN
 
 // EOF
 %token EOF
@@ -31,48 +30,52 @@ open Ast
 
 %nonassoc NOELSE
 %nonassoc ELSE
-%right ASSIGN
+%right ASSIGN PLUSASSIGN MINUSASSIGN TIMESASSIGN DIVIDEASSIGN MODASSIGN
 %left OR
 %left AND
 %left EQ NEQ
 %left LT GT LEQ GEQ
-%left PLUS MINUS PLUSPLUS MINUSMINUS
+%left PLUS MINUS
 %left TIMES DIVIDE MOD
-%right NOT
-
+%nonassoc NOT
+%nonassoc PLUSPLUS MINUSMINUS
 %%
 
 program:
-  decls EOF { $1 }
+  decls EOF { List.rev (fst $1), List.rev (snd $1) }
 
 decls:
-  /* nothing */ { ([], []) }
-  | decls vdecl { (($2 :: fst $1), snd $1) }
-  | decls tdecl { (fst $1, ($2 :: snd $1)) }
-
-vdecl:
-  typ ID SEMI { ($1, $2) }
+  { ([], []) }
+  | decls thread_decl { (($2 :: fst $1), snd $1) }
+  | decls func_decl { (fst $1, ($2 :: snd $1)) }
 
 typ:
-    INT { Int }
+    VOID { Unit }
+  | INT { Int }
   | BOOL { Bool }
-  | FLOAT { Float } 
-  | LPAREN typ COMMA typ RPAREN { Tuple($2, $4) } // TODO: support more than a 2-tuple?
-  | LPAREN RPAREN { Unit } // TODO: ?
+  | FLOAT { Float }
+  | LPAREN typ COMMA typ RPAREN { Tuple($2, $4) }
+  | LPAREN RPAREN { Unit }
   | STRING { String }
   | THREAD { Thread }
-  | typ LBRACKET ILIT RBRACKET { Array ($1, $3) }
+  | typ LBRACKET ILIT RBRACKET { Array($1, $3) }
 
 expr:
+  // Literals
     ILIT             { IntLit($1)             }
-  | FLIT	           { FloatLit($1)           }
+  | FLIT             { FloatLit($1)           }
   | BLIT             { BoolLit($1)            }
-  | SLIT             { StringLit($1)          } // TODO: string literals
+  | SLIT             { StringLit($1)          }
+  | LPAREN expr COMMA expr RPAREN { TupleLit($2, $4) }
+  | array            { ArrayLit($1)           }
+  // Names
   | ID               { Id($1)                 }
+  // Binary operators
   | expr PLUS   expr { Binop($1, Add,   $3)   }
   | expr MINUS  expr { Binop($1, Sub,   $3)   }
   | expr TIMES  expr { Binop($1, Mult,  $3)   }
   | expr DIVIDE expr { Binop($1, Div,   $3)   }
+  | expr MOD expr    { Binop($1, Mod,   $3)   }
   | expr EQ     expr { Binop($1, Equal, $3)   }
   | expr NEQ    expr { Binop($1, Neq,   $3)   }
   | expr LT     expr { Binop($1, Less,  $3)   }
@@ -81,33 +84,106 @@ expr:
   | expr GEQ    expr { Binop($1, Geq,   $3)   }
   | expr AND    expr { Binop($1, And,   $3)   }
   | expr OR     expr { Binop($1, Or,    $3)   }
+  // Unary operators
   | MINUS expr %prec NOT { Unop(Neg, $2)      }
   | NOT expr         { Unop(Not, $2)          }
+  | expr PLUSPLUS    { Unop(Plusplus, $1)     }
+  | expr MINUSMINUS  { Unop(Minmin, $1)       }
+  // Assignment
   | ID ASSIGN expr   { Assign($1, $3)         }
+  | ID PLUSASSIGN expr { Assign($1, Binop(Id($1), Add, $3)) }
+  | ID MINUSASSIGN expr { Assign($1, Binop(Id($1), Sub, $3)) }
+  | ID TIMESASSIGN expr { Assign($1, Binop(Id($1), Mult, $3)) }
+  | ID DIVIDEASSIGN expr { Assign($1, Binop(Id($1), Div, $3)) }
+  | ID MODASSIGN expr { Assign($1, Binop(Id($1), Mod, $3)) }
+  // Array access (reading)
+  | ID LBRACKET expr RBRACKET { Index($1, $3) }
+  // Array access (writing)
+  | ID LBRACKET expr RBRACKET ASSIGN expr { AssignIndex($1, $3, $6) }
+  | ID LBRACKET expr RBRACKET PLUSASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Add, $6)) }
+  | ID LBRACKET expr RBRACKET MINUSASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Sub, $6)) }
+  | ID LBRACKET expr RBRACKET TIMESASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Mult, $6)) }
+  | ID LBRACKET expr RBRACKET DIVIDEASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Div, $6)) }
+  | ID LBRACKET expr RBRACKET MODASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Mod, $6)) }
+  // Grouping (parentheses)
   | LPAREN expr RPAREN { $2                   }
+  // `spawn` keyword
+  | SPAWN ID         { Spawn($2)              }
+  // Function calls
+  | ID LPAREN args_opt RPAREN { Call($1, $3)  }
+
+
+array: LBRACKET array_elements RBRACKET { List.rev $2 }
+
+array_elements:
+  /* nothing */ { [] }
+  | expr        { [$1] }
+  | array_elements COMMA expr { $3 :: $1 }
+
+args_opt:
+  /* nothing */ { [] }
+  | args_list   { List.rev $1 }
+
+args_list:
+    expr                    { [$1] }
+  | args_list COMMA expr { $3 :: $1 }
 
 expr_opt:
-  /* nothing */ { Noexpr }
+  /* nothing */   { Noexpr }
   | expr          { $1 }
+
+for_init_statement:
+  vdecl { $1 }
+  | expr_opt SEMI { Expr($1) }
+
+stmt:
+  expr SEMI                                 { Expr($1)              }
+  | LBRACE stmt_list RBRACE                 { Block(List.rev $2)    }
+  | vdecl                                   { $1                    }
+  | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([])) }
+  | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7)        }
+  | FOR LPAREN for_init_statement expr SEMI expr_opt RPAREN stmt
+                                            { For($3, $4, $6, $8)   }
+  | WHILE LPAREN expr RPAREN stmt           { While($3, $5)         }
+  | RETURN expr_opt SEMI                    { Return($2)            }
+  | BREAK SEMI                              { Break                 }
+  | CONTINUE SEMI                           { Continue              }
+  | ID SEND expr SEMI                       { Send($1, $3)          }
+  | PARENT SEND expr SEMI                   { SendParent($3)        }
+  | receive                                 { $1                    }
 
 stmt_list:
     /* nothing */  { [] }
   | stmt_list stmt { $2 :: $1 }
 
-// TODO
-stmt:
-  expr SEMI                                 { Expr $1               }
-  | LBRACE stmt_list RBRACE                 { Block(List.rev $2)    }
-  | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([])) }
-  | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7)        }
-  | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt
-                                            { For($3, $5, $7, $9)   }
-  | WHILE LPAREN expr RPAREN stmt           { While($3, $5)         }
+pattern:
+  | typ ID                                 { BasePattern($1, $2) }
+  | WCARD                                  { WildcardPattern }
+  | LPAREN pattern COMMA pattern RPAREN    { TuplePattern($2, $4) }
 
-tdecl: THREAD_DEF ID LBRACE stmt_list RBRACE
-    { { tname = $2; body = $4; } }
+receive_case:
+  pattern ARROW stmt { ($1, $3) }
 
+receive_cases:
+  /* nothing */ { [] }
+  | receive_cases receive_case { $2 :: $1 }
 
-// receive: RECEIVE LBRACE pattern_list RBRACE {
-//   (* TODO: *)
-// }
+receive: RECEIVE LBRACE receive_cases RBRACE { Receive(List.rev $3) }
+
+vdecl:
+    typ ID SEMI                   { Decl($1, $2, Noexpr)  }
+  | typ ID ASSIGN expr SEMI     { Decl($1, $2, $4)      }
+
+thread_decl: THREAD_DEF ID LBRACE stmt_list RBRACE
+    { { tname = $2; body = List.rev $4; } }
+
+func_decl: typ ID LPAREN formals_opt RPAREN LBRACE stmt_list RBRACE
+    { { fname = $2; formals = List.rev $4; body = List.rev $7; ret_type = $1; } }
+
+formals_opt:
+    /* nothing */ { [] }
+  | formal_list   { $1 }
+
+formal_list:
+    typ ID                   { [($1,$2)]     }
+  | formal_list COMMA typ ID { ($3,$4) :: $1 }
