@@ -6,6 +6,7 @@ float hello(int a, string b, int c) {
 thread_def MyThread {
   bool d;
   int p;
+  semaphore s1;
 }
 
 thread_def Main {

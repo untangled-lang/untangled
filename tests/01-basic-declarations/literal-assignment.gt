@@ -7,6 +7,7 @@ thread_def Main {
   int i = 7;
   bool b = true;
   thread t = spawn MyThread;
+  semaphore s = make_semaphore(1);
   string s = "hello world";
   int[3] arr = [1, 2, 3];
 }
