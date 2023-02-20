@@ -1,0 +1,69 @@
+thread_def CheckPrime {
+  // Listen for a message that tells us which index we are computing.
+  // This receive call is *blocking* until there is a message in the message queue.
+  // Note the pattern matching syntax—the compiler enforces that all cases are
+  // handled, and all cases either return the declared value type or simply exit.
+  int index = receive { int val => val; _ => exit(1); };
+  // Listen for a message that tells us what number we are checking
+  int input = receive { int val => val; _ => exit(1); };
+  // NOTE: this is the order that the main thread sends these messages to us, so the
+  // messages are guaranteed to arrive in this order as well.
+
+  // Here, we do an expensive computation to check if the number is prime
+  bool answer = true;
+  for (int i = 2; i < sqrt(input) / 2; i++) {
+    if (input % i == 0) {
+      answer = false;
+      break;
+    }
+  }
+
+  // Send back the original index along with the answer we found.
+  // Here, it’s critical that we send both values in one message rather than in
+  // separate messages: if we send two messages they’re guaranteed to arrive in the
+  // order we sent them, but there’s no guarantee that another thread won’t send one
+  // or more messages in between our two messages! That could make the results
+  // uninterpretable to the main thread. Passing both values, as a tuple, in a single
+  // message guarantees that they’ll arrive together.
+  parent << (index, answer);
+}
+
+
+
+// The contents of the Main thread_def are automatically run on the main thread when
+// the program is invoked. But any thread could still spawn another instance of Main!
+thread_def Main {
+  // Spawn threads to check Mersenne numbers from #2 (3) to #32 (4,294,967,295)
+  for (int n = 2; n <= 32; n++) {
+    thread t = spawn CheckPrime;
+    int mersenne_number = 2 ** n - 1;
+    int index = n - 2;
+    t << index;
+    t << mersenne_number;
+  }
+
+
+  // Wait for as many results as we spawned threads
+  bool[31] results;
+  for (int i = 0; i < len(results); i++) { // Built-in function for array length
+    // Note tuple unpacking syntax; this syntactic sugar comes with compile-time
+    // type checking
+    (int index, bool is_prime) = receive {
+      int * bool answer => answer;
+      _ => exit(1); // pattern matching must be exhaustive
+    };
+    // Note that the results array is not necessarily filled in order from 0-30.
+    // Instead, results is filled in whatever order the answers are received.
+    // Each answer still goes into its proper index because we also receive its
+    // index as part of the message.
+    results[index] = is_prime;
+  }
+
+
+  // Print all the results in order, now that we’ve collected all of them
+  for (int i = 0; i < len(results); i++) { // Built-in function for array length
+    // note string concatenation using +, and int/bool casting using string()
+    print(string(2 ** (i + 2) - 1) + " is prime: " + string(results[i]));
+    // e.g. 2147483647 is prime: true
+  }
+}
