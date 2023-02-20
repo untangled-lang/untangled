@@ -9,6 +9,7 @@ type typ =
   | Float
   | String
   | Thread
+  | Semaphore
   | Tuple of typ * typ
   | Array of typ * int
 
@@ -89,6 +90,7 @@ let rec string_of_typ t =
   | Unit -> "void"
   | Tuple (t1, t2) -> ("(" ^ (string_of_typ t1) ^ ", " ^ (string_of_typ t2) ^ ")")
   | Thread -> "thread"
+  | Semaphore -> "semaphore"
   | String -> "string"
   | Array (t, size) -> string_of_typ t ^ "[" ^ Int.to_string size ^ "]"
 
@@ -126,7 +128,7 @@ and string_of_expr expr =
   | TupleLit(t1, t2) -> "(" ^ string_of_expr t1 ^ ", " ^ string_of_expr t2 ^ ")"
   | ArrayLit(n) -> "[" ^ String.concat ", " (List.map string_of_expr n) ^ "]"
   | Id(s) -> s
-  | Binop (e1, o, e2) -> "(" ^ string_of_expr e1 ^ string_of_op o ^ string_of_expr e2 ^ ")" (* todo add string of op *)
+  | Binop (e1, o, e2) -> "(" ^ string_of_expr e1 ^ string_of_op o ^ string_of_expr e2 ^ ")"
   | Unop(unop, e) -> "(" ^ string_of_unop unop e ^ ")"
   | Assign(s, e) -> "(" ^ s ^ " = " ^ string_of_expr e ^ ")"
   | Spawn(s) -> "spawn " ^ s

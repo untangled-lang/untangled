@@ -58,6 +58,7 @@ typ:
   | LPAREN RPAREN { Unit }
   | STRING { String }
   | THREAD { Thread }
+  | SEMAPHORE { Semaphore }
   | typ LBRACKET ILIT RBRACKET { Array($1, $3) }
 
 expr:

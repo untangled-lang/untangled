@@ -66,7 +66,7 @@ rule token = parse
   | "thread" { THREAD }
   | "true" { BLIT(true) }
   | "false" { BLIT(false) }
-  | "sem"  { SEMAPHORE }
+  | "semaphore" { SEMAPHORE }
   | "void" { VOID }
   | "_"  { WCARD }
 
