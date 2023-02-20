@@ -1,0 +1,30 @@
+thread_def Main {
+  for (int i = 0; i < 10; i++) {
+    int hello = 1;
+  }
+
+  int j;
+  for (j = 0; j < 100; j++) {
+    int x = 0;
+  }
+
+  for (int k = 0; k < 100; k++)
+    int x = 0;
+
+
+  for (; j < 5;) {
+    int x = 5;
+  }
+
+  while (true) {
+    for (int x; x < 10; x++) { int y = 0; }
+  }
+
+  for (int i = 0; i < 10; i++) {
+    if (i > 5) break;
+  }
+
+  for (int i = 0; i < 10; i++) {
+    if (i == 5) continue;
+  }
+}

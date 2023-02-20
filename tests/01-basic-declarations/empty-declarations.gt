@@ -1,0 +1,17 @@
+thread_def MyThread {
+  bool d;
+  int p;
+}
+
+thread_def Main {
+  int a;
+  bool b;
+  thread t;
+  string s;
+  int[1] arr;
+}
+
+float hello(int a, string b, int c) {
+  float x;
+  bool y;
+}
