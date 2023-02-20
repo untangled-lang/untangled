@@ -90,5 +90,5 @@ and line_comment_scanner = parse
 
 and string_scanner s_list = parse
   '"' { SLIT(String.concat "" (List.rev s_list)) }
-  (* '\\' (escaped_key as c) { TODO: interpret the next character as an escape character () } *)
+  (* '\\' (escaped_key as c) { TODO: interpret the next character as an escape character } *)
   | _ as new_char { string_scanner ((String.make 1 new_char) :: s_list) lexbuf }

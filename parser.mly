@@ -171,8 +171,9 @@ receive_cases:
 
 receive: RECEIVE LBRACE receive_cases RBRACE { Receive(List.rev $3) }
 
+// TODO: syntactic sugar for multiple variable declarations? e.g. `int x, y = 2, z;`
 vdecl:
-    typ ID SEMI                   { Decl($1, $2, Noexpr)  }
+    typ ID SEMI                 { Decl($1, $2, Noexpr)  }
   | typ ID ASSIGN expr SEMI     { Decl($1, $2, $4)      }
 
 thread_decl: THREAD_DEF ID LBRACE stmt_list RBRACE
