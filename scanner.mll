@@ -5,7 +5,8 @@ let digits = digit+
 
 rule token = parse
   [' ' '\t' '\r' '\n'] { token lexbuf }
-  | "/*" { comment_scanner lexbuf }
+  | "/*" { block_comment_scanner lexbuf }
+  | "//" { line_comment_scanner lexbuf }
   | ';' { SEMI }
   | '(' { LPAREN }
   | ')' { RPAREN }
@@ -79,9 +80,13 @@ rule token = parse
   | _ as other_char { raise (Failure("illegal character " ^ Char.escaped other_char)) }
 
 
-and comment_scanner = parse
+and block_comment_scanner = parse
   "*/" { token lexbuf }
-  | _ { comment_scanner lexbuf }
+  | _ { block_comment_scanner lexbuf }
+
+and line_comment_scanner = parse
+  '\n' { token lexbuf }
+  | _ { line_comment_scanner lexbuf }
 
 and string_scanner s_list = parse
   '"' { SLIT(String.concat "" (List.rev s_list)) }
