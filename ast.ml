@@ -1,4 +1,4 @@
-type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq | And | Or | Mod
+type op = Add | Sub | Mult | Div | Mod | Pow | Equality | Neq | Less | Leq | Greater | Geq | And | Or
 
 type unop = Neg | Not | Plusplus | Minmin
 
@@ -100,7 +100,9 @@ let string_of_op op = match op with
   | Sub -> " - "
   | Mult -> " * "
   | Div -> " / "
-  | Equal -> " == "
+  | Mod -> " % "
+  | Pow -> " ** "
+  | Equality -> " == "
   | Neq -> " != "
   | Less -> " < "
   | Leq -> " <= "
@@ -108,7 +110,6 @@ let string_of_op op = match op with
   | Geq -> " >= "
   | And -> " && "
   | Or -> " || "
-  | Mod -> " % "
 
 
 let rec string_of_unop unop e =

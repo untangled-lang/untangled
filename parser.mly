@@ -3,8 +3,8 @@ open Ast
 %}
 
 %token SEMI LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET COMMA
-%token PLUS MINUS TIMES DIVIDE MOD
-%token ASSIGN PLUSASSIGN MINUSASSIGN TIMESASSIGN DIVIDEASSIGN MODASSIGN
+%token PLUS MINUS TIMES DIVIDE MOD POW
+%token ASSIGN PLUSASSIGN MINUSASSIGN TIMESASSIGN DIVIDEASSIGN MODASSIGN POWASSIGN
 %token NOT EQ NEQ LT LEQ GT GEQ AND OR PLUSPLUS MINUSMINUS
 %token IF ELSE WHILE FOR BREAK CONTINUE
 
@@ -30,13 +30,14 @@ open Ast
 
 %nonassoc NOELSE
 %nonassoc ELSE
-%right ASSIGN PLUSASSIGN MINUSASSIGN TIMESASSIGN DIVIDEASSIGN MODASSIGN
+%right ASSIGN PLUSASSIGN MINUSASSIGN TIMESASSIGN DIVIDEASSIGN MODASSIGN POWASSIGN
 %left OR
 %left AND
 %left EQ NEQ
 %left LT GT LEQ GEQ
 %left PLUS MINUS
 %left TIMES DIVIDE MOD
+%left POW
 %nonassoc NOT
 %nonassoc PLUSPLUS MINUSMINUS
 %%
@@ -77,7 +78,8 @@ expr:
   | expr TIMES  expr { Binop($1, Mult,  $3)   }
   | expr DIVIDE expr { Binop($1, Div,   $3)   }
   | expr MOD expr    { Binop($1, Mod,   $3)   }
-  | expr EQ     expr { Binop($1, Equal, $3)   }
+  | expr POW expr    { Binop($1, Pow,   $3)   }
+  | expr EQ     expr { Binop($1, Equality, $3)}
   | expr NEQ    expr { Binop($1, Neq,   $3)   }
   | expr LT     expr { Binop($1, Less,  $3)   }
   | expr LEQ    expr { Binop($1, Leq,   $3)   }
@@ -97,6 +99,7 @@ expr:
   | ID TIMESASSIGN expr { Assign($1, Binop(Id($1), Mult, $3)) }
   | ID DIVIDEASSIGN expr { Assign($1, Binop(Id($1), Div, $3)) }
   | ID MODASSIGN expr { Assign($1, Binop(Id($1), Mod, $3)) }
+  | ID POWASSIGN expr { Assign($1, Binop(Id($1), Pow, $3)) }
   // Array access (reading)
   | ID LBRACKET expr RBRACKET { Index($1, $3) }
   // Array access (writing)
@@ -106,6 +109,7 @@ expr:
   | ID LBRACKET expr RBRACKET TIMESASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Mult, $6)) }
   | ID LBRACKET expr RBRACKET DIVIDEASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Div, $6)) }
   | ID LBRACKET expr RBRACKET MODASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Mod, $6)) }
+  | ID LBRACKET expr RBRACKET POWASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Pow, $6)) }
   // Grouping (parentheses)
   | LPAREN expr RPAREN { $2                   }
   // `spawn` keyword

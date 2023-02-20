@@ -23,12 +23,14 @@ rule token = parse
   | '*'      { TIMES }
   | '/'      { DIVIDE }
   | '%'      { MOD }
+  | "**"     { POW }
   | '='      { ASSIGN }
   | "+="     { PLUSASSIGN }
   | "-="     { MINUSASSIGN }
   | "*="     { TIMESASSIGN }
   | "/="     { DIVIDEASSIGN }
   | "%="     { MODASSIGN }
+  | "**="    { POWASSIGN }
   | "=="     { EQ }
   | "!="     { NEQ }
   | '<'      { LT }
