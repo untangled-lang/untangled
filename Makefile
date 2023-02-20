@@ -1,9 +1,7 @@
-all: untangled.native
-
-untangled.native: untangled.ml ast.ml parser.mly scanner.mll
-	ocamlbuild -r untangled.native
-
 .PHONY: clean untangled.native
+
+untangled.native: src/untangled.ml src/ast.ml src/parser.mly src/scanner.mll
+	ocamlbuild -r src/untangled.native
 
 clean:
 	find tests | grep ".output$$" | xargs rm
