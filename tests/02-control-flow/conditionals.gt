@@ -3,9 +3,16 @@ thread_def Main {
   if (true) {
     (a = 1);
   }
-  if (false){
+  if (false) {
     (a = 2);
   } else {
     (a = 3);
+  }
+  if ((a > 2)) {
+    print("1");
+  } else if ((b > 2)) {
+    print("2");
+  } else {
+    print("c");
   }
 }

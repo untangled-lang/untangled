@@ -9,4 +9,12 @@ thread_def Main {
   } else {
     a = 3;
   }
+
+  if (a > 2) {
+    print("1");
+  } else if (b > 2) {
+    print("2");
+  } else {
+    print("c");
+  }
 }
