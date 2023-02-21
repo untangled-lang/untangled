@@ -1,0 +1,208 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Untangled",
+  "patterns": [
+    {
+      "include": "#line_comments"
+    },
+    {
+      "include": "#block_comments"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#procedures"
+    },
+    {
+      "include": "#literals"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#punctuation"
+    }
+  ],
+
+
+  "repository": {
+    "line_comments": {
+      "name": "comment.line.untangled",
+      "begin": "//",
+      "end": "$"
+    },
+
+
+    "block_comments": {
+      "name": "comment.block.untangled",
+      "begin": "/\\*",
+      "end": "\\*/"
+    },
+
+
+    "keywords": {
+      "patterns": [
+        { "comment": "Operators" },
+        {
+          "name": "keyword.operator.assignment.untangled",
+          "match": "\\="
+        },
+        {
+          "name": "keyword.operator.assignment.compound.untangled",
+          "match": "\\+=|-=|\\*=|/=|%=|\\*\\*="
+        },
+        {
+          "name": "keyword.operator.arithmetic.untangled",
+          "match": "\\b(\\+|-|\\*|/|%|\\*\\*)\\b"
+        },
+        {
+          "name": "keyword.operator.increment.untangled",
+          "match": "\\b\\+\\+\\b"
+        },
+        {
+          "name": "keyword.operator.decrement.untangled",
+          "match": "\\b--\\b"
+        },
+        {
+          "name": "keyword.operator.comparison.untangled",
+          "match": "\\b(==|!=|<|>|<=|>=)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.untangled",
+          "match": "\\b(\\|\\||&&|!)\\b"
+        },
+
+
+        { "comment": "Thread-specific tokens" },
+        {
+          "name": "keyword.operator.untangled",
+          "match": "\\b(->|<<)\\b"
+        },
+        {
+          "name": "keyword.other.untangled",
+          "match": "\\b(receive|spawn)\\b"
+        },
+        {
+          "name": "storage.type.thread.untangled",
+          "match": "\\bthread_def\\b"
+        },
+        {
+          "name": "variable.language.special.untangled",
+          "match": "\\bparent\\b"
+        },
+
+
+        { "comment": "Function-specific tokens" },
+        {
+          "name": "keyword.control.flow.untangled",
+          "match": "\\b(return)\\b"
+        },
+
+
+        { "comment": "Control flow" },
+        {
+          "name": "keyword.control.untangled",
+          "match": "\\b(if|else|for|while|break|continue|return)\\b"
+        },
+
+
+        { "comment": "Misc" },
+        {
+          "name": "keyword.other.untangled",
+          "match": "\\b(_)\\b"
+        }
+      ]
+    },
+
+
+    "procedures": {
+      "patterns": [
+        { "comment": "Function definition" },
+        {
+          "match": "\\b(int|bool|float|string|thread|semaphore|sem|void)\\s+([a-zA-Z][a-zA-Z0-9_]*)\\s*(\\()",
+          "captures": {
+            "1": { "name": "storage.type.untangled" },
+            "2": { "name": "entity.name.function.untangled" },
+            "3": { "name": "punctuation.brackets.round.untangled" }
+          }
+        },
+
+        { "comment": "Function calls" },
+        {
+          "match": "\\b([a-zA-Z][a-zA-Z0-9_]*)\\s*(\\()",
+          "captures": {
+            "1": { "name": "entity.name.function.call.untangled" },
+            "2": { "name": "punctuation.brackets.round.untangled" }
+          }
+        },
+
+        { "comment": "Thread definitions" },
+        {
+          "match": "\\b(thread_def)\\s+([a-zA-Z][a-zA-Z0-9_]*)\\s*(\\{)",
+          "captures": {
+            "1": { "name": "storage.type.thread.untangled" },
+            "2": { "name": "entity.name.procedure.thread.untangled" },
+            "3": { "name": "punctuation.definition.block.untangled" }
+          }
+        }
+      ]
+    },
+
+
+    "literals": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.untangled",
+          "begin": "\"",
+          "end": "\""
+        },
+        {
+          "name": "constant.numeric.untangled",
+          "match": "\\b([0-9.]+)\\b"
+        },
+        {
+          "name": "constant.language.boolean.untangled",
+          "match": "\\b(true|false)\\b"
+        }
+      ]
+    },
+
+
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.untangled",
+          "match": "\\b(int|bool|float|string|thread|semaphore|sem|void)\\b"
+        }
+      ]
+    },
+
+
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.terminator.statement.untangled",
+          "match": ";"
+        },
+        {
+          "name": "punctuation.separator.comma.untangled",
+          "match": ","
+        },
+        {
+          "name": "punctuation.brackets.round.untangled",
+          "match": "[\\(\\)]"
+        },
+        {
+          "name": "punctuation.brackets.square.untangled",
+          "match": "[\\[\\]]"
+        },
+        {
+          "name": "punctuation.brackets.curly.untangled",
+          "match": "[\\{\\}]"
+        }
+      ]
+    }
+  },
+  "scopeName": "source.untangled"
+}

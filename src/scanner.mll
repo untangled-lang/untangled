@@ -4,9 +4,12 @@ let digit = ['0' - '9']
 let digits = digit+
 
 rule token = parse
+  (* Whitespace *)
   [' ' '\t' '\r' '\n'] { token lexbuf }
+  (* Comments *)
   | "/*" { block_comment_scanner lexbuf }
   | "//" { line_comment_scanner lexbuf }
+  (* Punctuation *)
   | ';' { SEMI }
   | '(' { LPAREN }
   | ')' { RPAREN }
@@ -16,6 +19,7 @@ rule token = parse
   | ']' { RBRACKET }
   | ',' { COMMA }
 
+  (* Operators *)
   | '+'      { PLUS }
   | "++"     { PLUSPLUS }
   | '-'      { MINUS }
@@ -41,7 +45,7 @@ rule token = parse
   | "||"     { OR }
   | "!"      { NOT }
 
-  (* Thread specific tokens *)
+  (* Thread-specific tokens *)
   | "->"         { ARROW }
   | "<<"         { SEND }
   | "receive"    { RECEIVE }
@@ -53,7 +57,7 @@ rule token = parse
   (* Function-specific tokens *)
   | "return" { RETURN }
 
-  (* Conditions *)
+  (* Control flow *)
   | "if"     { IF }
   | "else"   { ELSE }
   | "for"    { FOR }
@@ -67,14 +71,14 @@ rule token = parse
   | "float" { FLOAT }
   | "string" { STRING }
   | "thread" { THREAD }
-  | "true" { BLIT(true) }
-  | "false" { BLIT(false) }
   | "semaphore" { SEMAPHORE }
   | "void" { VOID }
-  | "_"  { WCARD }
 
+  | "true" { BLIT(true) }
+  | "false" { BLIT(false) }
   | digits as lxm { ILIT(int_of_string lxm) }
   | digits '.'  digit* as lxm { FLIT(lxm) }
+  | "_"  { WCARD }
   | ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
   | '"' { string_scanner [] lexbuf }
 

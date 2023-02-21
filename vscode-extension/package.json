@@ -1,0 +1,25 @@
+{
+  "name": "untangled",
+  "displayName": "Untangled",
+  "description": "VSCode syntax highlighting for the Untangled language.",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "untangled",
+      "aliases": ["Untangled", "untangled"],
+      "extensions": [".unt"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "untangled",
+      "scopeName": "source.untangled",
+      "path": "./syntaxes/untangled.tmLanguage.json"
+    }]
+  }
+}
