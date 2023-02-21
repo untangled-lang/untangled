@@ -112,13 +112,7 @@ for test_group_path in sorted(test_group_folders):
 
         # Run the test
         print(f"Running test {Format.bold}{full_test_name}{Format.reset}...")
-        parse_return_code = subprocess.run(
-            [f"./{BINARY}", "<", input_file_path, ">", output_path, "2>&1"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True,
-        ).returncode
+        os.system(f"./{BINARY} < {input_file_path} > {output_path} 2>&1")
         # Record a new ground truth if requested
         if REGENERATE_GTS and test_name in REGENERATE_GTS:
             subprocess.run(
