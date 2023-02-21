@@ -1,8 +1,6 @@
 #!/usr/bin/python3
 
 # TODO: nicer diff output
-# TODO: options for running a single test / test group
-# TODO: options for regenerating ground truth
 # TODO: options for end-to-end testing by re-parsing pretty printed AST output and ensuring it’s the same as the previous output
 
 import os
@@ -19,11 +17,20 @@ TESTS_DIR = f"{PWD}/tests"
 from argparse import ArgumentParser
 
 parser = ArgumentParser()
-parser.add_argument("-gt", "--ground_truths", nargs="*", required=False, 
-                    help="Regenerates ground truths, specify test names to regenerate specific ones, specify no test names to regenerate all")
+group = parser.add_mutually_exclusive_group(required=False)
+group.add_argument("-t", "--tests", nargs="*", help="Run specified tests")
+group.add_argument("-gt", "--ground_truths", nargs="*", required=False, 
+                    help="Regenerate ground truths, specify no test names to regenerate all")
+group.add_argument("-tg", "--test_groups", nargs="*", required=False, 
+                    help="Runs test groups supplied as arguments, specify none to run all")
+
+
 args = parser.parse_args()
 
+
 REGENERATE_GTS = set(args.ground_truths) if args.ground_truths != None else None
+TEST_GROUPS = set(args.test_groups) if args.test_groups != None else set()
+TESTS = set(args.tests) if args.tests != None else None
 
 class Format:
     """Defines common ANSI escape codes for formatted terminal output"""
@@ -63,40 +70,51 @@ def report_status(exit_code, test_name):
 
 test_groups = glob.glob(f"{TESTS_DIR}/*/")
 print()
-print(f"Executing {len(test_groups)} test group{'s' if len(test_groups) != 1 else ''}...")
+if TESTS == None:
+  print(f"Executing {len(TEST_GROUPS) if len(TEST_GROUPS) != 0 else len(test_groups)} test group{'s' if len(test_groups) != 1 else ''}...")
+else:
+  print(f"Executing specified test(s)...")
 print()
 
 
 num_tests = 0
 for test_group_path in sorted(test_groups):
-    test_group_name = os.path.basename(os.path.normpath(test_group_path))
-    input_files = glob.glob(os.path.join(test_group_path, "*.unt"))
+  test_group_name = os.path.basename(os.path.normpath(test_group_path))
+  if len(TEST_GROUPS) != 0 and test_group_name not in TEST_GROUPS:
+    continue
+  input_files = glob.glob(os.path.join(test_group_path, "*.unt"))
+  if TESTS == None:
     num_tests += len(input_files)
 
-    for input_file_path in sorted(input_files):
-        test_name = os.path.splitext(os.path.basename(input_file_path))[0]
-        full_test_name = f"{test_group_name}/{test_name}"
-        output_ast_file_path = os.path.join(test_group_path, f"{test_name}.output")
-        ground_truth_ast_file_path = os.path.join(test_group_path, f"{test_name}.gt")
-
-        if REGENERATE_GTS != None:
-          if len(REGENERATE_GTS) == 0 or test_name in REGENERATE_GTS:
-            print(f"Generating GTs for {Format.bold}{full_test_name}{Format.reset}...")
-            os.system(f"./{BINARY} < {input_file_path} > {ground_truth_ast_file_path} 2>&1")
+  for input_file_path in sorted(input_files):
+      test_name = os.path.splitext(os.path.basename(input_file_path))[0]
+      if TESTS != None:
+        if test_name in TESTS:
+          num_tests += 1
+        else:
           continue
+      full_test_name = f"{test_group_name}/{test_name}"
+      output_ast_file_path = os.path.join(test_group_path, f"{test_name}.output")
+      ground_truth_ast_file_path = os.path.join(test_group_path, f"{test_name}.gt")
+
+      if REGENERATE_GTS != None:
+        if len(REGENERATE_GTS) == 0 or test_name in REGENERATE_GTS:
+          print(f"Generating GTs for {Format.bold}{full_test_name}{Format.reset}...")
+          os.system(f"./{BINARY} < {input_file_path} > {ground_truth_ast_file_path} 2>&1")
+        continue
 
 
-        print(f"Running test {Format.bold}{full_test_name}{Format.reset}...")
-        # Run the test
-        os.system(f"./{BINARY} < {input_file_path} > {output_ast_file_path} 2>&1")
+      print(f"Running test {Format.bold}{full_test_name}{Format.reset}...")
+      # Run the test
+      os.system(f"./{BINARY} < {input_file_path} > {output_ast_file_path} 2>&1")
 
 
-        # Invoke diff against the ground truth output
-        if not os.path.isfile(ground_truth_ast_file_path):
-            print(f"{Format.cursor_up}{Format.yellow}WARNING: Could not find ground truth AST output for test {Format.bold}{full_test_name}{Format.reset}{Format.yellow}; skipping diff{Format.reset}")
-            continue
-        diff_exit_code = subprocess.run(["diff", ground_truth_ast_file_path, output_ast_file_path]).returncode
-        report_status(diff_exit_code, full_test_name)
+      # Invoke diff against the ground truth output
+      if not os.path.isfile(ground_truth_ast_file_path):
+          print(f"{Format.cursor_up}{Format.yellow}WARNING: Could not find ground truth AST output for test {Format.bold}{full_test_name}{Format.reset}{Format.yellow}; skipping diff{Format.reset}")
+          continue
+      diff_exit_code = subprocess.run(["diff", ground_truth_ast_file_path, output_ast_file_path]).returncode
+      report_status(diff_exit_code, full_test_name)
 
 
 # Report results of tests
