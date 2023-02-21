@@ -119,7 +119,7 @@
       "patterns": [
         { "comment": "Function definition" },
         {
-          "match": "\\b(int|bool|float|string|thread|semaphore|sem|void)\\s+([a-zA-Z][a-zA-Z0-9_]*)\\s*(\\()",
+          "match": "\\b(int|bool|float|string|thread|semaphore|void)\\s+([a-zA-Z][a-zA-Z0-9_]*)\\s*(\\()",
           "captures": {
             "1": { "name": "storage.type.untangled" },
             "2": { "name": "entity.name.function.untangled" },
@@ -172,7 +172,7 @@
       "patterns": [
         {
           "name": "storage.type.untangled",
-          "match": "\\b(int|bool|float|string|thread|semaphore|sem|void)\\b"
+          "match": "\\b(int|bool|float|string|thread|semaphore|void)\\b"
         }
       ]
     },
