@@ -1,4 +1,4 @@
-.PHONY: clean untangled.native test
+.PHONY: clean untangled.native test vscode-extension
 
 untangled.native: src/untangled.ml src/ast.ml src/parser.mly src/scanner.mll
 	ocamlbuild -r src/untangled.native
@@ -10,3 +10,6 @@ clean:
 
 test: clean untangled.native
 	python tests
+
+vscode-extension:
+	cd vscode-extension && yes | npx vsce package && code --install-extension untangled-*.vsix
