@@ -1,7 +1,16 @@
 # Untangled
 
+## Installing dependencies
+```sh
+opam install dune
+opam install llvm.14.0.6 # or whatever version of llvm you have installed
+```
+*(Note: [Dune](https://github.com/ocaml/dune) supersedes [Ocamlbuild](https://github.com/ocaml/ocamlbuild);
+the Ocamlbuild README has recommended to use Dune instead for several years.)*
+
+
 ## Instructions
-- Run `make` to build the `untangled.native` executable.
+- Run `make` to build the main `untangled.exe` executable.
 - Run `make test` to run the full series of automated tests (requires a current version of Python).
   See [Testing](#testing) for additional options.
 - Run `make clean` to remove all build artifacts.

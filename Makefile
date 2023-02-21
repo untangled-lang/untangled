@@ -1,14 +1,13 @@
-.PHONY: clean untangled.native test vscode-extension
+.PHONY: clean untangled.exe test vscode-extension
 
-untangled.native: src/untangled.ml src/ast.ml src/parser.mly src/scanner.mll
-	ocamlbuild -r src/untangled.native
+untangled.exe: src/untangled.ml src/ast.ml src/parser.mly src/scanner.mll
+	dune build
 
 clean:
-	-find tests | grep ".output$$" | xargs rm
-	-rm -rf _build
-	-rm untangled.native
+	find tests | grep ".output$$" | xargs rm
+	dune clean
 
-test: clean untangled.native
+test: clean untangled.exe
 	python tests
 
 vscode-extension:

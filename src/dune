@@ -1,0 +1,8 @@
+(ocamllex scanner)
+
+(ocamlyacc parser)
+
+(executable
+ (name untangled)
+ (public_name untangled)
+ (promote (into "..") (until-clean)))

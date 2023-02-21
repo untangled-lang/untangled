@@ -1,5 +1,6 @@
 _build
 *.native
+*.exe
 __pycache__/
 *.py[cod]
 *$py.class
