@@ -12,7 +12,7 @@ from argparse import ArgumentParser
 
 
 PWD = os.getcwd()
-BINARY = "untangled.native"
+BINARY = "untangled.exe"
 TESTS_DIR = f"{PWD}/tests"
 num_succeeded = 0
 num_failed = 0
@@ -62,16 +62,16 @@ def report_status(exit_code, test_name):
 parser = ArgumentParser()
 group = parser.add_mutually_exclusive_group(required=False)
 group.add_argument("-t", "--tests", nargs="*", help="Run specified tests")
-group.add_argument("-gt", "--ground_truths", nargs="*", required=False,
+group.add_argument("-gt", "--record-ground-truths", nargs="*", required=False,
                    help="Regenerate specified ground truths from test outputs. Leave list blank to regenerate all")  # noqa: E501
-group.add_argument("-tg", "--test_groups", nargs="*", required=False,
+group.add_argument("-tg", "--test-groups", nargs="*", required=False,
                    help="Runs test groups supplied as arguments, specify none to run all")  # noqa: E501
 args = parser.parse_args()
 
 
 TEST_GROUPS_FILTER = args.test_groups
 TESTS_FILTER = args.tests
-REGENERATE_GTS = args.ground_truths
+REGENERATE_GTS = args.record_ground_truths
 # If -gt is passed without specific tests, we will regenerate all ground truths
 if REGENERATE_GTS is not None and len(REGENERATE_GTS) == 0:
     REGENERATE_GTS = EverythingSet()
