@@ -3,10 +3,7 @@
   "name": "Untangled",
   "patterns": [
     {
-      "include": "#line_comments"
-    },
-    {
-      "include": "#block_comments"
+      "include": "#comments"
     },
     {
       "include": "#keywords"
@@ -27,17 +24,19 @@
 
 
   "repository": {
-    "line_comments": {
-      "name": "comment.line.untangled",
-      "begin": "//",
-      "end": "$"
-    },
-
-
-    "block_comments": {
-      "name": "comment.block.untangled",
-      "begin": "/\\*",
-      "end": "\\*/"
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.untangled",
+          "begin": "//",
+          "end": "$"
+        },
+        {
+          "name": "comment.block.untangled",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
     },
 
 
