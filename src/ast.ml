@@ -44,6 +44,7 @@ type stmt =
 | Send of string * expr
 | SendParent of expr
 | Decl of typ * string * expr
+| Decls of typ * (string list) * (expr list) (* Syntactic sugar  *)
 | Receive of receive_case list
 and receive_case = (pattern * stmt)
 and pattern =
@@ -167,6 +168,8 @@ let rec string_of_stmt statement =
   | SendParent(e) -> "parent << " ^ (string_of_expr e) ^ ";"
   | Decl(t, id, Noexpr) -> string_of_typ t ^ " " ^ id ^ ";"
   | Decl(t, id, expr) -> string_of_typ t ^ " " ^ id ^ " = " ^ (string_of_expr expr) ^ ";"
+  | Decls(t, ids, exprs) -> string_of_typ t ^ " " ^ (String.concat ", " ids) ^ " = " ^ 
+                            (String.concat ", " (List.map string_of_expr exprs)) ^ ";"
   | Receive(cases) -> "receive {\n" ^ indent (String.concat "\n" (List.map
       (fun (pat, stmt) -> ((string_of_pattern pat) ^ " -> " ^ (string_of_stmt stmt)))
     cases)) ^ "\n}"

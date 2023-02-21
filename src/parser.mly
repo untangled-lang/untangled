@@ -179,6 +179,15 @@ receive: RECEIVE LBRACE receive_cases RBRACE { Receive(List.rev $3) }
 vdecl:
     typ ID SEMI                 { Decl($1, $2, Noexpr)  }
   | typ ID ASSIGN expr SEMI     { Decl($1, $2, $4)      }
+  | typ id_comma_list ASSIGN expr_comma_list SEMI { Decls($1, List.rev $2, List.rev $4) }
+
+id_comma_list:
+  | ID          { [$1] }
+  | id_comma_list COMMA ID {$3 :: $1}
+
+expr_comma_list:
+  | expr          { [$1] }
+  | expr_comma_list COMMA expr { $3 :: $1 }
 
 thread_decl: THREAD_DEF ID LBRACE stmt_list RBRACE
     { { tname = $2; body = List.rev $4; } }

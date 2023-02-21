@@ -10,6 +10,7 @@ thread_def MyThread {
 }
 
 thread_def Main {
+  int a , b = 2 , 3;
   int i = 7;
   bool b = true;
   thread t = spawn MyThread;
