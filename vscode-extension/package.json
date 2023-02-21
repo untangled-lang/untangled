@@ -3,6 +3,12 @@
   "displayName": "Untangled",
   "description": "VSCode syntax highlighting for the Untangled language.",
   "version": "0.0.1",
+  "publisher": "cs107",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nickbar01234/untangled",
+    "directory": "vscode-extension"
+  },
   "engines": {
     "vscode": "^1.75.0"
   },
