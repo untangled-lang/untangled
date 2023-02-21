@@ -8,13 +8,22 @@
 import os
 import subprocess
 import glob
-
+import sys
+from argparse import ArgumentParser
 
 PWD = os.getcwd()
 
 BINARY = f"untangled.native"
 TESTS_DIR = f"{PWD}/tests"
 
+from argparse import ArgumentParser
+
+parser = ArgumentParser()
+parser.add_argument("-gt", "--ground_truths", nargs="*", required=False, 
+                    help="Regenerates ground truths, specify test names to regenerate specific ones, specify no test names to regenerate all")
+args = parser.parse_args()
+
+REGENERATE_GTS = set(args.ground_truths) if args.ground_truths != None else None
 
 class Format:
     """Defines common ANSI escape codes for formatted terminal output"""
@@ -67,12 +76,20 @@ for test_group_path in sorted(test_groups):
     for input_file_path in sorted(input_files):
         test_name = os.path.splitext(os.path.basename(input_file_path))[0]
         full_test_name = f"{test_group_name}/{test_name}"
-        print(f"Running test {Format.bold}{full_test_name}{Format.reset}...")
         output_ast_file_path = os.path.join(test_group_path, f"{test_name}.output")
         ground_truth_ast_file_path = os.path.join(test_group_path, f"{test_name}.gt")
 
+        if REGENERATE_GTS != None:
+          if len(REGENERATE_GTS) == 0 or test_name in REGENERATE_GTS:
+            print(f"Generating GTs for {Format.bold}{full_test_name}{Format.reset}...")
+            os.system(f"./{BINARY} < {input_file_path} > {ground_truth_ast_file_path} 2>&1")
+          continue
+
+
+        print(f"Running test {Format.bold}{full_test_name}{Format.reset}...")
         # Run the test
         os.system(f"./{BINARY} < {input_file_path} > {output_ast_file_path} 2>&1")
+
 
         # Invoke diff against the ground truth output
         if not os.path.isfile(ground_truth_ast_file_path):
