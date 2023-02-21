@@ -23,7 +23,7 @@ class Format:
     green = "\033[32m"
     red = "\033[91m"
     yellow = "\033[93m"
-    dim = "\033[2m"
+    dim = "\033[90m"
     reset = "\033[0m"
     bold = "\033[1m"
     cursor_up = "\033[1A"
@@ -61,11 +61,12 @@ def report_status(exit_code, test_name):
 
 parser = ArgumentParser()
 group = parser.add_mutually_exclusive_group(required=False)
-group.add_argument("-t", "--tests", nargs="*", help="Run specified tests")
-group.add_argument("-gt", "--record-ground-truths", nargs="*", required=False,
-                   help="Regenerate specified ground truths from test outputs. Leave list blank to regenerate all")  # noqa: E501
+group.add_argument("-t", "--tests", nargs="*",
+                   help="Limits tests to those with the specified names.")
 group.add_argument("-tg", "--test-groups", nargs="*", required=False,
-                   help="Runs test groups supplied as arguments, specify none to run all")  # noqa: E501
+                   help="Limits tests to those in the specified test groups.")
+group.add_argument("-gt", "--record-ground-truths", nargs="*", required=False,
+                   help="Regenerate ground truths from test outputs for the specified tests. Leave list blank to regenerate all.")  # noqa: E501
 args = parser.parse_args()
 
 
@@ -116,11 +117,20 @@ for test_group_path in sorted(test_group_folders):
         # Record a new ground truth if requested
         if REGENERATE_GTS and test_name in REGENERATE_GTS:
             os.system(f"cp {output_path} {ground_truth_path}")
-            print(f"{Format.cursor_up}{Format.yellow}!{Format.reset} Overwriting ground truth for test {Format.bold}{full_test_name}{Format.reset}\n")  # noqa: E501
+            print(
+                f"{Format.cursor_up}{Format.yellow}! "
+                "Overwriting ground truth for test "
+                f"{Format.bold}{full_test_name}{Format.reset}\n"
+            )
 
         # Invoke diff against the ground truth output
         if not os.path.isfile(ground_truth_path):
-            print(f"{Format.cursor_up}{Format.yellow}WARNING: Could not find ground truth AST output for test {Format.bold}{full_test_name}{Format.reset}{Format.yellow}; skipping diff{Format.reset}")  # noqa: E501
+            print(
+                f"{Format.cursor_up}{Format.yellow}! "
+                "Could not find ground truth AST output for test "
+                f"{Format.bold}{full_test_name}{Format.reset}{Format.yellow}; "
+                f"skipping diff{Format.reset}"
+            )
             continue
         diff_exit_code = subprocess.run(
             ["diff", ground_truth_path, output_path],
@@ -131,9 +141,17 @@ for test_group_path in sorted(test_group_folders):
 # Report results of tests
 
 print()
-if num_failed > 0:
-    print(f"{Format.red + Format.bold}{num_succeeded}/{num_tests} tests succeeded{Format.reset}", end="")  # noqa: E501
-else:
-    print(f"{Format.green + Format.bold}{num_succeeded}/{num_tests} tests succeeded{Format.reset}", end="")  # noqa: E501
-print(f" {Format.yellow}(diff skipped for {num_tests - num_succeeded - num_failed} tests){Format.reset}" if num_failed + num_succeeded != num_tests else "")  # noqa: E501
+print(
+    f"{Format.red if num_failed > 0 else Format.green}{Format.bold}"
+    f"{num_succeeded}/{num_tests} tests succeeded",
+    end=Format.reset
+)
+if num_failed + num_succeeded != num_tests:
+    print(
+        f"{Format.yellow} "
+        f"(diff skipped for {num_tests - num_succeeded - num_failed} tests)",
+        end=Format.reset
+    )
+print("\n")
+
 exit(1 if num_failed > 0 else 0)
