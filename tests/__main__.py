@@ -7,7 +7,6 @@
 import os
 import subprocess
 import glob
-import sys
 from argparse import ArgumentParser
 
 
@@ -113,10 +112,18 @@ for test_group_path in sorted(test_group_folders):
 
         # Run the test
         print(f"Running test {Format.bold}{full_test_name}{Format.reset}...")
-        os.system(f"./{BINARY} < {input_file_path} > {output_path} 2>&1")
+        parse_return_code = subprocess.run(
+            [f"./{BINARY}", "<", input_file_path, ">", output_path, "2>&1"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True,
+        ).returncode
         # Record a new ground truth if requested
         if REGENERATE_GTS and test_name in REGENERATE_GTS:
-            os.system(f"cp {output_path} {ground_truth_path}")
+            subprocess.run(
+                ["cp", output_path, ground_truth_path]
+            ).check_returncode()
             print(
                 f"{Format.cursor_up}{Format.yellow}! "
                 "Overwriting ground truth for test "
