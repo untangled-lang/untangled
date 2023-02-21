@@ -9,7 +9,7 @@ open Ast
 %token IF ELSE WHILE FOR BREAK CONTINUE
 
 // Types
-%token INT BOOL FLOAT SEM WCARD STRING VOID
+%token INT BOOL FLOAT WCARD STRING VOID
 %token <int> ILIT
 %token <bool> BLIT
 %token <string> ID
