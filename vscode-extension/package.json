@@ -10,7 +10,7 @@
     "directory": "vscode-extension"
   },
   "engines": {
-    "vscode": "^1.75.0"
+    "vscode": "^1.70.0"
   },
   "categories": [
     "Programming Languages"
