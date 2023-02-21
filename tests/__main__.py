@@ -29,6 +29,12 @@ class Format:
     cursor_up = "\033[1A"
 
 
+class EverythingSet:
+    """A collection that contains everything"""
+    def __contains__(self, item):
+        return True
+
+
 def report_status(exit_code, test_name):
     """Record the status of a test given its exit code"""
     global num_succeeded, num_failed
@@ -63,54 +69,54 @@ group.add_argument("-tg", "--test_groups", nargs="*", required=False,
 args = parser.parse_args()
 
 
-REGENERATE_GTS = set(args.ground_truths) if args.ground_truths is not None else None  # noqa: E501
-TEST_GROUPS_FILTER = set(args.test_groups) if args.test_groups is not None else set()  # noqa: E501
-TESTS_FILTER = set(args.tests) if args.tests is not None else None
+TEST_GROUPS_FILTER = args.test_groups
+TESTS_FILTER = args.tests
+REGENERATE_GTS = args.ground_truths
+# If -gt is passed without specific tests, we will regenerate all ground truths
+if REGENERATE_GTS is not None and len(REGENERATE_GTS) == 0:
+    REGENERATE_GTS = EverythingSet()
 
 
 # RUN TESTS ===================================================================
 
 
-test_groups = glob.glob(f"{TESTS_DIR}/*/")
+test_group_folders = glob.glob(f"{TESTS_DIR}/*/")
 print()
-if TESTS_FILTER is not None:
-    num_test_groups = len(TEST_GROUPS_FILTER or test_groups)
+if TESTS_FILTER:  # don’t know which groups we’re running if we filter by test
+    print(f"Executing specified test(s)...")
+else:
+    num_test_groups = len(TEST_GROUPS_FILTER or test_group_folders)
     plural = "s" if num_test_groups != 1 else ""
     print(f"Executing {num_test_groups} test group{plural}...")
-else:
-    print(f"Executing specified test(s)...")
 print()
 
 
 num_tests = 0
-for test_group_path in sorted(test_groups):
-    test_group_name = os.path.basename(os.path.normpath(test_group_path))
-    if len(TEST_GROUPS_FILTER) and test_group_name not in TEST_GROUPS_FILTER:
+for test_group_path in sorted(test_group_folders):
+    group_name = os.path.basename(os.path.normpath(test_group_path))
+    # Skip test groups that aren’t in the filter
+    if TEST_GROUPS_FILTER is not None and group_name not in TEST_GROUPS_FILTER:
         continue
-    input_files = glob.glob(os.path.join(test_group_path, "*.unt"))
-    if TESTS_FILTER is None:
-        num_tests += len(input_files)
 
+    input_files = glob.glob(os.path.join(test_group_path, "*.unt"))
     for input_file_path in sorted(input_files):
         test_name = os.path.splitext(os.path.basename(input_file_path))[0]
-        if TESTS_FILTER is not None:
-            if test_name in TESTS_FILTER:
-                num_tests += 1
-            else:
-                continue
-        full_test_name = f"{test_group_name}/{test_name}"
+        # Skip tests that aren’t in the filter
+        if TESTS_FILTER is not None and test_name not in TESTS_FILTER:
+            continue
+
+        num_tests += 1
+        full_test_name = f"{group_name}/{test_name}"
         output_path = os.path.join(test_group_path, f"{test_name}.output")
         ground_truth_path = os.path.join(test_group_path, f"{test_name}.gt")
 
-        if REGENERATE_GTS is not None:
-            if len(REGENERATE_GTS) == 0 or test_name in REGENERATE_GTS:
-                print(f"Generating GTs for {Format.bold}{full_test_name}{Format.reset}...")  # noqa: E501
-                os.system(f"./{BINARY} < {input_file_path} > {ground_truth_path} 2>&1")  # noqa: E501
-            continue
-
-        print(f"Running test {Format.bold}{full_test_name}{Format.reset}...")
         # Run the test
+        print(f"Running test {Format.bold}{full_test_name}{Format.reset}...")
         os.system(f"./{BINARY} < {input_file_path} > {output_path} 2>&1")
+        # Record a new ground truth if requested
+        if REGENERATE_GTS and test_name in REGENERATE_GTS:
+            os.system(f"cp {output_path} {ground_truth_path}")
+            print(f"{Format.cursor_up}{Format.yellow}!{Format.reset} Overwriting ground truth for test {Format.bold}{full_test_name}{Format.reset}\n")  # noqa: E501
 
         # Invoke diff against the ground truth output
         if not os.path.isfile(ground_truth_path):
