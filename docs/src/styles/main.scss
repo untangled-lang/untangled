@@ -1,0 +1,89 @@
+@use 'sass:color';
+@use 'sass:math';
+@use './reset';
+@use './fonts';
+
+
+
+// Colors
+
+$black: #020012;
+$white: #fff;
+$almost-white: color.scale($white, $alpha: -5%);
+$text: $almost-white;
+$text-secondary: color.scale($white, $alpha: -30%);
+$text-hint: color.scale($white, $alpha: -60%);
+
+body {
+  background-color: $black;
+  color: $text;
+}
+
+
+// Layout
+
+:root {
+  font-size: 18px;
+  font-family: fonts.$body;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  vertical-align: baseline;
+}
+
+#root-container {
+  display: grid;
+  grid-template-columns: 1fr min(65ch, 100%) 1fr;
+  & > * { grid-column: 2; }
+  padding: 4.5rem 1rem;
+  & > :first-child { margin-top: 0; }
+  & > :last-child { margin-bottom: 0; }
+}
+
+
+
+// Typography
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: fonts.$heading;
+  font-variation-settings: 'wght' 700;
+  line-height: 1.1;
+  margin: 1.5em 0 0.5em;
+  color: $white;
+}
+$ratio: 1.250;
+h1 { font-size: 1rem * math.pow($ratio, 5); }
+h2 { font-size: 1rem * math.pow($ratio, 4); }
+h3 { font-size: 1rem * math.pow($ratio, 3); }
+h4 { font-size: 1rem * math.pow($ratio, 2); }
+h5 { font-size: 1rem * math.pow($ratio, 1); }
+h6 { font-size: 1rem * math.pow($ratio, 0); }
+
+
+
+// Code blocks
+
+pre {
+  $margin: 1.75em;
+  $padding-horizontal: 1.75em;
+  $padding-vertical: 1.35em;
+  padding: $padding-vertical $padding-horizontal;
+  margin: $margin -1 * $padding-horizontal;
+  border-radius: 0.5em;
+  box-shadow: 0 0 0 1.5px color.scale($white, $alpha: -90%);
+  background: none !important;
+  line-height: 1.3;
+  font-size: 0.85rem;
+
+}
+
+code {
+  font-family: fonts.$mono;
+  font-variation-settings: 'wght' 115;
+}
+
+// Misc
+
+::selection {
+  background-color: color.scale(color.mix($white, $black, 15%), $saturation: 5%);
+}
