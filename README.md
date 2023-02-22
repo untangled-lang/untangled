@@ -1,5 +1,11 @@
 # Untangled
 
+Luke Taylor (luke.taylor@tufts.edu),
+Nick Doan (hdoan02@tufts.edu),
+Caleb Ledi (cledi01@tufts.edu),
+Duru Ugurlu (duru.ugurlu@tufts.edu),
+Chloe Lam (clam08@tufts.edu)
+
 
 ## Instructions
 First, install required dependencies:
