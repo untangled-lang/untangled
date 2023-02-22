@@ -1,16 +1,28 @@
 # Untangled: Language Reference Manual
 
-This is the documentation for the Untangled programming language.
+**Untangled** is a new programming language with first-class support for multithreading. It
+encourages users to write highly parallelized programs by providing safe and easy-to-use primitives
+and abstractions over multithreading.
 
-```untangled
-thread_def Main {
-  int[10] arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-  // Replace each element with the cumulative sum
-  for (int i = 0; i < len(arr); i++) {
-    print(arr[i]);
-    if (i > 0) {
-      arr[i] += arr[i - 1];
-    }
+<figure>
+  ```untangled
+  thread_def SumWorker {
+    receive { int x -> int target = x; _ -> exit(); }
+    int sum = 0;
+    for (int i = 0; i < target; i++) sum += i;
+    parent << sum; // send the result back
   }
-}
-```
+
+  thread_def Main {
+    thread my_worker = spawn SumWorker;
+    my_worker << 100000;
+    // Free to do something else here...
+    receive { int x -> int result = x; _ -> exit(); };
+    print(result);
+  }
+  ```
+  <figcaption>
+    A simple program demonstrating multithreaded computation in Untangled. The `Main` thread
+    continues to run while the `SumWorker` thread does hard, CPU-bound computations.
+  </figcaption>
+</figure>

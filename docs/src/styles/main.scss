@@ -20,6 +20,7 @@ body {
 }
 
 
+
 // Layout
 
 :root {
@@ -75,6 +76,9 @@ pre {
   line-height: 1.3;
   font-size: 0.85rem;
 
+  &:has(+ figcaption) {
+    margin-bottom: 0.75em;
+  }
 }
 
 code {
@@ -82,7 +86,19 @@ code {
   font-variation-settings: 'wght' 115;
 }
 
+
+
 // Misc
+
+figcaption {
+  font-size: math.div(1rem, $ratio);
+  color: $text-secondary;
+  font-style: italic;
+
+  code {
+    font-style: normal;
+  }
+}
 
 ::selection {
   background-color: color.scale(color.mix($white, $black, 15%), $saturation: 5%);
