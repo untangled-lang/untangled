@@ -8,5 +8,5 @@
 
 (package
  (name untangled)
- (synopsis "The Untagled programming language")
+ (synopsis "The Untangled programming language")
  (depends ocaml dune llvm))
