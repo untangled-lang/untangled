@@ -9,7 +9,7 @@ if (!root) throw new Error('React root element not found');
 // Mount the MDX page
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
-    <CodeConfig theme="github-dark">
+    <CodeConfig theme="poimandres">
       <Main components={{ code: Code, pre: CodeWrapper }} />
     </CodeConfig>
   </React.StrictMode>
