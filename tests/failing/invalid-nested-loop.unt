@@ -1,10 +1,10 @@
 thread_def Main {
-  /* Arbitrary statements are not allowed to appear in the first position of a for loop; only
-     an expression or a declaration is allowed. */
+  // Arbitrary statements are not allowed to appear in the first position of a for loop; only an
+  // expression or a declaration is allowed.
   for (
     for (int i = 0; i < 4; i++) { int b = 5; }
-    i < 6;
-    i++
+      i < 6;
+      i++
   ) {
     /* body */
   }

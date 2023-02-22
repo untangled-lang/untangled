@@ -1,0 +1,4 @@
+// This should fail because statements are not allowed at the top level; they are only allowed
+// inside thread/function procedure declarations
+int x = 2;
+print(x);

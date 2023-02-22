@@ -1,0 +1,8 @@
+int my_func() {
+  return 2;
+}
+
+thread Main {
+  int x = my_func(;
+  bool y = true;
+}

@@ -1,0 +1,5 @@
+thread Main {
+  for (;;) {
+    int x = 0;
+  }
+}
