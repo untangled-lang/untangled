@@ -23,21 +23,15 @@ body {
 
 // Layout
 
-:root {
-  font-size: 18px;
-  font-family: fonts.$body;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
-  vertical-align: baseline;
-}
-
-#root-container {
+body {
   display: grid;
   grid-template-columns: 1fr min(65ch, 100%) 1fr;
   & > * { grid-column: 2; }
-  padding: 4.5rem 1rem;
-  & > :first-child { margin-top: 0; }
+  padding: 0 1rem;
+}
+
+#root-container {
+  padding: 4.5rem 0;
   & > :last-child { margin-bottom: 0; }
 }
 
@@ -45,70 +39,158 @@ body {
 
 // Typography
 
+:root {
+  font-size: 18px;
+  font-family: fonts.$body;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.5;
+  vertical-align: baseline;
+  text-decoration-thickness: from-font;
+  text-underline-position: from-font;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: fonts.$heading;
-  font-variation-settings: 'wght' 700;
+  font-variation-settings: 'wght' 650;
   line-height: 1.1;
   margin: 1.5em 0 0.5em;
+  &:first-child { margin-top: 0; }
   color: $white;
 }
 $ratio: 1.250;
-h1 { font-size: 1rem * math.pow($ratio, 5); }
-h2 { font-size: 1rem * math.pow($ratio, 4); }
-h3 { font-size: 1rem * math.pow($ratio, 3); }
-h4 { font-size: 1rem * math.pow($ratio, 2); }
-h5 { font-size: 1rem * math.pow($ratio, 1); }
+h1 { font-size: 1rem * math.pow($ratio, 5); font-variation-settings: 'wght' 700; & + h2 { margin-top: 0; } }
+h2 { font-size: 1rem * math.pow($ratio, 4); & + h3 { margin-top: 1em; } }
+h3 { font-size: 1rem * math.pow($ratio, 3); & + h4 { margin-top: 1em; } }
+h4 { font-size: 1rem * math.pow($ratio, 2); & + h5 { margin-top: 1em; } }
+h5 { font-size: 1rem * math.pow($ratio, 1); & + h6 { margin-top: 1em; } }
 h6 { font-size: 1rem * math.pow($ratio, 0); }
 
+a {
+  color: inherit;
+  text-decoration-color: $text-hint;
+  transition: text-decoration-color 0.2s ease;
 
-
-// Code blocks
-
-pre {
-  $margin: 1.75em;
-  $padding-horizontal: 1.75em;
-  $padding-vertical: 1.35em;
-  padding: $padding-vertical $padding-horizontal;
-  margin: $margin -1 * $padding-horizontal;
-  border-radius: 0.5em;
-  box-shadow: 0 0 0 1.5px color.scale($white, $alpha: -90%);
-  background: none !important;
-  line-height: 1.3;
-  font-size: 0.85rem;
-
-  &:has(+ figcaption) {
-    margin-bottom: 0.75em;
+  &:hover {
+    text-decoration-color: currentColor;
   }
 }
+
+p {
+  margin: 0 0 1em;
+}
+
+
+
+// Code
+
+$block-bleed: 1.75em;
+$border-width: 1.5px;
+$border-color: color.scale($white, $alpha: -85%);
+
 
 code {
   font-family: fonts.$mono;
   font-variation-settings: 'wght' 115;
 }
 
-:not(pre) > code {
-  padding: 0.05em 0.5em 0.15em;
-  margin: 0 0.15em;
+// Code blocks
+@mixin boxedBlock {
+  $margin: 1.75em;
+  $padding-vertical: 1.35em;
+  padding: $padding-vertical $block-bleed;
+  margin: $margin (-1 * $block-bleed);
+  border-radius: 0.5em;
+  box-shadow: 0 0 0 $border-width $border-color;
+  &:has(+ figcaption) {
+    margin-bottom: 0.75em;
+  }
+}
+pre {
+  @include boxedBlock;
+  line-height: 1.3;
+  font-size: 0.85rem;
+}
+
+// Inline code
+@mixin inlineBoxed {
+  padding: 0.04rem 0.4rem 0.12rem 0.4rem;
+  // display: inline-block;
+  margin: 0.1em 0.15em;
   background: color.scale($white, $alpha: -92.5%);
   text-align: center;
-  border: 1.5px solid color.scale($white, $alpha: -92.5%);
+  border: $border-width solid color.scale($white, $alpha: -92.5%);
   border-radius: 4px;
+  font-size: math.div(1rem, math.pow($ratio, 0.5));
+}
+:not(pre, :has(pre), pre *) code:where(:not(.lowkey)) {
+  @include inlineBoxed;
 }
 
 
 
 // Misc
 
+div.boxed { @include boxedBlock; }
+span.boxed { @include inlineBoxed; }
+
+hr {
+  border: none;
+  margin: 3rem (-1 * $block-bleed);
+  &:not([class]) { // default; line
+    height: $border-width;
+    background: $border-color;
+  }
+
+  &.dinkus { // * * *
+    margin: 3rem 0;
+    border: none;
+    display: flex;
+    height: 0;
+    overflow: visible;
+    font-family: fonts.$mono;
+
+    &::before {
+      content: '*\00a0\00a0*\00a0\00a0*';
+      display: block;
+      margin: 0 auto;
+      height: 1em;
+      line-height: 1em;
+      transform: translateY(-50%);
+    }
+  }
+}
+
+figure {
+  margin: 2rem 0;
+}
+
 figcaption {
   font-size: math.div(1rem, $ratio);
   color: $text-secondary;
   font-style: italic;
 
-  code {
-    font-style: normal;
-  }
+  code { font-style: normal; display: inline; font-size: 1em; }
+  & > p:last-child { margin-bottom: 0; }
 }
 
 ::selection {
   background-color: color.scale(color.mix($white, $black, 15%), $saturation: 5%);
+}
+
+ol, ul {
+  margin-bottom: 1em;
+  ol, ul { margin-bottom: 0; }
+
+  li {
+    p { display: contents; }
+    p ~ p, p:has(~p) { display: block; }
+  }
+  li:not(:last-child) {
+    margin-bottom: 0.35em;
+  }
+
+  li > :is(ul, ol):not(:first-child) {
+    margin-top: 0.35em;
+  }
 }

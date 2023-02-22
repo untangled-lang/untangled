@@ -72,7 +72,7 @@ export default function Code({
                   ...(token.fontStyle ?? 0) & FontStyle.Bold && { fontWeight: 'bold' },
                   ...(token.fontStyle ?? 0) & FontStyle.Underline && { textDecoration: 'underline' },
                 }}
-                data-token={JSON.stringify(token)}
+                data-token={JSON.stringify(token.explanation)}
               >
                 {token.content}
               </span>
