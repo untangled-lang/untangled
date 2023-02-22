@@ -8,7 +8,7 @@ clean:
 	dune clean
 
 test: clean untangled.exe
-	python tests
+	python3 tests
 
 vscode-extension:
 	cd vscode-extension && yes | npx vsce package && code --install-extension untangled-*.vsix
