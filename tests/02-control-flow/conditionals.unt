@@ -17,4 +17,9 @@ thread_def Main {
   } else {
     print("c");
   }
+
+  /* Dangling if-else */
+  if (true) {}
+  if (false) {}
+  else {}
 }

@@ -33,8 +33,7 @@ thread_def Thread2 {
 
 
 thread_def Main {
-  // final naming of this function TBD
-  semaphore my_sem = make_semaphore(1);
+  semaphore my_sem = 1;
 
   thread my_thread1 = spawn Thread1;
   thread my_thread2 = spawn Thread2;

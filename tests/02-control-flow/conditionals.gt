@@ -15,4 +15,10 @@ thread_def Main {
   } else {
     print("c");
   }
+  if (true) {
+
+  }
+  if (false) {
+
+  }
 }
