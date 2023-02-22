@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Untangled Docs</title>
+
+  <link rel="stylesheet" href="./src/styles.scss">
 </head>
 <body>
   <div id="root"></div>
@@ -12,12 +14,13 @@
     import React from 'react';
     import ReactDOM from 'react-dom/client';
     import Main from './src/main.mdx';
+    import Code, { CodeWrapper } from './src/components/Code.tsx';
 
     ReactDOM.createRoot(document.getElementById('root')).render(
       React.createElement(
         React.StrictMode,
         null,
-        React.createElement(Main, null),
+        React.createElement(Main, { components: { code: Code, pre: CodeWrapper } }),
       ),
     );
   </script>
