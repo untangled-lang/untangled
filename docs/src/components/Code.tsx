@@ -35,11 +35,15 @@ export function CodeConfig({ children, ...props }: { children?: React.ReactNode 
 }
 
 
+// A `pre` tag wrapping a `code` tag signals to the Code component that it should highlight
+const PreWrapContext = createContext<boolean>(false);
+
+
 /** Renders code with syntax highlighting */
 export default function Code({
   children,
   className = 'language-untangled',
-  highlight = true,
+  highlight: highlightProp,
 }: {
   children?: React.ReactNode;
   className?: string;
@@ -48,6 +52,7 @@ export default function Code({
   const language = className.replace(/^language-/, '') as Language;
   const { theme } = useContext(CodeConfigContext);
   // If highlight is disabled, or if children is *not* a single string, play dead.
+  const highlight = highlightProp ?? useContext(PreWrapContext);
   if (typeof children !== 'string' || !highlight) return <code>{children}</code>;
   // Highlight string child with shiki
   const lines = highlighter.codeToThemedTokens(children, language, theme);
@@ -78,5 +83,15 @@ export default function Code({
         </span>
       ))}
     </code>
+  );
+}
+
+
+// A `pre` tag wrapping a `code` tag signals to the Code component that it should highlight
+export function CodeWrapper({ children, ...props }: { children?: React.ReactNode } & React.HTMLAttributes<HTMLPreElement>) {
+  return (
+    <PreWrapContext.Provider value={true}>
+      <pre {...props}>{children}</pre>
+    </PreWrapContext.Provider>
   );
 }
