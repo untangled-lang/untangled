@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "html-react-parser": "^3.0.9",
+    "overnight": "github:cevr/overnight",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "shiki": "^0.14.1"

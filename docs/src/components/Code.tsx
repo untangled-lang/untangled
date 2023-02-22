@@ -3,7 +3,6 @@ import { getHighlighter, HighlighterOptions } from 'shiki';
 import parse from 'html-react-parser';
 
 
-
 const UNTANGLED_LANGUAGE_DEFINITION = {
   id: 'untangled',
   scopeName: 'source.untangled',
@@ -12,10 +11,10 @@ const UNTANGLED_LANGUAGE_DEFINITION = {
 } as const;
 
 const LOAD_LANGUAGES = ['ocaml', 'python', UNTANGLED_LANGUAGE_DEFINITION] as const;
-const LOAD_THEMES = ['poimandres'] as const;
+const LOAD_THEMES = ['poimandres', 'Overnight-Slumber-italic', 'Overnight-Slumber'] as const;
 
 
-// Union types for the above
+// Union types for languages/themes
 type LanguageName<T extends typeof LOAD_LANGUAGES[number]> = T extends object ? T['id'] : T;
 export type Language = LanguageName<typeof LOAD_LANGUAGES[number]>;
 export type Theme = typeof LOAD_THEMES[number];
