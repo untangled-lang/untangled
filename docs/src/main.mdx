@@ -43,47 +43,20 @@ specify the language, including its syntax, semantics, and built-in functions.
 
 
 ### Notation
-The following sections specify the notation used throughout this document to describe the syntactic
-grammar rules of the Untangled language.
 
-Lexer tokens specify how Untangled source is understood by the lexer:
-<div className="boxed" style={{ fontSize: '0.9rem' }}>
-###### Lexer tokens
-  * Monospaced, double-quoted text like <Code highlight>"this"</Code> indicates a literal token in
-    Untangled source code, i.e. those exact characters.
-  * A monospaced, bracketed range of characters like <Code highlight>[a-z]</Code> indicates a
-    literal character in Untangled source code that can be any single character within the ASCII
-    character code range between the values specified (inclusive).
-    * A caret `^` immediately following the opening bracket of a range
-      indicates that the range is negated, i.e. the character matched must be any character *not* in
-      the specified range.
+The syntax of the language is given in BNF-like notation. Terminal symbols are set in monospace font
+like `this`. Nonterminal symbols are set in italicized kebab-cased text like <span className="boxed">*this-example*</span>.
 
-  * Two or more lexer tokens or groups<sup>1</sup>, each separated by a single space, indicate
-    **concatenation**: each of the tokens in the sequence must be present in the source code in the
-    order specified.
-  * A question mark `?` following a lexer token or group indicates that
-    the preceding token/group may occur zero or more times (i.e. is optional).
-  * An asterisk `*` indicates that the preceding token/group may be repeated zero or more times.
-  * A plus sign `+` indicates that it may be repeated one or more times.
-  * A vertical bar `|` between two lexer tokens indicates alternatives; exactly one of the token
-    on the left or the token on the right must be present.
+- Space-separated elements within square brackets indicate an option between any of the elements,
+  e.g. `[a b c]` matches exactly one of `a`, `b`, or `c`. A hyphen is used to indicate an ASCII
+  range, e.g. `[a-z]`.
+- An asterisk `*` indicates that the preceding component may be repeated zero or more times.
+- A plus sign `+` indicates that the preceding component may be repeated one or more times.
+- Parentheses `(` `)` indicate grouping
 
-***Note 1**: Parentheses <code style={{ fontStyle: 'normal' }}>(</code> and
-<code style={{ fontStyle: 'normal'}}>)</code> surrounding any of the above constructs indicate the
-beginning and end of a **group**.*
-</div>
+The special nonterminal <span className="boxed">*any-char*</span> is defined to match any single
+character.
 
-Grammar rule tokens are used to specify how lexer tokens and groups are combined into syntactic
-productions:
-<div className="boxed" style={{ fontSize: '0.9rem' }}>
-###### Grammar rule tokens
-  * Capitalized text like <span className="boxed" style={{ paddingBottom: 0 }}>THIS</span> indicates
-    a token produced by the lexer.
-  * Lower snake-cased text like <span className="boxed">this_example</span> indicates a nonterminal
-    token used in parser grammars.
-  * Italicized pascal-case text like <span className="boxed">ThisExample</span> indicates a terminal
-    syntactical production by the parser, which is represented in the program's Abstract Syntax Tree.
-</div>
 
 ## Syntax
 
