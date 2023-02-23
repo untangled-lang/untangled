@@ -1,5 +1,7 @@
-.PHONY: untangled.exe test
-.PHONY: clean clean-docs clean-vscode
+.PHONY: untangled.exe test clean-untangled
+.PHONY: clean-vscode
+.PHONY: docs-pdf docs-build clean-docs
+.PHONY: default clean
 
 default: untangled.exe
 clean: clean-untangled clean-vscode clean-docs
@@ -34,9 +36,15 @@ docs/node_modules: docs/package.json
 	# Update mtime to avoid make rebuilding unnecessarily
 	touch -m docs/node_modules
 
-docs: docs/node_modules
+docs-pdf: docs/node_modules
+	cd docs && npm run pdf
+
+docs-build: docs/node_modules
 	cd docs && npm run build
+
+docs: docs-build docs-pdf
 
 clean-docs:
 	-rm -rf docs/node_modules
 	-rm -rf docs/dist
+	-rm docs/untangled.pdf
