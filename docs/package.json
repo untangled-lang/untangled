@@ -11,7 +11,7 @@
     "prepare": "node -e \"const fs = require('fs'); fs.writeFileSync('package-lock.json', JSON.stringify(JSON.parse(fs.readFileSync('package-lock.json', 'utf8'))));\"",
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --open"
+    "pdf": "node scripts/capture-pdf.js"
   },
   "dependencies": {
     "overnight": "github:cevr/overnight",
@@ -25,6 +25,7 @@
     "@types/node": "^18.14.0",
     "@types/react-dom": "^18.0.11",
     "@vitejs/plugin-react": "^3.1.0",
+    "puppeteer": "^19.7.2",
     "sass": "^1.58.3",
     "typescript": "^4.9.5",
     "vite": "^4.1.4",
