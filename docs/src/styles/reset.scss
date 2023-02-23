@@ -27,3 +27,13 @@ p, h1, h2, h3, h4, h5, h6 {
     content: none;
   }
 }
+
+pre {
+  font-family: inherit;
+  font-style: inherit;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}

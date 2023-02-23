@@ -59,25 +59,34 @@ h1, h2, h3, h4, h5, h6 {
   color: $white;
 }
 $ratio: 1.250;
-h1 { font-size: 1rem * math.pow($ratio, 5); font-variation-settings: 'wght' 700; & + h2 { margin-top: 0; } }
-h2 { font-size: 1rem * math.pow($ratio, 4); & + h3 { margin-top: 1em; } }
-h3 { font-size: 1rem * math.pow($ratio, 3); & + h4 { margin-top: 1em; } }
-h4 { font-size: 1rem * math.pow($ratio, 2); & + h5 { margin-top: 1em; } }
-h5 { font-size: 1rem * math.pow($ratio, 1); & + h6 { margin-top: 1em; } }
-h6 { font-size: 1rem * math.pow($ratio, 0); }
+@function rem-size($exponent) {
+  @return 1rem * math.pow($ratio, $exponent);
+}
+h1 { font-size: rem-size(5); font-variation-settings: 'wght' 700; & + h2 { margin-top: 0; } }
+h2 { font-size: rem-size(4); & + h3 { margin-top: 1em; } }
+h3 { font-size: rem-size(3); & + h4 { margin-top: 1em; } }
+h4 { font-size: rem-size(2); & + h5 { margin-top: 1em; } }
+h5 { font-size: rem-size(1); & + h6 { margin-top: 1em; } }
+h6 { font-size: rem-size(0); }
 
 a {
   color: inherit;
-  text-decoration-color: $text-hint;
-  transition: text-decoration-color 0.2s ease;
-
-  &:hover {
-    text-decoration-color: currentColor;
+  &[href] {
+    text-decoration-color: $text-hint;
+    transition: text-decoration-color 0.2s ease;
+    &:hover { text-decoration-color: currentColor; }
   }
 }
 
 p {
   margin: 0 0 1em;
+}
+
+.secondary {
+  color: $text-secondary;
+}
+.hint {
+  color: $text-hint;
 }
 
 
@@ -95,25 +104,25 @@ code {
 }
 
 // Code blocks
-@mixin boxedBlock {
-  $margin: 1.75em;
-  $padding-vertical: 1.35em;
+@mixin boxed-block {
+  $margin: 1.75rem;
+  $padding-vertical: 1rem;
   padding: $padding-vertical $block-bleed;
   margin: $margin (-1 * $block-bleed);
-  border-radius: 0.5em;
+  border-radius: 0.5rem;
   box-shadow: 0 0 0 $border-width $border-color;
   &:has(+ figcaption) {
-    margin-bottom: 0.75em;
+    margin-bottom: 0.5rem;
   }
 }
 pre {
-  @include boxedBlock;
+  @include boxed-block;
   line-height: 1.3;
-  font-size: 0.85rem;
+  & > code { font-size: rem-size(-0.5); }
 }
 
 // Inline code
-@mixin inlineBoxed {
+@mixin boxed-inline {
   padding: 0.04rem 0.4rem 0.12rem 0.4rem;
   // display: inline-block;
   margin: 0.1em 0.15em;
@@ -121,10 +130,11 @@ pre {
   text-align: center;
   border: $border-width solid color.scale($white, $alpha: -92.5%);
   border-radius: 4px;
-  font-size: math.div(1rem, math.pow($ratio, 0.5));
+  font-size: rem-size(-0.5);
 }
 :not(pre, :has(pre), pre *) code:where(:not(.lowkey)) {
-  @include inlineBoxed;
+  @include boxed-inline;
+}
 }
 
 
@@ -132,11 +142,11 @@ pre {
 // Misc
 
 div.boxed {
-  @include boxedBlock;
+  @include boxed-block;
   & > :first-child { margin-top: 0; }
   & > :last-child { margin-bottom: 0; }
 }
-span.boxed { @include inlineBoxed; }
+span.boxed { @include boxed-inline; }
 
 hr {
   border: none;
@@ -173,6 +183,7 @@ figcaption {
   font-size: math.div(1rem, $ratio);
   color: $text-secondary;
   font-style: italic;
+  font-variation-settings: 'wght' 450;
 
   code { font-style: normal; display: inline; font-size: 1em; }
   & > p:last-child { margin-bottom: 0; }
@@ -186,15 +197,18 @@ ol, ul {
   margin-bottom: 1em;
   ol, ul { margin-bottom: 0; }
 
-  li {
-    p { display: contents; }
-    p ~ p, p:has(~p) { display: block; }
-  }
-  li:not(:last-child) {
-    margin-bottom: 0.35em;
-  }
+  // Space between list items
+  li:not(:last-child) { margin-bottom: 0.5em; }
+  // A sublist should be spaced apart from text that comes earlier in its parent list item
+  li > :is(ul, ol):not(:first-child) { margin-top: 0.5em; }
 
-  li > :is(ul, ol):not(:first-child) {
-    margin-top: 0.35em;
+  li {
+    // If a li has only a single paragraph, ignore it
+    p { display: contents; }
+    // If a li has multiple paragraphs, that’s meaningful
+    p ~ p, p:has(~p) { display: block; }
+    // Paragraphs need reduced spacing to not make paragraph spaces within a list item seem more
+    // significant than spaces between separate list items
+    p:not(:last-child) { margin-bottom: 0.35em; }
   }
 }
