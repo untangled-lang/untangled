@@ -1,4 +1,4 @@
-import Code from './components/Code';
+import { RuleBlock, Rule, NonTerminal as NT, Terminal as T } from './components/Rule';
 
 
 # Untangled: Language Reference Manual
@@ -45,17 +45,36 @@ specify the language, including its syntax, semantics, and built-in functions.
 ### Notation
 
 The syntax of the language is given in BNF-like notation. Terminal symbols are set in monospace font
-like `this`. Nonterminal symbols are set in italicized kebab-cased text like <span className="boxed">*this-example*</span>.
+like <T>this</T>. Nonterminal symbols are set in italicized kebab-cased text like
+<NT>example-nonterminal</NT>.
 
-- Space-separated elements within square brackets indicate an option between any of the elements,
-  e.g. `[a b c]` matches exactly one of `a`, `b`, or `c`. A hyphen is used to indicate an ASCII
-  range, e.g. `[a-z]`.
-- An asterisk `*` indicates that the preceding component may be repeated zero or more times.
-- A plus sign `+` indicates that the preceding component may be repeated one or more times.
-- Parentheses `(` `)` indicate grouping
+Terminals and nonterminals are combined as followed:
+- A single space between components indicates concatenation—the given components should appear in
+  the given order.
+- Square brackets indicate *character sets*. A character set contains several single-character
+  literals, and matches any one of those characters. For example,
+  <nobr>[<T>a</T> <T>b</T> <T>c</T>]</nobr> matches exactly one of <T>a</T>, <T>b</T>, or <T>c</T>.
+  - Within a character set, a hyphen indicates an ASCII range, e.g. <nobr>[<T>a</T>-<T>z</T>]</nobr>
+    matches any lowercase letter.
+  - A caret after the opening square brace of a character set indicates negation, e.g.
+    <nobr>[^<T>a</T>-<T>z</T>]</nobr> matches any character that is *not* a lowercase letter.
+- Parentheses (<span className="hint">...</span>) indicate grouping.
+- An asterisk <span className="hint">...</span>* indicates that the preceding component may be
+  repeated zero or more times.
+- A plus sign <span className="hint">...</span>+ indicates that the preceding component may be
+  repeated one or more times.
+- A question mark <span className="hint">...</span>? indicates that the preceding component is
+  optional.
 
-The special nonterminal <span className="boxed">*any-char*</span> is defined to match any single
-character.
+These forms are combined into *rules*, each of which gives a single nonterminal on the left and one
+or more possible expansions on the right (one per line, separated by a vertical bar). For example,
+the following rule defines a nonterminal <NT>example-nonterminal</NT> that expands to either “hello”
+or “world”:
+
+<Rule name="example-nonterminal">
+  <><T>hello</T></>
+  <><T>world</T></>
+</Rule>
 
 
 ## Syntax
