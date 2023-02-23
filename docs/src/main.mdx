@@ -79,5 +79,80 @@ or “world”:
 
 ## Syntax
 
-### Keywords
-TODO
+### Blanks
+Spaces, tabs, carriage returns (`\r`), and newlines (`\n`) are considered “blank” characters. Blanks
+are ignored, except that they separate adjacent identifiers, keywords, etc. that would otherwise be
+considered a single token. Blanks are *not* ignored within string literals.
+
+### Comments
+Comments in Untangled follow C-style comment syntax: single-line comments start with two forward
+slashes `//`, and continue until the end of the line; multi-line comments start with `/*` and end
+with `*/`. Comments separate identifiers, keywords, etc. in the same way as blanks. Comments do not
+occur within strings.
+
+### Identifiers
+Identifiers start with a letter, and can contain letters, digits, and underscores.
+<Rule name="ident">
+  <>
+    [<T>a</T>-<T>z</T> <T>A</T>-<T>Z</T>]
+    [<T>a</T>-<T>z</T> <T>A</T>-<T>Z</T> <T>0</T>-<T>9</T> <T>_</T>]*
+  </>
+</Rule>
+
+
+### Literal values
+
+Numeric literals work as one would expect: integer literals contain a sequence of digits, while
+floating-point literal values contain two sequences of digits separated by a decimal point.
+
+<RuleBlock>
+  <Rule name="digit">
+    <>[<T>0</T>-<T>9</T>]</>
+  </Rule>
+
+  <Rule name="digits">
+    <><NT>digit</NT>+</>
+  </Rule>
+
+  <Rule name="integer-literal">
+    <NT>digits</NT>
+  </Rule>
+
+  <Rule name="float-literal">
+    <><NT>digits</NT> <T>.</T> <NT>digits</NT></>
+  </Rule>
+</RuleBlock>
+
+Boolean literals come from the token `true` or the token `false`.
+
+<Rule name="boolean-literal">
+  <T>true</T>
+  <T>false</T>
+</Rule>
+
+String literals start and end with a double quote, and any character *besides* a double quote can
+go inside. The entire contents between (not including) the double quotes make up the string value.
+
+<Rule name="string-literal">
+  <><T>"</T> [^<T>"</T>]* <T>"</T></>
+</Rule>
+
+{/* TODO: do we need to move this after we define expressions? */}
+A tuple literal includes exactly two values.
+
+<Rule name="tuple-literal">
+  <><T>(</T> <NT>expr</NT> <T>,</T> <NT>expr</NT> <T>)</T></>
+</Rule>
+
+An array literal includes an arbitrary number of values.
+
+<RuleBlock>
+  <Rule name="array-literal">
+    <><T>[</T> <NT>array-elements</NT>? <T>]</T></>
+  </Rule>
+
+  <Rule name="array-elements">
+    <NT>expr</NT>
+    <><NT>array-elements</NT> <T>,</T> <NT>expr</NT></>
+  </Rule>
+</RuleBlock>

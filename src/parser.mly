@@ -69,7 +69,7 @@ expr:
   | BLIT             { BoolLit($1)            }
   | SLIT             { StringLit($1)          }
   | LPAREN expr COMMA expr RPAREN { TupleLit($2, $4) }
-  | array            { ArrayLit($1)           }
+  | LBRACKET array_elements RBRACKET { ArrayLit(List.rev $2) }
   // Names
   | ID               { Id($1)                 }
   // Binary operators
@@ -117,8 +117,6 @@ expr:
   // Function calls
   | ID LPAREN args_opt RPAREN { Call($1, $3)  }
 
-
-array: LBRACKET array_elements RBRACKET { List.rev $2 }
 
 array_elements:
   /* nothing */ { [] }

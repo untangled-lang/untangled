@@ -17,6 +17,6 @@
     "incremental": true,
     "noUncheckedIndexedAccess": true,
   },
-  "include": ["**/*.ts", "**/*.tsx", "**/*.mdx", "**/*.js"],
+  "include": ["**/*.ts", "**/*.tsx", "**/*.mdx", "**/*.js", "**/*.mdx"],
   "exclude": ["**/node_modules"]
 }
