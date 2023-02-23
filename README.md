@@ -20,9 +20,10 @@ After installing dependencies, you will be able to:
 - Run `make` to build the main `untangled.exe` executable.
 - Run `make test` to run the full series of automated tests. See [Testing](#testing) for
   additional options. Requires Python 3.
-- Run `make clean` to remove all build artifacts.
 - Run `make vscode-extension` to build and install the VS Code extension for Untangled syntax
   highlighting. Requires VS Code, a recent version of Node.js, and the `code` command in your PATH.
+- Run `make docs` to generate a PDF of the Language Reference Manual. The generated PDF appears at
+  `docs/untangled.pdf`. Requires a recent version Node.js.
 
 
 ## Testing
@@ -34,3 +35,10 @@ executable is up to date.
 - `python3 tests --record-ground-truths` writes new `.gt` ground truths for all tests
 - `python3 tests --record-ground-truths test1 test2 ...` writes new `.gt` ground truths for the
   specified tests
+
+
+## Documentation
+The MDX file at `docs/src/main.mdx` (MDX is Markdown with support for React components) is the
+source file for the Language Reference Manual. You can edit it like a normal markdown file. You can
+also define additional react components in `docs/src/components`, and then import/use them in the
+MDX file.
