@@ -13,7 +13,7 @@ if (!hasDist) {
 const previewServer = await preview({ preview: { port: 5174 } });
 
 // Load the page
-const browser = await puppeteer.launch({ headless: false });
+const browser = await puppeteer.launch({ headless: true });
 const page = await browser.newPage();
 await page.goto('http://localhost:5174');
 await page.waitForSelector('h1');
