@@ -54,7 +54,7 @@ Lexer tokens specify how Untangled source is understood by the lexer:
   * A monospaced, bracketed range of characters like <Code highlight>[a-z]</Code> indicates a
     literal character in Untangled source code that can be any single character within the ASCII
     character code range between the values specified (inclusive).
-    * A caret <span className="boxed">^</span> immediately following the opening bracket of a range
+    * A caret `^` immediately following the opening bracket of a range
       indicates that the range is negated, i.e. the character matched must be any character *not* in
       the specified range.
 
@@ -68,8 +68,9 @@ Lexer tokens specify how Untangled source is understood by the lexer:
   * A vertical bar `|` between two lexer tokens indicates alternatives; exactly one of the token
     on the left or the token on the right must be present.
 
-***Note 1**: Parentheses <span className="boxed">(</span> and <span className="boxed">)</span> surrounding
-any of the above constructs indicate the beginning and end of a **group**.*
+***Note 1**: Parentheses <code style={{ fontStyle: 'normal' }}>(</code> and
+<code style={{ fontStyle: 'normal'}}>)</code> surrounding any of the above constructs indicate the
+beginning and end of a **group**.*
 </div>
 
 Grammar rule tokens are used to specify how lexer tokens and groups are combined into syntactic

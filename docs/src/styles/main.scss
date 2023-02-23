@@ -131,7 +131,11 @@ pre {
 
 // Misc
 
-div.boxed { @include boxedBlock; }
+div.boxed {
+  @include boxedBlock;
+  & > :first-child { margin-top: 0; }
+  & > :last-child { margin-bottom: 0; }
+}
 span.boxed { @include inlineBoxed; }
 
 hr {
