@@ -35,6 +35,10 @@ body {
   & > :last-child { margin-bottom: 0; }
 }
 
+html, body {
+  scroll-behavior: smooth;
+}
+
 
 
 // Typography
@@ -135,8 +139,66 @@ pre {
 :not(pre, :has(pre), pre *) code:where(:not(.lowkey)) {
   @include boxed-inline;
 }
+
+
+// Rules
+.rule-block {
+  @include boxed-block;
+  // left margin, rule name, rule separator (either ::= or |), rule body, right margin
+  display: grid;
+  grid-template-columns: 1fr max-content max-content max-content 1fr;
+  grid-template-rows: auto;
+  column-gap: 1em;
+  row-gap: 0.1em;
+
+  .rule-name { grid-column: 2; justify-self: right; }
+  .rule-separator { grid-column: 3; justify-self: center; }
+  .rule-body { grid-column: 4; }
+
+  // Each Rule has its own rule-block div wrapper so that it could be rendered properly without
+  // wrapping it in a RuleBlock. Therefore, a RuleBlock containing multiple Rules will contain
+  // nested rule-block divs. We can leverage that markup to add space between adjacent rules in the
+  // same block.
+  & > .rule-block:not(:last-child)::after {
+    content: '';
+    grid-column: 1 / -1;
+    height: 1em;
+  }
+
+  // Only the outermost rule block actually displays and dictates the grid
+  .rule-block { display: contents; }
+  // Squash unintended markup (paragraphs etc.) that Markdown might generate
+  :not(:is(.rule-name, .rule-separator, .rule-body, .nonterminal, .terminal)) {
+    display: contents;
+  }
 }
 
+.nonterminal {
+  font-style: italic;
+  font-variation-settings: 'wght' 500;
+  white-space: nowrap;
+
+  &:is(a[href]) {
+    text-decoration-color: color.scale($text-hint, $alpha: -50%);
+    &:hover { text-decoration-color: $text-hint; }
+  }
+}
+
+.terminal {
+  @include boxed-inline;
+  font-family: fonts.$mono;
+  white-space: nowrap;
+}
+
+// Scroll margin for breathing room when anchor link scrolls to a rule-name
+// Give the first rule in the block enough room that the border at the top of the block is visible
+.rule-name a {
+  scroll-margin-top: 2rem;
+}
+// Subsequent rules in the block don’t need quite that much room
+.rule-block .rule-block ~ .rule-block .rule-name a {
+  scroll-margin-top: 0.75rem;
+}
 
 
 // Misc
