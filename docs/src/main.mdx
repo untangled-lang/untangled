@@ -102,6 +102,19 @@ Identifiers start with a letter, and can contain letters, digits, and underscore
 
 ### Literal values
 
+{/* TODO - Thread, Sempahore, and Unit literal */}
+{/* TODO - Add unit type to preamble */}
+{/* TODO - Add thread + semaphore type to preamble */}
+Untangled data type includes boolean, integer, float, string, tuple, and array. 
+
+<Rule name="literal">
+  <NT>integer-literal</NT>
+  <NT>float-literal</NT>
+  <NT>boolean-literal</NT>
+  <NT>tuple-literal</NT>
+  <NT>array-literal</NT>
+</Rule>
+
 Numeric literals work as one would expect: integer literals contain a sequence of digits, while
 floating-point literal values contain two sequences of digits separated by a decimal point.
 
@@ -154,5 +167,31 @@ An array literal includes an arbitrary number of values.
   <Rule name="array-elements">
     <NT>expr</NT>
     <><NT>array-elements</NT> <T>,</T> <NT>expr</NT></>
+  </Rule>
+</RuleBlock>
+
+### Expressions
+
+<RuleBlock>
+  <Rule name="expr">
+    <NT>literal</NT>
+    {/* TODO - Should ID be linked to ident, but ID is a terminal */}
+    <><T>ID</T></>
+    <><NT>expr</NT> <T>infix-op</T> <NT>expr</NT></>
+    <><T>prefix-op</T> <NT>expr</NT></>
+    <><NT>expr</NT> <T>postfix-op</T></>
+  </Rule>
+
+  <Rule name="infix-op">
+    <>[<T>+</T> <T>-</T> <T>*</T> <T>/</T> <T>%</T> <T>**</T>]</>
+    <>[<T>&#61;</T> <T>&lt;</T> <T>></T> <T>&lt;&#61;</T> <T>&#61;</T> <T>||</T> <T>&&</T>]</>
+  </Rule>
+
+  <Rule name="prefix-op">
+    <>[<T>-</T> <T>!</T>]</>
+  </Rule>
+
+  <Rule name="postfix-op">
+    <>[<T>++</T> <T>--</T>]</>
   </Rule>
 </RuleBlock>
