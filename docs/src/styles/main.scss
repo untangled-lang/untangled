@@ -204,6 +204,7 @@ pre {
   @include boxed-inline;
   font-family: fonts.$mono;
   white-space: nowrap;
+  font-variant-ligatures: none;
 }
 
 // Scroll margin for breathing room when anchor link scrolls to a rule-name
