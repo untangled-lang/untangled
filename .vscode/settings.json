@@ -1,6 +1,8 @@
 {
   "editor.tabSize": 2,
   "editor.rulers": [100],
+  "files.trimTrailingWhitespace": true,
+  "editor.trimAutoWhitespace": true,
 
   "python.linting.pycodestyleEnabled": true,
   "[python]": {
@@ -8,5 +10,5 @@
     "editor.rulers": [79],
   },
 
-  "mdx.experimentalLanguageServer": true
+  "mdx.experimentalLanguageServer": true,
 }
