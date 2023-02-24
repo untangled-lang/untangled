@@ -14,9 +14,11 @@ export function RuleBlock({ children }: { children: React.ReactNode }) {
 export function Rule({
   name,
   children: casesNode,
+  inlineCases = false,
 }: {
   name: string;
   children: React.ReactNode,
+  inlineCases?: boolean,
 }) {
   const cases = React.Children.toArray(casesNode);
   return (
@@ -25,14 +27,30 @@ export function Rule({
         <NonTerminal definition>{name}</NonTerminal>
       </div>
       <div className="rule-separator">::=</div>
-      <div className="rule-body">{cases[0] ?? null}</div>
 
-      {cases.slice(1).map((child, idx) => (
-        <React.Fragment key={idx}>
-          <div className="rule-separator">&#x01c0;</div>
-          <div className="rule-body">{child}</div>
-        </React.Fragment>
-      ))}
+      {
+        !inlineCases ? (
+          <>
+            <div className="rule-body">{cases[0] ?? null}</div>
+
+            {cases.slice(1).map((child, idx) => (
+              <React.Fragment key={idx}>
+                <div className="rule-separator">&#x01c0;</div>
+                <div className="rule-body">{child}</div>
+              </React.Fragment>
+            ))}
+          </>
+        ) : (
+          <div className="rule-body inline-cases">
+            {cases.map((child, idx) => (
+              <div key={idx}>
+                {child}
+                {idx < cases.length - 1 ? <span className="rule-separator">&#x01c0;</span> : null}
+              </div>
+            ))}
+          </div>
+        )
+      }
     </div>
   );
 }

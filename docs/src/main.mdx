@@ -67,9 +67,9 @@ Terminals and nonterminals are combined as followed:
   optional.
 
 These forms are combined into *rules*, each of which gives a single nonterminal on the left and one
-or more possible expansions on the right (one per line, separated by a vertical bar). For example,
-the following rule defines a nonterminal <NT>example-nonterminal</NT> that expands to either “hello”
-or “world”:
+or more possible expansions on the right (each separated by a vertical bar). For example, the
+following rule defines a nonterminal <NT>example-nonterminal</NT> that expands to either “hello” or
+“world”:
 
 <Rule name="example-nonterminal">
   <><T>hello</T></>
@@ -170,28 +170,50 @@ An array literal includes an arbitrary number of values.
   </Rule>
 </RuleBlock>
 
+
 ### Expressions
+
+Expressions in Untangled include literals and identifiers, and are combined using a range of
+operators.
 
 <RuleBlock>
   <Rule name="expr">
     <NT>literal</NT>
-    {/* TODO - Should ID be linked to ident, but ID is a terminal */}
-    <><T>ID</T></>
-    <><NT>expr</NT> <T>infix-op</T> <NT>expr</NT></>
-    <><T>prefix-op</T> <NT>expr</NT></>
-    <><NT>expr</NT> <T>postfix-op</T></>
+    <><NT>ident</NT></>
+    <><NT>expr</NT> <NT>infix-op</NT> <NT>expr</NT></>
+    <><NT>prefix-op</NT> <NT>expr</NT></>
+    <><NT>expr</NT> <NT>postfix-op</NT></>
+    <><NT>expr</NT> <T>[</T> <NT>expr</NT> <T>]</T></>
+    <NT>assignment</NT>
+    <><T>(</T> <NT>expr</NT> <T>)</T></>
+    <><T>spawn</T> <NT>ident</NT></>
+    <><NT>ident</NT> <T>(</T> <NT>call-args</NT>? <T>)</T></>
   </Rule>
 
-  <Rule name="infix-op">
-    <>[<T>+</T> <T>-</T> <T>*</T> <T>/</T> <T>%</T> <T>**</T>]</>
-    <>[<T>&#61;</T> <T>&lt;</T> <T>></T> <T>&lt;&#61;</T> <T>&#61;</T> <T>||</T> <T>&&</T>]</>
+  <Rule name="infix-op" inlineCases>
+    <T>+</T>
+    <T>-</T>
+    <T>*</T>
+    <T>/</T>
+    <T>%</T>
+    <T>**</T>
+    <T>==</T>
+    <T>!=</T>
+    <T>&lt;</T>
+    <T>&lt;=</T>
+    <T>&gt;</T>
+    <T>&gt;=</T>
+    <T>&amp;&amp;</T>
+    <T>||</T>
   </Rule>
 
-  <Rule name="prefix-op">
-    <>[<T>-</T> <T>!</T>]</>
+  <Rule name="prefix-op" inlineCases>
+    <T>-</T>
+    <T>!</T>
   </Rule>
 
-  <Rule name="postfix-op">
-    <>[<T>++</T> <T>--</T>]</>
+  <Rule name="postfix-op" inlineCases>
+    <T>++</T>
+    <T>--</T>
   </Rule>
 </RuleBlock>

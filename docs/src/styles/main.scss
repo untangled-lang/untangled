@@ -146,7 +146,7 @@ pre {
   @include boxed-block;
   // left margin, rule name, rule separator (either ::= or |), rule body, right margin
   display: grid;
-  grid-template-columns: 1fr max-content max-content max-content 1fr;
+  grid-template-columns: 1fr max-content max-content minmax(0, max-content) 1fr;
   grid-template-rows: auto;
   column-gap: 1em;
   row-gap: 0.1em;
@@ -154,6 +154,18 @@ pre {
   .rule-name { grid-column: 2; justify-self: right; }
   .rule-separator { grid-column: 3; justify-self: center; }
   .rule-body { grid-column: 4; }
+  .rule-body.inline-cases {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 0.2em;
+    row-gap: 0.1em;
+
+    div {
+      display: flex;
+      align-items: center;
+      gap: 0.25em;
+    }
+  }
 
   // Each Rule has its own rule-block div wrapper so that it could be rendered properly without
   // wrapping it in a RuleBlock. Therefore, a RuleBlock containing multiple Rules will contain
@@ -168,7 +180,7 @@ pre {
   // Only the outermost rule block actually displays and dictates the grid
   .rule-block { display: contents; }
   // Squash unintended markup (paragraphs etc.) that Markdown might generate
-  :not(:is(.rule-name, .rule-separator, .rule-body, .nonterminal, .terminal)) {
+  :not(:is(.rule-name, .rule-separator, .rule-body, .nonterminal, .terminal, .rule-body > div)) {
     display: contents;
   }
 }
@@ -182,6 +194,10 @@ pre {
     text-decoration-color: color.scale($text-hint, $alpha: -50%);
     &:hover { text-decoration-color: $text-hint; }
   }
+}
+
+.nonterminal + .nonterminal {
+  margin-left: 0.35em;
 }
 
 .terminal {
