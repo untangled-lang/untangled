@@ -204,6 +204,12 @@ The next type of expression applies an operator to one or two subexpressions (ei
 <NT>postfix-operator</NT> before or after an expression).
 
 <RuleBlock>
+  <Rule name="operation">
+    <><NT>expr</NT> <NT>infix-op</NT> <NT>expr</NT></>
+    <><NT>prefix-op</NT> <NT>expr</NT></>
+    <><NT>expr</NT> <NT>postfix-op</NT></>
+  </Rule>
+
   <Rule name="infix-op" inlineCases>
     <T>+</T>
     <T>-</T>
@@ -311,7 +317,7 @@ Function call expressions invoke a function with a specified set of arguments. T
 evaluates to the return value of the function.
 
 <RuleBlock>
-  <Rule name="call">
+  <Rule name="function-call">
     <><NT>ident</NT> <T>(</T> <NT>call-args</NT>? <T>)</T></>
   </Rule>
 
