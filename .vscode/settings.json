@@ -1,9 +1,12 @@
 {
   "editor.tabSize": 2,
-  "python.linting.pycodestyleEnabled": true,
   "editor.rulers": [100],
+
+  "python.linting.pycodestyleEnabled": true,
   "[python]": {
     "editor.tabSize": 4,
     "editor.rulers": [79],
-  }
+  },
+
+  "mdx.experimentalLanguageServer": true
 }

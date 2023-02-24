@@ -1,6 +1,7 @@
 {
   "recommendations": [
     "ocamllabs.ocaml-platform",
-    "ms-python.python"
+    "ms-python.python",
+    "unifiedjs.vscode-mdx"
   ]
 }
