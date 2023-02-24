@@ -42,3 +42,8 @@ The MDX file at `docs/src/main.mdx` (MDX is Markdown with support for React comp
 source file for the Language Reference Manual. You can edit it like a normal markdown file. You can
 also define additional react components in `docs/src/components`, and then import/use them in the
 MDX file.
+
+While writing, you can run `npm run dev` from inside the `docs` folder to start a local server that
+will render a preview of the LRM, and auto-refresh when you make changes.
+
+Running `make docs` from the project root will automatically generate a PDF of the LRM.
