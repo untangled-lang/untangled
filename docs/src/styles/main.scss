@@ -97,9 +97,12 @@ p {
 
 // Code
 
-$block-bleed: 1.75em;
-$border-width: 1.5px;
-$border-color: color.scale($white, $alpha: -85%);
+:root {
+  --bleed: 1.75rem;
+  --border-width: 1.5px;
+}
+
+$border-color: color.mix($black, $white, 85%);
 
 
 code {
@@ -111,10 +114,10 @@ code {
 @mixin boxed-block {
   $margin: 1.75rem;
   $padding-vertical: 1rem;
-  padding: $padding-vertical $block-bleed;
-  margin: $margin (-1 * $block-bleed);
+  padding: $padding-vertical var(--bleed);
+  margin: $margin calc(-1 * var(--bleed));
   border-radius: 0.5rem;
-  box-shadow: 0 0 0 $border-width $border-color;
+  box-shadow: 0 0 0 var(--border-width) $border-color;
   &:has(+ figcaption) {
     margin-bottom: 0.5rem;
   }
@@ -132,7 +135,7 @@ pre {
   margin: 0.1em 0.15em;
   background: color.scale($white, $alpha: -92.5%);
   text-align: center;
-  border: $border-width solid color.scale($white, $alpha: -92.5%);
+  border: var(--border-width) solid color.scale($white, $alpha: -92.5%);
   border-radius: 4px;
   font-size: rem-size(-0.5);
 }
@@ -141,7 +144,9 @@ pre {
 }
 
 
+
 // Rules
+
 .rule-block {
   @include boxed-block;
   // left margin, rule name, rule separator (either ::= or |), rule body, right margin
@@ -183,6 +188,10 @@ pre {
   :not(:is(.rule-name, .rule-separator, .rule-body, .nonterminal, .terminal, .rule-body > div)) {
     display: contents;
   }
+
+  .nonterminal {
+    margin: 0 0.1em;
+  }
 }
 
 .nonterminal {
@@ -218,6 +227,26 @@ pre {
 }
 
 
+
+// Tables
+table {
+  @include boxed-block;
+  --bleed: 0;
+  padding: 0;
+
+  td, th {
+    padding: 0.5em 1em;
+    border: var(--border-width) solid $border-color;
+
+    &:first-child { border-left: 0; }
+    &:last-child { border-right: 0; }
+  }
+  thead tr:first-child th { border-top: 0; }
+  tbody tr:last-child td { border-bottom: 0; }
+}
+
+
+
 // Misc
 
 div.boxed {
@@ -229,9 +258,9 @@ span.boxed { @include boxed-inline; }
 
 hr {
   border: none;
-  margin: 3rem (-1 * $block-bleed);
+  margin: 3rem calc(-1 * var(--bleed));
   &:not([class]) { // default; line
-    height: $border-width;
+    height: var(--border-width);
     background: $border-color;
   }
 
