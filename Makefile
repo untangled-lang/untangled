@@ -1,6 +1,6 @@
 .PHONY: untangled.exe test clean-untangled
 .PHONY: clean-vscode
-.PHONY: docs-pdf docs-build clean-docs
+.PHONY: docs-dev docs-build docs-pdf clean-docs
 .PHONY: default clean
 
 default: untangled.exe
@@ -30,19 +30,20 @@ clean-vscode:
 
 
 # Docs
+
 docs/node_modules: docs/package.json
 	cd docs && npm install
 	# Update mtime to avoid make rebuilding unnecessarily
 	touch -m docs/node_modules
-
-docs-pdf: docs/node_modules
-	cd docs && npm run pdf
 
 docs-dev:
 	cd docs && npm run dev
 
 docs-build: docs/node_modules
 	cd docs && npm run build
+
+docs-pdf: docs/node_modules
+	cd docs && npm run pdf
 
 docs: docs-build docs-pdf
 
