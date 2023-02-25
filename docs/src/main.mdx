@@ -90,9 +90,85 @@ slashes <T>//</T>, and continue until the end of the line; multi-line comments s
 and end with <T>\*/</T>. Comments separate identifiers, keywords, etc. in the same way as blanks.
 Comments do not occur within strings.
 
+### Keywords
+
+The following identifiers are reserved as keywords, and cannot be employed otherwise:
+<div className="boxed">
+- <T>if</T>
+- <T>else</T>
+- <T>for</T>
+- <T>while</T>
+- <T>break</T>
+- <T>continue</T>
+- <T>return</T>
+
+- <T>thread_def</T>
+- <T>thread</T>
+- <T>spawn</T>
+- <T>receive</T>
+- <T>parent</T>
+
+- <T>int</T>
+- <T>float</T>
+- <T>bool</T>
+- <T>string</T>
+- <T>thread</T>
+- <T>semaphore</T>
+- <T>void</T>
+
+- <T>true</T>
+- <T>false</T>
+</div>
+
+
+The following are also keywords in Untangled:
+<div className="boxed">
+{/* Punctuation */}
+- <T>;</T>
+- <T>(</T>
+- <T>)</T>
+- <T>\{</T>
+- <T>}</T>
+- <T>[</T>
+- <T>]</T>
+
+{/* Operators */}
+- <T>+</T>
+- <T>++</T>
+- <T>-</T>
+- <T>\*</T>
+- <T>/</T>
+- <T>%</T>
+- <T>\*\*</T>
+- <T>=</T>
+- <T>+=</T>
+- <T>-=</T>
+- <T>\*=</T>
+- <T>/=</T>
+- <T>%=</T>
+- <T>\*\*=</T>
+- <T>!=</T>
+- <T>\<</T>
+- <T>\<=</T>
+- <T>\></T>
+- <T>\>=</T>
+- <T>&&</T>
+- <T>||</T>
+- <T>!</T>
+
+{/* Thread specific */}
+- <T>-\></T>
+- <T>\<\<</T>
+- <T>_</T>
+</div>
+
+
 ### Identifiers
+
 Identifiers serve as unique names for variables, thread definitions, and functions. Identifiers
-start with a letter, and can contain letters, digits, and underscores.
+start with a letter, and can contain letters, digits, and underscores. It is a compiler error
+to use an identifier with the same name as one of the keywords.
+
 <Rule name="ident">
   <>
     [<T>a</T>-<T>z</T> <T>A</T>-<T>Z</T>]

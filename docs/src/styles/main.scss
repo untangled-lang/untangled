@@ -256,6 +256,18 @@ div.boxed {
 }
 span.boxed { @include boxed-inline; }
 
+div.boxed:has(> ul) {
+  @include boxed-block;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em 0.5em;
+
+  & > ul {
+    list-style: none;
+    display: contents;
+  }
+}
+
 hr {
   border: none;
   margin: 3rem calc(-1 * var(--bleed));

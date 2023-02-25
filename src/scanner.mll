@@ -9,6 +9,9 @@ rule token = parse
   (* Comments *)
   | "/*" { block_comment_scanner lexbuf }
   | "//" { line_comment_scanner lexbuf }
+
+  (* start keywords *)
+
   (* Punctuation *)
   | ';' { SEMI }
   | '(' { LPAREN }
@@ -76,9 +79,12 @@ rule token = parse
 
   | "true" { BLIT(true) }
   | "false" { BLIT(false) }
+  | "_"  { WCARD }
+
+  (* end keywords *)
+
   | digits as lxm { ILIT(int_of_string lxm) }
   | digits '.'  digit* as lxm { FLIT(lxm) }
-  | "_"  { WCARD }
   | ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
   | '"' { string_scanner [] lexbuf }
 
