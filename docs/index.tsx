@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import Main from './src/main.mdx';
+import Main from './src/main';
 import Code, { CodeConfig, CodeWrapper } from './src/components/Code';
 
 const root = document.getElementById('root-container');
