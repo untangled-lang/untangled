@@ -71,7 +71,10 @@ h2 { font-size: rem-size(4); & + h3 { margin-top: 1em; } }
 h3 { font-size: rem-size(3); & + h4 { margin-top: 1em; } }
 h4 { font-size: rem-size(2); & + h5 { margin-top: 1em; } }
 h5 { font-size: rem-size(1); & + h6 { margin-top: 1em; } }
-h6 { font-size: rem-size(0); }
+h6 {
+  font-size: rem-size(0);
+  font-family: fonts.$body;
+}
 
 a {
   color: inherit;
@@ -79,6 +82,11 @@ a {
     text-decoration-color: $text-hint;
     transition: text-decoration-color 0.2s ease;
     &:hover { text-decoration-color: currentColor; }
+  }
+
+  &.invalid {
+    color: #ff2929;
+    cursor: not-allowed;
   }
 }
 
