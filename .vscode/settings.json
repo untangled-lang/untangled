@@ -7,8 +7,8 @@
   "python.linting.pycodestyleEnabled": true,
   "[python]": {
     "editor.tabSize": 4,
-    "editor.rulers": [79],
+    "editor.rulers": [79]
   },
 
-  "mdx.experimentalLanguageServer": true,
+  "mdx.experimentalLanguageServer": true
 }

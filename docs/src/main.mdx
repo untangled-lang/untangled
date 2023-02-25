@@ -1,14 +1,19 @@
-import { RuleBlock, Rule, NonTerminal as NT, Terminal as T } from './components/Rule';
-
+import {
+  RuleBlock,
+  Rule,
+  NonTerminal as NT,
+  Terminal as T,
+  Semi,
+  Ident,
+  Expr,
+} from "./components/Rule";
 
 # Untangled: Language Reference Manual
 
-<div style={{ marginTop: '-1rem', marginBottom: '3rem' }}>
-  [Luke Deen Taylor](mailto:luke.taylor@tufts.edu),
-  [Nick Doan](mailto:hdoan02@tufts.edu),
-  [Duru Ugurlu](mailto:duru.ugurlu@tufts.edu),
-  [Caleb Ledi](mailto:cledi01@tufts.edu),
-  [Chloe Lam](mailto:clam08@tufts.edu)
+<div style={{ marginTop: "-1rem", marginBottom: "3rem" }}>
+  [Luke Deen Taylor](mailto:luke.taylor@tufts.edu), [Nick
+  Doan](mailto:hdoan02@tufts.edu), [Duru Ugurlu](mailto:duru.ugurlu@tufts.edu),
+  [Caleb Ledi](mailto:cledi01@tufts.edu), [Chloe Lam](mailto:clam08@tufts.edu)
 </div>
 
 **Untangled** is a new programming language with first-class support for multithreading. It
@@ -24,18 +29,19 @@ and abstractions over multithreading.
     parent << sum; // send the result back
   }
 
-  thread_def Main {
-    thread my_worker = spawn SumWorker;
-    my_worker << 100000;
-    // Main thread is free to do something else here...
-    receive { int x -> int result = x; _ -> exit(); };
-    print(result);
-  }
-  ```
-  <figcaption>
-    A simple program demonstrating multithreaded computation in Untangled. The `Main` thread
-    continues running while the `SumWorker` thread does hard, CPU-bound computations.
-  </figcaption>
+thread*def Main {
+thread my_worker = spawn SumWorker;
+my_worker << 100000;
+// Main thread is free to do something else here...
+receive { int x -> int result = x; * -> exit(); };
+print(result);
+}
+
+```
+<figcaption>
+  A simple program demonstrating multithreaded computation in Untangled. The `Main` thread
+  continues running while the `SumWorker` thread does hard, CPU-bound computations.
+</figcaption>
 </figure>
 
 This document serves as authoritative reference for the Untangled language. It is intended to fully
@@ -50,21 +56,21 @@ like <T>this</T>. Nonterminal symbols are set in italicized kebab-cased text lik
 
 Terminals and nonterminals are combined as followed:
 - A single space between components indicates concatenation—the given components should appear in
-  the given order.
+the given order.
 - Square brackets indicate *character sets*. A character set contains several single-character
-  literals, and matches any one of those characters. For example,
-  <nobr>[<T>a</T> <T>b</T> <T>c</T>]</nobr> matches exactly one of <T>a</T>, <T>b</T>, or <T>c</T>.
-  - Within a character set, a hyphen indicates an ASCII range, e.g. <nobr>[<T>a</T>-<T>z</T>]</nobr>
-    matches any lowercase letter.
-  - A caret after the opening square brace of a character set indicates negation, e.g.
-    <nobr>[^<T>a</T>-<T>z</T>]</nobr> matches any character that is *not* a lowercase letter.
+literals, and matches any one of those characters. For example,
+<nobr>[<T>a</T> <T>b</T> <T>c</T>]</nobr> matches exactly one of <T>a</T>, <T>b</T>, or <T>c</T>.
+- Within a character set, a hyphen indicates an ASCII range, e.g. <nobr>[<T>a</T>-<T>z</T>]</nobr>
+  matches any lowercase letter.
+- A caret after the opening square brace of a character set indicates negation, e.g.
+  <nobr>[^<T>a</T>-<T>z</T>]</nobr> matches any character that is *not* a lowercase letter.
 - Parentheses (<span className="hint">...</span>) indicate grouping.
 - An asterisk <span className="hint">...</span>* indicates that the preceding component may be
-  repeated zero or more times.
+repeated zero or more times.
 - A plus sign <span className="hint">...</span>+ indicates that the preceding component may be
-  repeated one or more times.
+repeated one or more times.
 - A question mark <span className="hint">...</span>? indicates that the preceding component is
-  optional.
+optional.
 
 These forms are combined into *rules*, each of which gives a single nonterminal on the left and one
 or more possible expansions on the right (each separated by a vertical bar). For example, the
@@ -72,8 +78,8 @@ following rule defines a nonterminal <NT>example-nonterminal</NT> that expands t
 “world”:
 
 <Rule name="example-nonterminal">
-  <><T>hello</T></>
-  <><T>world</T></>
+<><T>hello</T></>
+<><T>world</T></>
 </Rule>
 
 
@@ -86,17 +92,17 @@ considered a single token. Blanks are *not* ignored within string literals.
 
 ### Comments
 Comments in Untangled follow C-style comment syntax: single-line comments start with two forward
-slashes `//`, and continue until the end of the line; multi-line comments start with `/*` and end
+slashes `//` and continue until the end of the line; multi-line comments start with `/*` and end
 with `*/`. Comments separate identifiers, keywords, etc. in the same way as blanks. Comments do not
 occur within strings.
 
 ### Identifiers
 Identifiers start with a letter, and can contain letters, digits, and underscores.
 <Rule name="ident">
-  <>
-    [<T>a</T>-<T>z</T> <T>A</T>-<T>Z</T>]
-    [<T>a</T>-<T>z</T> <T>A</T>-<T>Z</T> <T>0</T>-<T>9</T> <T>_</T>]*
-  </>
+<>
+  [<T>a</T>-<T>z</T> <T>A</T>-<T>Z</T>]
+  [<T>a</T>-<T>z</T> <T>A</T>-<T>Z</T> <T>0</T>-<T>9</T> <T>_</T>]*
+</>
 </Rule>
 
 
@@ -110,14 +116,14 @@ The **type** of an expression refers to the [type](#types) of value that it eval
 There are several forms of expressions:
 
 <Rule name="expr">
-  <NT>literal</NT>
-  <NT>ident</NT>
-  <NT>operation</NT>
-  <NT>array-access</NT>
-  <NT>assignment</NT>
-  <NT>grouping</NT>
-  <NT>function-call</NT>
-  <NT>thread-spawn</NT>
+<NT>literal</NT>
+<NT>ident</NT>
+<NT>operation</NT>
+<NT>array-access</NT>
+<NT>assignment</NT>
+<NT>grouping</NT>
+<NT>function-call</NT>
+<NT>thread-spawn</NT>
 </Rule>
 
 
@@ -128,66 +134,67 @@ In Untangled, boolean, integer, float, string, tuple, and array values can be co
 specific value.
 
 <Rule name="literal">
-  <NT>integer-literal</NT>
-  <NT>float-literal</NT>
-  <NT>boolean-literal</NT>
-  <NT>tuple-literal</NT>
-  <NT>array-literal</NT>
+<NT>integer-literal</NT>
+<NT>float-literal</NT>
+<NT>boolean-literal</NT>
+<NT>tuple-literal</NT>
+<NT>array-literal</NT>
 </Rule>
 
 Numeric literals work as one would expect: they contain sequences of digits, and floating-point
 literal values contain a decimal point.
 
 <RuleBlock>
-  <Rule name="digit">
-    <>[<T>0</T>-<T>9</T>]</>
-  </Rule>
+<Rule name="digit">
+  <>[<T>0</T>-<T>9</T>]</>
+</Rule>
 
-  <Rule name="digits">
-    <><NT>digit</NT>+</>
-  </Rule>
+<Rule name="digits">
+  <><NT>digit</NT>+</>
+</Rule>
 
-  <Rule name="integer-literal">
-    <NT>digits</NT>
-  </Rule>
+<Rule name="integer-literal">
+  <NT>digits</NT>
+</Rule>
 
-  <Rule name="float-literal">
-    <><NT>digits</NT> <T>.</T> <NT>digits</NT></>
-  </Rule>
+<Rule name="float-literal">
+  <><NT>digits</NT> <T>.</T> <NT>digits</NT></>
+</Rule>
 </RuleBlock>
 
 Boolean literals come from the token `true` or the token `false`.
 
 <Rule name="boolean-literal">
-  <T>true</T>
-  <T>false</T>
+<T>true</T>
+<T>false</T>
 </Rule>
 
-String literals start and end with a double quote, and any character *besides* a double quote can
-go inside. The entire contents between (not including) the double quotes make up the string value.
+String literals start and end with a double quote, and any sequence of
+characters, *besides* a double quote can go inside. The entire contents between
+(not including) the double quotes make up the string value.
 
 <Rule name="string-literal">
-  <><T>"</T> [^<T>"</T>]* <T>"</T></>
+<><T>"</T> [^<T>"</T>]* <T>"</T></>
 </Rule>
 
 A tuple literal groups exactly two expressions, each of which can have any type.
 
 <Rule name="tuple-literal">
-  <><T>(</T> <NT>expr</NT> <T>,</T> <NT>expr</NT> <T>)</T></>
+<><T>(</T> <NT>expr</NT> <T>,</T> <NT>expr</NT> <T>)</T></>
 </Rule>
 
 An array literal includes an arbitrary number of values; all of the expressions inside an array
 literal must have the same type.
 
 <RuleBlock>
-  <Rule name="array-literal">
-    <><T>[</T> <NT>array-elements</NT>? <T>]</T></>
-  </Rule>
+<Rule name="array-literal">
+  <><T>[</T> <NT>array-elements</NT>? <T>]</T></>
+</Rule>
 
-  <Rule name="array-elements">
-    <NT>expr</NT>
-    <><NT>array-elements</NT> <T>,</T> <NT>expr</NT></>
-  </Rule>
+<Rule name="array-elements">
+  <NT>expr</NT>
+  <><NT>array-elements</NT> <T>,</T> <NT>expr</NT></>
+</Rule>
 </RuleBlock>
 
 
@@ -204,45 +211,46 @@ The next type of expression applies an operator to one or two subexpressions (ei
 <NT>postfix-operator</NT> before or after an expression).
 
 <RuleBlock>
-  <Rule name="operation">
-    <><NT>expr</NT> <NT>infix-op</NT> <NT>expr</NT></>
-    <><NT>prefix-op</NT> <NT>expr</NT></>
-    <><NT>expr</NT> <NT>postfix-op</NT></>
-  </Rule>
+<Rule name="operation">
+  <><NT>expr</NT> <NT>infix-op</NT> <NT>expr</NT></>
+  <><NT>prefix-op</NT> <NT>expr</NT></>
+  <><NT>expr</NT> <NT>postfix-op</NT></>
+</Rule>
 
-  <Rule name="infix-op" inlineCases>
-    <T>+</T>
-    <T>-</T>
-    <T>*</T>
-    <T>/</T>
-    <T>%</T>
-    <T>**</T>
-    <T>==</T>
-    <T>!=</T>
-    <T>&lt;</T>
-    <T>&lt;=</T>
-    <T>&gt;</T>
-    <T>&gt;=</T>
-    <T>&amp;&amp;</T>
-    <T>||</T>
-  </Rule>
+<Rule name="infix-op" inlineCases>
+  <T>+</T>
+  <T>-</T>
+  <T>*</T>
+  <T>/</T>
+  <T>%</T>
+  <T>**</T>
+  <T>==</T>
+  <T>!=</T>
+  <T>&lt;</T>
+  <T>&lt;=</T>
+  <T>&gt;</T>
+  <T>&gt;=</T>
+  <T>&amp;&amp;</T>
+  <T>||</T>
+</Rule>
 
-  <Rule name="prefix-op" inlineCases>
-    <T>-</T>
-    <T>!</T>
-  </Rule>
+<Rule name="prefix-op" inlineCases>
+  <T>-</T>
+  <T>!</T>
+</Rule>
 
-  <Rule name="postfix-op" inlineCases>
-    <T>++</T>
-    <T>--</T>
-  </Rule>
+<Rule name="postfix-op" inlineCases>
+  <T>++</T>
+  <T>--</T>
+</Rule>
 </RuleBlock>
 
 ##### Infix operators
+{/* TODO - Check if this should be included in the LRM */}
 For infix operators, the left-hand expression and the right-hand expression must evaluate to the
 same type.
 
-*For intger and floating-point operands*, <T>+</T>, <T>-</T>, <T>*</T>, <T>/</T> perform standard
+*For integer and floating-point operands*, <T>+</T>, <T>-</T>, <T>*</T>, <T>/</T> perform standard
 arithmetic operations (addition, subtraction, multiplication, and division, respectively).
 Additionally, <T>%</T> performs the “modulo” operation, and <T>**</T> raises the left operand to the
 power of the right operand. Comparison operators <T>==</T>, <T>!=</T>, <T>&lt;</T>, <T>&lt;=</T>,
@@ -259,20 +267,23 @@ The `!` prefix operator is the logical “not” operator; it applies to boolean
 
 ##### Postfix operators
 
+{/* TODO - Semaphores? */}
 The `++` and `--` postfix operators are increment and decrement operators. They apply to integer
 and floating-point operands.
 
 ##### Operator precedence and associativity
 TODO: write this section
 
+The following table provide the precedence and associativity of operators in
+order from lowest to highest.
 
-#### Array access expressions
+### Array access expressions
 Array access expressions unpack a single value from a specified index of an array stored in a
 variable. The expression inside the brackets must evaluate to an integer. The evaluated type of
 the array access expression is the element type of the array.
 
 <Rule name="array-access">
-  <><NT>ident</NT> <T>[</T> <NT>expr</NT> <T>]</T></>
+<><NT>ident</NT> <T>[</T> <NT>expr</NT> <T>]</T></>
 </Rule>
 
 
@@ -286,20 +297,20 @@ The evaluated value of an assignment expression is the evaluated value of the ri
 expression (i.e. the value that was assigned).
 
 <RuleBlock>
-  <Rule name="assignment">
-    <><NT>assignment-left</NT> <T>=</T> <NT>expr</NT></>
-    <><NT>assignment-left</NT> <T>+</T> <NT>expr</NT></>
-    <><NT>assignment-left</NT> <T>-=</T> <NT>expr</NT></>
-    <><NT>assignment-left</NT> <T>\*=</T> <NT>expr</NT></>
-    <><NT>assignment-left</NT> <T>/=</T> <NT>expr</NT></>
-    <><NT>assignment-left</NT> <T>%=</T> <NT>expr</NT></>
-    <><NT>assignment-left</NT> <T>\*\*=</T> <NT>expr</NT></>
-  </Rule>
+<Rule name="assignment">
+  <><NT>assignment-left</NT> <T>=</T> <NT>expr</NT></>
+  <><NT>assignment-left</NT> <T>+=</T> <NT>expr</NT></>
+  <><NT>assignment-left</NT> <T>-=</T> <NT>expr</NT></>
+  <><NT>assignment-left</NT> <T>\*=</T> <NT>expr</NT></>
+  <><NT>assignment-left</NT> <T>/=</T> <NT>expr</NT></>
+  <><NT>assignment-left</NT> <T>%=</T> <NT>expr</NT></>
+  <><NT>assignment-left</NT> <T>\*\*=</T> <NT>expr</NT></>
+</Rule>
 
-  <Rule name="assignment-left">
-    <NT>ident</NT>
-    <><NT>ident</NT> <T>[</T> <NT>expr</NT> <T>]</T></>
-  </Rule>
+<Rule name="assignment-left">
+  <NT>ident</NT>
+  <><NT>ident</NT> <T>[</T> <NT>expr</NT> <T>]</T></>
+</Rule>
 </RuleBlock>
 
 
@@ -308,7 +319,7 @@ Grouping expressions are used to clarify order of operations. They ensure that t
 the group is evaluated in full before any of its components are used in any surrounding expression.
 
 <Rule name="grouping">
-  <><T>(</T> <NT>expr</NT> <T>)</T></>
+<><T>(</T> <NT>expr</NT> <T>)</T></>
 </Rule>
 
 
@@ -317,14 +328,14 @@ Function call expressions invoke a function with a specified set of arguments. T
 evaluates to the return value of the function.
 
 <RuleBlock>
-  <Rule name="function-call">
-    <><NT>ident</NT> <T>(</T> <NT>call-args</NT>? <T>)</T></>
-  </Rule>
+<Rule name="function-call">
+  <><NT>ident</NT> <T>(</T> <NT>call-args</NT>? <T>)</T></>
+</Rule>
 
-  <Rule name="call-args">
-    <NT>expr</NT>
-    <><NT>call-args</NT> <T>,</T> <NT>expr</NT></>
-  </Rule>
+<Rule name="call-args">
+  <NT>expr</NT>
+  <><NT>call-args</NT> <T>,</T> <NT>expr</NT></>
+</Rule>
 </RuleBlock>
 
 
@@ -334,5 +345,29 @@ new thread. The new thread runs the procedure whose identifier matches the spawn
 must be defined with a [`thread_def`](#thread_def).
 
 <Rule name="thread-spawn">
-  <><T>spawn</T> <NT>ident</NT></>
+<><T>spawn</T> <NT>ident</NT></>
 </Rule>
+
+### Statements
+
+Statements are instructions that are executed in sequence.
+
+<RuleBlock>
+  <Rule name="stmt">
+    <><Expr/><Semi /></>
+    <><T>&#123;</T> <NT>stmt</NT>*<T>&#125;</T></>
+    <><NT>variable-declaration</NT></>
+    {/* TODO - for loop */}
+    <><T>while</T><T>&#40;</T><Expr /><T>&#41;</T><NT>stmt</NT></>
+    <><T>return</T><Expr />?<Semi /></>
+    <><T>break</T><Semi /></>
+    <><Ident /><T>&lt;&lt;</T><Expr /><Semi /></>
+  </Rule>
+
+  <Rule name="variable-declaration">
+    <><NT>type</NT><Ident /><Semi /></>
+    <><NT>type</NT><Ident /><T>=</T><NT>expr</NT><Semi /></>
+  </Rule>
+</RuleBlock>
+
+```

@@ -30,7 +30,6 @@ clean-vscode:
 
 
 # Docs
-
 docs/node_modules: docs/package.json
 	cd docs && npm install
 	# Update mtime to avoid make rebuilding unnecessarily
@@ -38,6 +37,9 @@ docs/node_modules: docs/package.json
 
 docs-pdf: docs/node_modules
 	cd docs && npm run pdf
+
+docs-dev:
+	cd docs && npm run dev
 
 docs-build: docs/node_modules
 	cd docs && npm run build
