@@ -258,14 +258,14 @@ An array literal includes an arbitrary number of values; all of the expressions 
 literal must have the same type.
 
 <RuleBlock>
-<Rule name="array-literal">
-  <><T>[</T> <NT>array-elements</NT>? <T>]</T></>
-</Rule>
+  <Rule name="array-literal">
+    <><T>[</T> <NT>array-elements</NT>? <T>]</T></>
+  </Rule>
 
-<Rule name="array-elements">
-  <NT>expr</NT>
-  <><NT>array-elements</NT> <T>,</T> <NT>expr</NT></>
-</Rule>
+  <Rule name="array-elements">
+    <NT>expr</NT>
+    <><NT>array-elements</NT> <T>,</T> <NT>expr</NT></>
+  </Rule>
 </RuleBlock>
 
 
@@ -317,7 +317,6 @@ The next type of expression applies an operator to one or two subexpressions (ei
 </RuleBlock>
 
 ##### Infix operators
-{/* TODO: Check if this should be included in the LRM */}
 For infix operators, the left-hand expression and the right-hand expression must evaluate to the
 same type.
 
@@ -338,13 +337,13 @@ The <T>-</T> prefix operator is negation; it applies to integer and floating-poi
 The <T>!</T> prefix operator is the logical “not” operator; it applies to boolean operands.
 
 ##### Postfix operators
-
-{/* TODO: Semaphores? */}
 The <T>++</T> and <T>--</T> postfix operators are increment and decrement operators. They apply to
-integer and floating-point operands.
+integer and floating-point operands as you would expect.
+
+The <T>++</T> and <T>--</T> postfix operators also apply to semaphores; see
+[Semaphores](#semaphores) for the semantics of these operations.
 
 ##### Operator precedence and associativity
-
 The table below shows the relative precedence and associativity of operators in Untangled. Operators
 with higher precedence appear in earlier rows of the table than operators with lower precedence.
 
