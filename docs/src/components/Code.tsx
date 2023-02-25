@@ -10,7 +10,12 @@ const UNTANGLED_LANGUAGE_DEFINITION = {
 } as const;
 
 const LOAD_LANGUAGES = ['ocaml', 'python', UNTANGLED_LANGUAGE_DEFINITION] as const;
-const LOAD_THEMES = ['poimandres', 'Overnight-Slumber-italic', 'Overnight-Slumber', 'nord', 'github-dark', 'github-dark-dimmed'] as const;
+const LOAD_THEMES = [
+  'poimandres',
+  'Overnight-Slumber-italic', 'Overnight-Slumber',
+  'nord',
+  'github-dark', 'github-dark-dimmed',
+] as const;
 
 // Union types for languages/themes
 type LanguageName<T extends typeof LOAD_LANGUAGES[number]> = T extends object ? T['id'] : T;

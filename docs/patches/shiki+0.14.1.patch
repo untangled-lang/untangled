@@ -1,0 +1,14 @@
+diff --git a/node_modules/shiki/themes/poimandres.json b/node_modules/shiki/themes/poimandres.json
+index 92fac99..43f4bfa 100644
+--- a/node_modules/shiki/themes/poimandres.json
++++ b/node_modules/shiki/themes/poimandres.json
+@@ -17,7 +17,8 @@
+     "editor.findMatchBackground": "#ADD7FF40",
+     "editor.findMatchBorder": "#ADD7FF",
+     "editor.findMatchHighlightBackground": "#ADD7FF40",
+-    "editor.foreground": "#a6accd",
++    "editor.foreground_old": "#a6accd",
++    "editor.foreground": "#E4F0FB",
+     "editor.lineHighlightBackground": "#717cb425",
+     "editor.lineHighlightBorder": "#00000000",
+     "editor.selectionBackground": "#717cb425",
