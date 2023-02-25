@@ -53,30 +53,30 @@
         },
         {
           "name": "keyword.operator.arithmetic.untangled",
-          "match": "\\b(\\+|-|\\*|/|%|\\*\\*)\\b"
+          "match": "\\+|-|\\*|/|%|\\*\\*"
         },
         {
           "name": "keyword.operator.increment.untangled",
-          "match": "\\b\\+\\+\\b"
+          "match": "\\+\\+"
         },
         {
           "name": "keyword.operator.decrement.untangled",
-          "match": "\\b--\\b"
+          "match": "--"
         },
         {
           "name": "keyword.operator.comparison.untangled",
-          "match": "\\b(==|!=|<|>|<=|>=)\\b"
+          "match": "==|!=|<|>|<=|>="
         },
         {
           "name": "keyword.operator.logical.untangled",
-          "match": "\\b(\\|\\||&&|!)\\b"
+          "match": "\\|\\||&&|!"
         },
 
 
         { "comment": "Thread-specific tokens" },
         {
           "name": "keyword.operator.untangled",
-          "match": "\\b(->|<<)\\b"
+          "match": "->|<<"
         },
         {
           "name": "keyword.other.untangled",
