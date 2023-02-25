@@ -163,6 +163,7 @@ The following are also keywords in Untangled:
 </div>
 
 
+
 ### Identifiers
 
 Identifiers serve as unique names for variables, thread definitions, and functions. Identifiers
@@ -175,6 +176,44 @@ to use an identifier with the same name as one of the keywords.
     [<T>a</T>-<T>z</T> <T>A</T>-<T>Z</T> <T>0</T>-<T>9</T> <T>_</T>]*
   </>
 </Rule>
+
+
+
+### Types
+Untangled includes first-class types for booleans, integers, floats, strings, threads, semaphores,
+tuples, and arrays.
+
+<RuleBlock>
+  <Rule name="type">
+    <T>void</T>
+    <T>bool</T>
+    <T>int</T>
+    <T>float</T>
+    <T>string</T>
+    <T>thread</T>
+    <T>semaphore</T>
+    <NT>tuple-type</NT>
+    <NT>array-type</NT>
+  </Rule>
+
+  <Rule name="tuple-type">
+    <>
+      <T>(</T>
+      <NT>type</NT>
+      <T>,</T>
+      <NT>type</NT>
+      <T>)</T>
+    </>
+  </Rule>
+  <Rule name="array-type">
+    <>
+      <NT>type</NT>
+      <T>[</T>
+      <NT>integer-literal</NT>
+      <T>]</T>
+    </>
+  </Rule>
+</RuleBlock>
 
 
 
