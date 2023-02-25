@@ -56,7 +56,7 @@ export function Rule({
 }
 
 
-export function NonTerminal({
+function NonTerminal({
   definition = false,
   children,
   ...props
@@ -70,10 +70,38 @@ export function NonTerminal({
 }
 
 
-export function Terminal({
+function Terminal({
   children,
 }: {
   children: string,
 }) {
   return <span className="terminal">{children}</span>;
 }
+
+
+// Enable “magic” syntax for terminals/nonterminals (e.g. <NT.expr />)
+
+const reactInternalsBlacklist = [
+  ...Object.getOwnPropertyNames(React.Component),
+  ...Object.getOwnPropertyNames(NonTerminal),
+  'childContextTypes', 'constructor', 'getDerivedStateFromError', 'getDerivedStateFromProps',
+  'isReactComponent', 'propTypes', 'PropTypes', 'defaultProps', 'getDefaultProps', 'contextTypes',
+];
+const magicHandler = {
+  get(Target: typeof NonTerminal | typeof Terminal, name: string) {
+    name = ({
+      semi: ';', comma: ',', dot: '.', lparen: '(', rparen: ')', lbrack: '[', rbrack: ']',
+      lbrace: '{', rbrace: '}', arrow: '->',
+    })[name] ?? name;
+    if (typeof name === 'string' && reactInternalsBlacklist.includes(name)) return (Target as any)[name];
+    return (props: any) => <Target {...props}>{name}</Target>;
+  }
+};
+type ProxyType<T extends typeof Terminal | typeof NonTerminal> = T & {
+  [key: string]: (props: Omit<Parameters<T>[0], 'children' | 'definition'>) => ReturnType<T>
+};
+
+const NonTerminalProxy = new Proxy(NonTerminal, magicHandler) as ProxyType<typeof NonTerminal>;
+export { NonTerminalProxy as NonTerminal };
+const TerminalProxy = new Proxy(Terminal, magicHandler) as ProxyType<typeof Terminal>;
+export { TerminalProxy as Terminal };
