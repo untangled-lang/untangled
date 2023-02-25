@@ -385,6 +385,7 @@ The <T>++</T> and <T>--</T> postfix operators also apply to semaphores; see
 ##### Operator precedence and associativity
 The table below shows the relative precedence and associativity of operators in Untangled. Operators
 with higher precedence appear in earlier rows of the table than operators with lower precedence.
+For operators in the same row, precedence is in ascending order from left to right.
 
 <table>
   <thead>
@@ -395,8 +396,20 @@ with higher precedence appear in earlier rows of the table than operators with l
   </thead>
   <tbody>
     <tr>
-      <td>TODO:</td>
-      <td>TODO:</td>
+      <td><T>=</T> TODO: other assignment operators</td>
+      <td>Right</td>
+    </tr>
+    <tr>
+      <td><T>||</T> <T>&&</T> <T>==</T> <T>!=</T> <T>&lt;</T> <T>&gt;</T> <T>&lt;=</T> <T>&gt;=</T></td>
+      <td>Left</td>
+    </tr>
+    <tr>
+      <td><T>+</T> <T>-</T> <T>\*</T> <T>/</T> <T>%</T> <T>**</T></td>
+      <td>Left</td>
+    </tr>
+    <tr>
+      <td><T>!</T> <T>++</T> <T>--</T></td>
+      <td>None</td>
     </tr>
   </tbody>
 </table>
