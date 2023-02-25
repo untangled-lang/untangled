@@ -271,8 +271,8 @@ literal must have the same type.
 
 #### Identifier expressions
 
-Identifier expressions refer to variables. An identifier expression has the same type and the same
-evaluated value as the variable it refers to.
+Identifier expressions refer to variables. An identifier expression returns the value of the
+variable it refers to.
 
 
 #### Operator expressions
@@ -445,20 +445,161 @@ must be defined with a [<T>thread_def</T>](#thread_def).
 
 Statements are instructions that are executed in sequence.
 
+<Rule name="stmt">
+  <><NT>expr</NT><T>semi</T></>
+  <NT>block</NT>
+  <><NT>variable-decl</NT></>
+  <><NT>control-flow</NT></>
+  <><NT>thread-message</NT></>
+</Rule>
+
+The simplest form of a statement is an expression followed by a semicolon; this statement simply
+evaluates that expression (which may have side effects, such as assignment or function calls) and
+discards the evaluated value of the expression.
+
+#### Blocks
+<Rule name="block">
+  <T>{'{'}</T> <NT>stmt</NT>* <T>}</T>
+</Rule>
+
+A <NT>block</NT> is a sequence of statements enclosed in curly braces. A block defines its own
+*scope*, meaning that any variables declared inside the block are only available within the block.
+
+#### Variable declaration statements
+
+<Rule name="variable-decl">
+  <><NT.type /><NT.ident />(<T>=</T> <NT.expr />)? <T.semi /></>
+</Rule>
+
+A variable declaration binds an identifier to a type and, optionally, assigns a value to this
+new variable. When a declaration includes an assignment, the type of the expression must match the
+declared type of the variable.
+
+The compiler raises an error if the name being declared already exists in the current scope.
+
+
+#### Control flow statements
+
 <RuleBlock>
-  <Rule name="stmt">
-    <><NT>expr</NT><T>semi</T></>
-    <><T>\{</T> <NT>stmt</NT>* <T>}</T></>
-    <><NT>variable-declaration</NT></>
-    {/* TODO: for loop */}
-    <><T>while</T> <T>(</T> <NT>expr</NT> <T>)</T> <NT>stmt</NT></>
-    <><T>return</T> <NT>expr</NT>? <T>;</T></>
-    <><T>break</T> <T>;</T></>
-    <><NT>ident</NT> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></>
+  <Rule name="control-flow">
+    <><NT>conditional</NT></>
+    <><NT>loop</NT></>
+    <><NT>loop-control</NT></>
   </Rule>
 
-  <Rule name="variable-declaration">
-    <><NT>type</NT><NT>ident</NT><T>;</T></>
-    <><NT>type</NT><NT>ident</NT><T>=</T><NT>expr</NT><T>;</T></>
+  <Rule name="conditional">
+    <><T>if</T> <T>(</T> <NT>expr</NT> <T>)</T> <NT>stmt</NT> </>
+    <><T>if</T> <T>(</T> <NT>expr</NT> <T>)</T> <NT>stmt</NT> <T>else</T> <NT>stmt</NT> </>
+  </Rule>
+
+  <Rule name="loop">
+    <><T>while</T> <T>(</T> <NT>expr</NT> <T>)</T> <NT>stmt</NT> </>
+
+    <>
+      <T>for</T> <T>(</T>
+      <NT>variable-decl</NT>
+      <NT>expr</NT>
+      <T>;</T>
+      <NT>expr</NT>?
+      <T>)</T>
+      <NT>stmt</NT>
+    </>
+    <>
+      <T>for</T> <T>(</T>
+      <NT>expr</NT>?
+      <T>;</T>
+      <NT>expr</NT>
+      <T>;</T>
+      <NT>expr</NT>?
+      <T>)</T>
+      <NT>stmt</NT>
+    </>
+  </Rule>
+
+  <Rule name="loop-control">
+    <><T>break</T><T.semi/></>
+    <><T>continue</T><T.semi/></>
   </Rule>
 </RuleBlock>
+
+##### Conditionals
+
+The <T>if</T> statement evaluates the expression in parentheses and executes the statement following
+if and only if the expression evaluates to `true`. It is a compiler error to use a non-boolean
+expression in an <T>if</T> statement. When the <T>else</T> block is included, the statement
+following the <T>else</T> is executed if and only if the expression within the “corresponding”
+<T>if</T> evaluates to `false`.
+
+###### Note on “dangling else” ambiguity
+The “corresponding” <T>if</T>, as referenced above, is sometimes ambiguous. For example:
+```untangled
+if (my_boolean_1)
+if (my_boolean_2) print("1");
+else print("2");
+
+// Should the above be interpreted like this...
+if (my_boolean_1) {
+  if (my_boolean_2) { print("1"); }
+} else {
+  print("2");
+}
+
+// ...or like this?
+if (my_boolean_1) {
+  if (my_boolean_2) { print("1"); }
+  else { print("2"); }
+}
+```
+
+Untangled resolves this ambiguity by associating each “else” statement with the most recent “if”
+statement (i.e., the second of the two interpretations given above).
+
+##### Loops
+
+###### While loops
+
+A while loop encloses a *condition* expression and a *body* statement. The condition expression
+must be a boolean expression.
+
+A while loop performs the following steps:
+1. Evaluate the condition expression. If the condition expression is `false`, the loop terminates.
+2. Executes the body statement
+3. Go back to step 1.
+
+###### For loops
+
+A for loop encloses three semicolon-separated parts in parentheses, followed by a *body* statement.
+We call the first part the *initialization*, the second part the *condition*, and the third part the
+*afterthought*. The initialization is either a variable declaration or an expression, the condition
+is a boolean expression, and the afterthought is an expression. Of the three, only the condition is
+required.
+
+A for loop is executed as follows:
+1. Evaluate the initialization, if present.
+2. Evaluate the condition. If the condition is false, the loop terminates.
+3. Execute the body statement.
+4. Evaluate the afterthought, if present.
+5. Go back to step 2.
+
+###### Break and continue
+
+<T>break</T> and <T>continue</T> statements can only be used within a <NT>loop</NT>.
+
+<T>break</T> jumps to the end of the loop, skipping any remaining statements in the loop body and
+any remaining iterations of the loop. <T>continue</T> jumps to the next loop iteration, skipping
+any remaining statements in the loop body but preserving any remaining iterations of the loop.
+
+<T>break</T> and <T>continue</T> both always refer to the innermost loop that contains them:
+
+```untangled
+for (int a = 0; a < 10; a++) { // loop A
+  for (int b = 0; b < 10; b++) { // loop B
+    if (a > b) {
+      continue; // jumps to next iteration of loop B
+    }
+    if (a < b) {
+      break; // interrupts loop B
+    }
+  }
+}
+```
