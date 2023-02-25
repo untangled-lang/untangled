@@ -92,9 +92,9 @@ considered a single token. Blanks are *not* ignored within string literals.
 
 ### Comments
 Comments in Untangled follow C-style comment syntax: single-line comments start with two forward
-slashes `//` and continue until the end of the line; multi-line comments start with `/*` and end
-with `*/`. Comments separate identifiers, keywords, etc. in the same way as blanks. Comments do not
-occur within strings.
+slashes <T>//</T>, and continue until the end of the line; multi-line comments start with <T>/\*</T>
+and end with <T>\*/</T>. Comments separate identifiers, keywords, etc. in the same way as blanks.
+Comments do not occur within strings.
 
 ### Identifiers
 Identifiers start with a letter, and can contain letters, digits, and underscores.
@@ -162,7 +162,7 @@ literal values contain a decimal point.
 </Rule>
 </RuleBlock>
 
-Boolean literals come from the token `true` or the token `false`.
+Boolean literals come from the token <T>true</T> or the token <T>false</T>.
 
 <Rule name="boolean-literal">
 <T>true</T>
@@ -256,20 +256,21 @@ Additionally, <T>%</T> performs the “modulo” operation, and <T>**</T> raises
 power of the right operand. Comparison operators <T>==</T>, <T>!=</T>, <T>&lt;</T>, <T>&lt;=</T>,
 <T>&gt;</T>, and <T>&gt;=</T> compare their operands and evaluate to a boolean value.
 
-*For string operands*, the `+` operator is string concatenation.
+*For string operands*, the <T>+</T> operator is string concatenation.
 
-*For boolean operands*, the `&&` and `||` operators are the logical “and” and “or” operations.
+*For boolean operands*, the <T>&&</T> and <T>||</T> operators are the logical “and” and “or”
+operations.
 
 ##### Prefix operators
-The `-` prefix operator is negation; it applies to integer and floating-point operands.
+The <T>-</T> prefix operator is negation; it applies to integer and floating-point operands.
 
-The `!` prefix operator is the logical “not” operator; it applies to boolean operands.
+The <T>!</T> prefix operator is the logical “not” operator; it applies to boolean operands.
 
 ##### Postfix operators
 
 {/* TODO - Semaphores? */}
-The `++` and `--` postfix operators are increment and decrement operators. They apply to integer
-and floating-point operands.
+The <T>++</T> and <T>--</T> postfix operators are increment and decrement operators. They apply to
+integer and floating-point operands.
 
 ##### Operator precedence and associativity
 TODO: write this section
@@ -342,11 +343,13 @@ evaluates to the return value of the function.
 #### Thread spawn expressions
 Thread spawn expressions start a new thread and evaluate to a `thread` value which references the
 new thread. The new thread runs the procedure whose identifier matches the spawn expression, which
-must be defined with a [`thread_def`](#thread_def).
+must be defined with a [<T>thread_def</T>](#thread_def).
 
 <Rule name="thread-spawn">
 <><T>spawn</T> <NT>ident</NT></>
 </Rule>
+
+
 
 ### Statements
 
@@ -369,5 +372,3 @@ Statements are instructions that are executed in sequence.
     <><NT>type</NT><Ident /><T>=</T><NT>expr</NT><Semi /></>
   </Rule>
 </RuleBlock>
-
-```
