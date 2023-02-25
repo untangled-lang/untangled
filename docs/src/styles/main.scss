@@ -268,11 +268,16 @@ div.boxed:has(> ul) {
   @include boxed-block;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25em 0.5em;
+  gap: 0.5em;
+  align-items: center;
 
   & > ul {
     list-style: none;
     display: contents;
+
+    & > li {
+      margin: 0;
+    }
   }
 }
 
