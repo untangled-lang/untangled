@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import mdx from '@mdx-js/rollup';
+import rehypeSlug from 'rehype-slug';
 import react from '@vitejs/plugin-react';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
@@ -7,7 +8,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 export default defineConfig({
   build: { target: 'esnext' },
   plugins: [
-    { enforce: 'pre', ...mdx() },
+    { enforce: 'pre', ...mdx({ rehypePlugins: [rehypeSlug] }) },
     react(),
     viteStaticCopy({
       targets: [
