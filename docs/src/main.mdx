@@ -34,22 +34,23 @@ and abstractions over multithreading.
   ```
   <figcaption>
     A simple program demonstrating multithreaded computation in Untangled. The `Main` thread
-    continues running while the `SumWorker` thread does hard, CPU-bound computations.
+    sends a message to a `SumWorker` thread and waits until that `SumWorker` thread sends a message back.
   </figcaption>
 </figure>
 
-This document serves as authoritative reference for the Untangled language. It is intended to fully
-specify the language, including its syntax, semantics, and built-in functions.
+This document serves as an authoritative reference for the Untangled language. It fully specifies 
+the language, including its syntax, semantics, and built-in functions.
 
 
 ### Notation
 
-The syntax of the language is given in BNF-like notation. Terminal symbols are set in monospace font
+The syntax of the language is given in BNF-like notation. There are 2 types of symbols, Terminal &
+Nonterminal. Terminal symbols are set in monospace font
 like <T>this</T>. Nonterminal symbols are set in italicized kebab-cased text like
 <NT>example-nonterminal</NT>.
 
 Terminals and nonterminals are combined as followed:
-- A single space between components indicates concatenation—the given components should appear in
+- A single space between symbols indicates concatenation—the given symbols should appear in
   the given order.
 - Square brackets indicate *character sets*. A character set contains several single-character
   literals, and matches any one of those characters. For example,
@@ -59,17 +60,17 @@ Terminals and nonterminals are combined as followed:
   - A caret after the opening square brace of a character set indicates negation, e.g.
     <nobr>[^<T>a</T>-<T>z</T>]</nobr> matches any character that is *not* a lowercase letter.
 - Parentheses (<span className="hint">...</span>) indicate grouping.
-- An asterisk <span className="hint">...</span>* indicates that the preceding component may be
+- An asterisk <span className="hint"><T>S*</T></span> indicates that the preceding symbol may be
   repeated zero or more times.
-- A plus sign <span className="hint">...</span>+ indicates that the preceding component may be
+- A plus sign <span className="hint"><T>S+</T></span> indicates that the preceding symbol may be
   repeated one or more times.
-- A question mark <span className="hint">...</span>? indicates that the preceding component is
+- A question mark <span className="hint"><T>S?</T></span> indicates that the preceding symbol is
   optional.
 
-These forms are combined into *rules*, each of which gives a single nonterminal on the left and one
-or more possible expansions on the right (each separated by a vertical bar). For example, the
-following rule defines a nonterminal <NT>example-nonterminal</NT> that expands to either “hello” or
-“world”:
+This protocol is used to describe *production rules*, each of which has a single nonterminal on the left, and one
+or more possible *expansions* on the right (each separated by a vertical bar). For example, the
+following rule defines a nonterminal <NT>example-nonterminal</NT> that expands to
+terminal symbols “hello” or “world”:
 
 <Rule name="example-nonterminal">
   <><T>hello</T></>
@@ -81,7 +82,7 @@ following rule defines a nonterminal <NT>example-nonterminal</NT> that expands t
 
 ### Blanks
 Spaces, tabs, carriage returns (`\r`), and newlines (`\n`) are considered “blank” characters. Blanks
-are ignored, except that they separate adjacent identifiers, keywords, etc. that would otherwise be
+only serve to separate adjacent identifiers, keywords, etc. that would otherwise be
 considered a single token. Blanks are *not* ignored within string literals.
 
 ### Comments
@@ -91,7 +92,8 @@ and end with <T>\*/</T>. Comments separate identifiers, keywords, etc. in the sa
 Comments do not occur within strings.
 
 ### Identifiers
-Identifiers start with a letter, and can contain letters, digits, and underscores.
+Identifiers for variables, thread declarations, and function declarations must start with 
+a letter, and can contain letters, digits, and underscores.
 <Rule name="ident">
   <>
     [<T>a</T>-<T>z</T> <T>A</T>-<T>Z</T>]
@@ -103,7 +105,7 @@ Identifiers start with a letter, and can contain letters, digits, and underscore
 
 ### Expressions
 
-Expressions in Untangled are basic syntactic constructions that can be evaluated to produce a value.
+Expressions in Untangled are basic syntactic units that can be evaluated to produce a value.
 
 The **type** of an expression refers to the [type](#types) of value that it evaluates to.
 
@@ -156,7 +158,7 @@ literal values contain a decimal point.
   </Rule>
 </RuleBlock>
 
-Boolean literals come from the token <T>true</T> or the token <T>false</T>.
+Boolean literals are derived from the keywords `true` or `false`.
 
 <Rule name="boolean-literal">
   <T>true</T>
@@ -171,14 +173,16 @@ string value.
   <><T>"</T> [^<T>"</T>]* <T>"</T></>
 </Rule>
 
-A tuple literal groups exactly two expressions, each of which can have any type.
+A tuple literal groups exactly two comma-separated expressions surrounded by parenthesis. The 2 
+expressions which can have any type.
 
 <Rule name="tuple-literal">
   <><T>(</T> <NT>expr</NT> <T>,</T> <NT>expr</NT> <T>)</T></>
 </Rule>
 
-An array literal includes an arbitrary number of values; all of the expressions inside an array
-literal must have the same type.
+An array literal consists of an arbitrary number of comma-separated expressions surrounded
+by left and right square brackets. All of the expressions inside an array
+literal must be of the same type.
 
 <RuleBlock>
 <Rule name="array-literal">
@@ -200,9 +204,9 @@ evaluated value as the variable it refers to.
 
 #### Operator expressions
 
-The next type of expression applies an operator to one or two subexpressions (either an
-<NT>infix-operator</NT> between two expressions, or a <NT>prefix-operator</NT> or
-<NT>postfix-operator</NT> before or after an expression).
+The next type of expression applies an operator to one or two sub-expressions. These operators
+can be an <NT>infix-operator</NT> between two expressions, a <NT>prefix-operator</NT> before an 
+expression, or a <NT>postfix-operator</NT> after an expression.
 
 <RuleBlock>
   <Rule name="operation">
@@ -250,15 +254,15 @@ Additionally, <T>%</T> performs the “modulo” operation, and <T>**</T> raises
 power of the right operand. Comparison operators <T>==</T>, <T>!=</T>, <T>&lt;</T>, <T>&lt;=</T>,
 <T>&gt;</T>, and <T>&gt;=</T> compare their operands and evaluate to a boolean value.
 
-*For string operands*, the <T>+</T> operator is string concatenation.
+*For string operands*, the <T>+</T> operator does string concatenation.
 
 *For boolean operands*, the <T>&&</T> and <T>||</T> operators are the logical “and” and “or”
-operations.
+operations respectively.
 
 ##### Prefix operators
 The <T>-</T> prefix operator is negation; it applies to integer and floating-point operands.
 
-The <T>!</T> prefix operator is the logical “not” operator; it applies to boolean operands.
+The <T>!</T> prefix operator is the logical “not” operator; it only applies to boolean operands.
 
 ##### Postfix operators
 
@@ -275,8 +279,8 @@ order from lowest to highest.
 
 
 #### Array access expressions
-Array access expressions unpack a single value from a specified index of an array stored in a
-variable. The expression inside the brackets must evaluate to an integer. The evaluated type of
+Array access expressions retrieves the element at the specified index of an array. 
+The expression inside the brackets must evaluate to an integer. The evaluated type of
 the array access expression is the element type of the array.
 
 <Rule name="array-access">
@@ -285,13 +289,13 @@ the array access expression is the element type of the array.
 
 
 #### Assignment expressions
-Assignment expressions assign a value to the variable or array element that appears on the left
-hand side of the expression. The right hand side of the expression must evaluate to the same type
-as the variable referenced on the left (or, in the array assignment case, to the element type of the
-referenced array).
+Assignment expressions assigns a value to an existing variable or 
+array element. It consists of: the variable/array element to assign to, an assignment
+operator, and an expression. The right hand side of the expression must evaluate to the same type
+as the variable/array element referenced on the left.
 
-The evaluated value of an assignment expression is the evaluated value of the right hand side of the
-expression (i.e. the value that was assigned).
+An assignment expression will return the evaluation of the evaluated expression on the
+right-hand side (i.e. the value that was assigned).
 
 <RuleBlock>
   <Rule name="assignment">
@@ -310,10 +314,20 @@ expression (i.e. the value that was assigned).
   </Rule>
 </RuleBlock>
 
+The following assignment operators: <T>+=</T>, <T>-=</T>, <T>*=</T>, <T>/=</T>, <T>%=</T>, <T>**=</T>
+are shorthands for the following:
+<figure>
+  ```untangled
+  (x (infix operator)= y) == (x = x (infix operator) y) // General case
+  (x += y) == (x = x + y)
+  (x -= y) == (x = x - y)
+  ...
+  ```
+</figure>
 
 #### Grouping expressions
 Grouping expressions are used to clarify order of operations. They ensure that the expression inside
-the group is evaluated in full before any of its components are used in any surrounding expression.
+the group is evaluated within the enclosed context of that group.
 
 <Rule name="grouping">
   <><T>(</T> <NT>expr</NT> <T>)</T></>

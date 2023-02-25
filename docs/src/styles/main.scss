@@ -12,7 +12,7 @@ $white: #fff;
 $almost-white: color.scale($white, $alpha: -5%);
 $text: $almost-white;
 $text-secondary: color.scale($white, $alpha: -30%);
-$text-hint: color.scale($white, $alpha: -60%);
+$text-hint: color.scale($white, $alpha: 0%);
 
 body {
   background-color: $black;
