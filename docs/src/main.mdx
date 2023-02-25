@@ -698,3 +698,28 @@ Receiving messages uses a construction with the keyword <T>receive</T>, followed
     <><T>(</T> <NT>pattern</NT> <T>,</T> <NT>pattern</NT> <T>)</T> </>
   </Rule>
 </RuleBlock>
+
+
+
+### Programs
+The top level of an Untangled program is a set of [function definitions](#nonterminal-function-def)
+and [thread procedure definitions](#nonterminal-thread-def).
+
+<RuleBlock>
+  <Rule name="program">
+    <><NT>function-def</NT>\*</>
+    <><NT>thread-def</NT>\*</>
+  </Rule>
+  <Rule name="thread-def">
+    <><T>thread_def</T> <NT>ident</NT> <T>{'{'}</T> <NT>stmt</NT>* <T>{'}'}</T></>
+  </Rule>
+  <Rule name="function-def">
+    <><NT>type</NT> <NT>ident</NT> <T>(</T> <NT>function-def-parameters</NT>? <T>)</T><T>{'{'}</T> <NT>stmt</NT>* <T>{'}'}</T></>
+  </Rule>
+   <Rule name="function-def-parameters">
+    <><NT>type</NT> <NT>ident</NT></>
+    <><NT>function-def-parameters</NT> <T>,</T> <NT>type</NT> <NT>ident</NT></>
+  </Rule>
+</RuleBlock>
+
+TODO: explain
