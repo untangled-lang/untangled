@@ -139,11 +139,13 @@ The following are also keywords in Untangled:
 - <T>+</T>
 - <T>++</T>
 - <T>-</T>
+- <T>--</T>
 - <T>\*</T>
 - <T>/</T>
 - <T>%</T>
 - <T>\*\*</T>
 - <T>=</T>
+- <T>==</T>
 - <T>+=</T>
 - <T>-=</T>
 - <T>\*=</T>
@@ -183,8 +185,8 @@ to use an identifier with the same name as one of the keywords.
 
 
 ### Types
-Untangled includes first-class types for booleans, integers, floats, strings, threads, semaphores,
-tuples, and arrays.
+Untangled includes first-class types for booleans, integers, floats, strings,
+threads, semaphores, units, tuples, and arrays.
 
 <RuleBlock>
 <Rule name="type">
@@ -195,6 +197,7 @@ tuples, and arrays.
   <T>string</T>
   <T>thread</T>
   <T>semaphore</T>
+  <T>unit</T>
   <NT>tuple-type</NT>
   <NT>array-type</NT>
 </Rule>
@@ -386,9 +389,11 @@ The <T>++</T> and <T>--</T> postfix operators also apply to semaphores; see
 [Semaphores](#semaphores) for the semantics of these operations.
 
 ##### Operator precedence and associativity
-The table below shows the relative precedence and associativity of operators in Untangled. Operators
-with higher precedence appear in earlier rows of the table than operators with lower precedence.
-For operators in the same row, precedence is in ascending order from left to right.
+
+The table below shows the relative precedence and associativity of operators in
+Untangled. Operators with lower precedence appear in earlier rows of the table
+than operators with higher precedence. Operators in the same row have the same
+precedence. 
 
 <table>
 <thead>
@@ -399,7 +404,7 @@ For operators in the same row, precedence is in ascending order from left to rig
 </thead>
 <tbody>
   <tr>
-    <td><T>=</T> TODO: other assignment operators</td>
+    <td><T>=</T> <T>+=</T> <T>-=</T> <T>*=</T> <T>/=</T> <T>%=</T> <T>**=</T></td>
     <td>Right</td>
   </tr>
   <tr>
@@ -523,14 +528,15 @@ A <NT>block</NT> is a sequence of statements enclosed in curly braces. A block d
 #### Variable declaration statements
 
 <Rule name="variable-decl">
-<><NT.type /><NT.ident />(<T>=</T> <NT.expr />)? <T.semi /></>
+  <><NT.type /><NT.ident />(<T>=</T> <NT.expr />)? <T.semi /></>
 </Rule>
 
-A variable declaration binds an identifier to a type and, optionally, assigns a value to this
-new variable. When a declaration includes an assignment, the type of the expression must match the
-declared type of the variable.
+A variable declaration binds an identifier to a type and, optionally, assigns a
+value to this new variable. When a declaration includes an assignment, the type
+of the expression must match the declared type of the variable.
 
-The compiler raises an error if the name being declared already exists in the current scope.
+The compiler raises an error if the name being declared already exists in the
+current <NT.block />.
 
 
 #### Control flow statements
@@ -670,7 +676,12 @@ for (int a = 0; a < 10; a++) { // loop A
 ```
 
 ###### Return Statements
-The <T>return</T> keyword can only be used in within a function definition. The expression that comes after the <T>return</T> keyword is evaluated and the evaluated value is returned to where the function was called. Said expression must evaluate to a value of the same type as the type of the function. The execution of a return statement finalizes the function. All functions need to have a <T>return</T> statement. Because functions with type <T>void</T> do not return a value, they are exempt from this rule.
+The <T>return</T> keyword can only be used in within a function definition. The expression that
+comes after the <T>return</T> keyword is evaluated and the evaluated value is returned to where
+the function was called. Said expression must evaluate to a value of the same type as the type of
+the function. The execution of a return statement finalizes the function. All functions need to
+have a <T>return</T> statement. Because functions with type <T>void</T> do not return a value,
+they are exempt from this rule.
 
 #### Message passing statements
 
@@ -687,13 +698,13 @@ system.
 
 ##### Sending messages
 
-Sending a message requires an identifier specifying the recipient (which must be a variable of type
-`thread`), and an expression whose value we want to send.
+A thread can sent messages to any <NT.ident /> of type `thread` or its parent,
+specificied by the keyword <T>parent</T>. A message is the value of the 
+evaluated expression.
 
 <Rule name="message-send">
-  <>
-    <NT>ident</NT> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T>
-  </>
+  <><NT>ident</NT> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></>
+  <><T>parent</T> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></>
 </Rule>
 
 ##### Receiving messages
@@ -760,9 +771,16 @@ function definition that invokes other function or thread calls
 </RuleBlock>
 
 #### Function definitions
-Function definitions are a way of defining a block of statements that can be added to the control flow of a running thread.
+Function definitions are a way of defining a block of statements that can be added to the control
+flow of a running thread. There are 4 parts to each function definition: 
 
- There are 4 parts to each function definition: the return type, the name, the arguments and the body of the function which consists of a list of statements. The return type indicates the type of the value that will be returned by the function. The name is used to identify and refer to the function. The arguments are a list of type and name pairs separated by commas and enclosed in parantheses. These names can be then used to refer to values passed on during a function call inside the body of the function. Below you can see a function definition example:
+1. The return type: Indicates the type of the value that will be returned by the function
+2. The name: Used for identifying and refering to the function
+3. The arguments: A list of type and name pairs separated by commas and enclosed in parantheses. 
+These are the values that will be passed in during the function call.
+4. The body of the function: A list of statements that are executed when the function is called.
+
+Below you can see a function definition example:
 
 
 ```untangled
@@ -781,37 +799,142 @@ int min (int num1, int num2) {
 
   return num2;
 }
-```
+``` 
+
+#### Thread definitions
+
+Thread definitions are blocks of code that can be assigned to run by a thread. There are 2 parts to any thread definition:
+
+1. The name: Used for identifying the thread definition.
+2. The body: The list of statements that the thread would run.
+
+All thread definitions have access to the <T>parent</T> keyword which is a
+reference to the thread that spawned the current thread. Check out the [thread
+features](#thread-ft) section for more semantic information on threads. Here's
+an example:
+
+
+```untangled
+/*
+Name     : Max
+Purpose  : Sending the greater of two integer values back to the parent thread
+*/
+
+thread_def Max { 
+  int num1;
+  int num2;
+  receive {
+    int val -> num1 = val;
+    _       -> exit(1);
+  }
+  receive {
+    int val -> num2 = val;
+    _       -> exit(1);
+  }
+
+  if (num1 >= num2) {
+    parent << num1;
+  } else {
+    parent << num2;
+  }
+  
+}
+``` 
 
 ## Language Features
-
-TODO:
 
 ### Multithreaded features
 
 #### Thread features
 
-One thread is a singular flow of control. All statements within a singular thread are executed in sequential order from top to bottom. Any function calls that occur within the thread definition are added to the the control flow of the thread and do not execute in parallel. 
+One thread is a singular flow of control. All statements within a singular
+thread are executed in sequential order from top to bottom. Any function calls
+that occur within the thread definition are added to the the control flow of the
+thread and do not execute in parallel. 
 
-Each thread has a <T>parent</T> thread, which is a keyword that can be used to reference the "parent" thread that spawned the current thread. This keyword can be used in place of a thread identifier. It is a runtime error(TODO: can a parent thread go out of scope before a child thread?) to reference a parent thread that has terminated and gone out of scope.
+Each thread has a <T>parent</T> thread, which is a keyword that can be used to
+reference the "parent" thread that spawned the current thread. This keyword can
+be used in place of a thread identifier. It is a runtime error(TODO: can a
+parent thread go out of scope before a child thread?) to reference a parent
+thread that has terminated and gone out of scope.
 
-A variable declared in the scope of one thread will go out of scope once the thread stops its execution. 
+A variable declared in the scope of one thread will go out of scope once the
+thread stops its execution. 
 
-A thread needs to be spawned with an existing [thread definition](#nonterminal-thread-def). A spwaned thread can operate without a stored reference and can continue operating even if the parent thread has finished operating (TODO: this wholly depends on what we decid for operations with parent threads).
+A thread needs to be spawned with an existing [thread
+definition](#nonterminal-thread-def). A spawned thread can operate without a
+stored reference and can continue operating even if the parent thread has
+finished operating (TODO: this wholly depends on what we decide for operations
+with parent threads).
 
 #### Main Thread features
 
-Every program needs to have a <T>Main</T> thread definition which is the starting point of any Untangled program. The program starts by spawning a thread with the <T>Main</T> thread definition and starts running the procedure defined in it. More threads with the <T>Main</T> thread definition can be spawned using the <T>spawn</T> keyword.
+Every program needs to have a <T>Main</T> thread definition which is the 
+starting point of any Untangled program. The program starts by spawning a
+thread with the <T>Main</T> thread definition and starts running the procedure
+defined in it. More threads with the <T>Main</T> thread definition can be 
+spawned using the <T>spawn</T> keyword.
 
 #### Message passing
 
+The way different threads communicate with each other in Untangled is through the use of message passing. 
+
+A thread can send a message to any other thread that they have a reference for (including the parent thread) as long as they still are within scope. Sending a message to a thread that is no longer running is a runtime error. Messages sent by one thread are all sent in sequential order and are also received in sequential order (with reference to each other).
+
+Any message sent to a thread is stored in a queue. Values sent by one thread will be also received in sequential order; however, in the case of multiple threads sending values to one thread, there is no order guarantee.
+
+A receive block needs to be invoked in order to have access to the first message in the receiving queue. This message is then pattern matched inside of the receive block. Pattern matching happens as follows:
+
+1. The first message in the queue is popped from the receive queue
+2. The type of the message is compared to each pattern in the receive block in sequential order
+3. The message pattern matches against one of the patterns and then bound to variable names (see example below).
+5. The statement attached to the pattern executes.
+
+```untangled
+
+thread_def ReceiveExample { 
+  
+  receive {
+    int val                -> print(val + 2)
+    string val             -> print(val);
+    (string s1, string s2) -> print("Hello " + s1 + " " + s2 + "!");
+    _                      -> exit(1);
+  }
+  
+}
+``` 
+A receive block blocks the program from running until it receives a message. The pattern matching inside of a receive block should be exhaustive.
 TODO: keywords like parent, explain pattern matching logic, explain implicit effects
 Message passing is the mechanism in which threads communicates with each other.
 
 #### Semaphores
 
-TODO:
+TODO: 
 
-### Function features
+#### Function features
 
 TODO: keywords like return, explain how functions are run as if part of the same thread, scope of functions, restrictions of function calls etc. 
+
+#### Scope
+
+Scope refers to parts of the program where an <NT.ident /> can be referred to.
+Any reference to an <NT.ident /> that does not exist in the current scope is
+a compiler error.
+
+```untangled
+int foo() {
+  // Compiler error: x is undeclared
+  x += 2; 
+}
+```
+
+##### Functions / Threads scope
+
+In Untangled, <NT>thread-def</NT> and <NT>function-def</NT> have global scope
+and can be declared in any order. Their name can be referred to by 
+any part of the program, even before they are declared.
+
+##### Variables scope
+
+The scope of an <NT.ident /> in a <NT.block /> begins when it is first declared
+and ends at the end of the block. 
