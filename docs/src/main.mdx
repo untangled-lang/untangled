@@ -911,7 +911,38 @@ TODO: decide if we are using semaphores to have a built in lock function, steali
 2. ...another thread increments the semaphore. Exactly one thread is unblocked by an increment
 operation, but which thread will be unblocked is not defined.
 
-##### TODO - Passby value vs pass by reference?
+
+
+### Types passed by value / reference
+
+In message passing and in function calls, every type in Untangled is passed by *value*, with three
+key exceptions:
+1. [Arrays](#nonterminal-array-type) are passed by reference
+2. [Thread handles](#thread-handles) are an opaque reference to a specific spawned thread; a thread
+   handle passed to another function/thread will still refer to the same thread as before (and will
+   not spawn a new thread)
+3. [Semaphores] are passed by reference; if they were not they would not be useful, since
+   semaphore-based synchronization between threads inherently requires two threads to hold a
+   reference to the same thread.
+
+```untangled
+void referenceFunc(int[4] arr) { arr[0] = 0; }
+
+void valueFunc(int num) { num = -1; }
+
+thread_def Main
+  // arrays are passed by reference
+  int[4] arr = [1, 2, 3, 4];
+  referenceFunc(arr)
+
+// integers are passed by value
+  int num = 1000000;
+  valueFunc(num);
+
+  print(arr[0]); // prints -1
+  print(num); // prints 1000000
+}
+```
 
 #### Function Features
 
