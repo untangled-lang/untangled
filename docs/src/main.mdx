@@ -331,6 +331,9 @@ The next type of expression applies an operator to one or two subexpressions (ei
 <NT>infix-op</NT> between two expressions, or a <NT>prefix-op</NT> or <NT>postfix-op</NT> before or
 after an expression).
 
+The operators listed below are only valid for the types of values for which their semantics are
+defined; for other types, the compiler will throw an error.
+
 <RuleBlock>
   <Rule name="operation">
     <><NT>expr</NT> <NT>infix-op</NT> <NT>expr</NT></>
@@ -370,16 +373,23 @@ after an expression).
 For infix operators, the left-hand expression and the right-hand expression must evaluate to the
 same type.
 
-*For integer and floating-point operands*, <T>+</T>, <T>-</T>, <T>*</T>, <T>/</T> perform standard
-arithmetic operations (addition, subtraction, multiplication, and division, respectively).
+**For integer and floating-point operands**, <T>+</T>, <T>-</T>, <T>*</T>, and <T>/</T> perform
+standard arithmetic operations (addition, subtraction, multiplication, and division, respectively).
 Additionally, <T>%</T> performs the “modulo” operation, and <T>**</T> raises the left operand to the
-power of the right operand. Comparison operators <T>==</T>, <T>!=</T>, <T>&lt;</T>, <T>&lt;=</T>,
-<T>&gt;</T>, and <T>&gt;=</T> compare their operands and evaluate to a boolean value.
+power of the right operand. The comparison operators <T>&lt;</T>, <T>&lt;=</T>, <T>&gt;</T>, and
+<T>&gt;=</T> compare their operands and evaluate to a boolean value.
 
-*For string operands*, the <T>+</T> operator does string concatenation.
+**For string operands**, the <T>+</T> operator does string concatenation.
 
-*For boolean operands*, the <T>&&</T> and <T>||</T> operators are the logical “and” and “or”
+**For boolean operands**, the <T>&&</T> and <T>||</T> operators are the logical “and” and “or”
 operations, respectively.
+
+The <T>==</T> and <T>!=</T> perform *value equality* comparisons for [operands that are passed by
+value](#types-passed-by-value--reference) (like strings, integers, and booleans), and perform
+*reference equality* comparisons between [operands that are passed by
+reference](#types-passed-by-value--reference) (like semaphores and arrays). Operands of type
+<T>thread</T> (thread handles) are equal if and only if they reference the same thread.
+
 
 ##### Prefix operators
 The <T>-</T> prefix operator is negation; it applies to integer and floating-point operands.
