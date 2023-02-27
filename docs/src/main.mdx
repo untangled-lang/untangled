@@ -870,7 +870,7 @@ thread_def Max {
 
 
 
-## Language Features
+## Language features
 
 This section expands on the semantics of key language features mentioned above.
 
@@ -958,6 +958,11 @@ match common Semaphore semantics defined in [literature](https://greenteapress.c
 
 
 
+
+## Additional program semantics
+
+
+
 ### Types passed by value / reference
 
 In message passing and in function calls, every type in Untangled is passed by *value*, with three
@@ -993,12 +998,12 @@ thread_def Main
 
 ### Scope
 
-Scope refers to parts of the program where an <NT.ident /> can be referred to.
+A scope is a part of the program where a set of <NT.ident /> can be referred to.
 Any reference to an <NT.ident /> that does not exist in the current scope is
 a compiler error.
 
 ```untangled
-int foo() {
+int foo() { // The function body is its own scope
   // Compiler error: x is undeclared
   x += 2;
 }
@@ -1013,9 +1018,10 @@ any part of the program, even before they are declared.
 ##### Local variables
 
 The scope of a [local variable](#nonterminal-variable-decl) begins when it is first declared
-and ends at the end of the block. Declaring a variable with the same
-[identifier](#nonterminal-ident) in a nested block excludes the outer scope of the
-identifier from lookup.
+and ends at the end of the block. Each declaration in a block must have a unique
+name, otherwise, it is a compiler error. Declaring a variable with the same
+[identifier](#nonterminal-ident) in a nested block excludes the outer scope of
+the identifier from lookup.
 
 ```untangled
 int foo() {
@@ -1039,3 +1045,59 @@ int foo() {
 Formal paramaters refer to named [identifiers](#nonterminal-ident) in a
 [function definition](#nonterminal-function-def) to stand for values that are passed in a function
 call. The scope of formal parameter is the body of its [function](#nonterminal-function-def).
+
+##### For loops
+
+A [for loop](#for-loops) body has its own scope. *Initializer*, if present, follows the
+scoping rule of [local variables](#local-variables).
+
+```untangled
+int i = 0;
+for (int i = 1; i < 10; i += 2) {
+  // Looked up i in the scope of the for loop
+  print(i % 2 == 0);
+}
+
+int i = 0;
+for (; i < 10; i += 2) {
+  // Looked up i in the outer scope of the for loop
+  print(i % 2 == 0);
+}
+```
+
+##### Receive statement
+
+Each pattern indentifier in a [receive statement](#receive-statements) is scoped to the
+[statement](#nonterminal-stmt) immediately following <T.arrow />.
+
+```untangled
+receive {
+  // x is scoped to the block following it
+  int x -> {
+    x += 5;
+  }
+
+  // Compiler error: x is not defined
+  _ -> print(x);
+}
+```
+
+### Pattern matching
+Inside of a receive block, the message is matched to the corresponding receive case that matches
+its type. Here is an example of pattern-matching in action:
+
+```untangled
+thread_def patterns {
+  receive
+}
+thread_def Main {
+  thread t = spawn patterns;
+  semaphore s = make_semaphore();
+  patterns << (2, (4, "hello"));
+  patterns << "I'm a string";
+  patterns << s;
+  patterns << true;
+  patterns << false;
+}
+```
+
