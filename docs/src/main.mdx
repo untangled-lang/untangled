@@ -582,8 +582,9 @@ A variable declaration binds an identifier to a type and, optionally, assigns a 
 variable. When a declaration includes an assignment, the type of the expression must match the
 declared type of the variable.
 
-The compiler raises an error if the name being declared already exists in the current
-<NT>block</NT>.
+The compiler raises an error if the name being declared has already been declared in the current
+<NT>block</NT> (but re-declaration of variables in nested blocks is allowed; see [Local
+variables](#local-variables)).
 
 
 #### Control flow statements
