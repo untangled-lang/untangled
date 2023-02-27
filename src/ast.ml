@@ -3,7 +3,7 @@ type op = Add | Sub | Mult | Div | Mod | Pow | Equality | Neq | Less | Leq | Gre
 type unop = Neg | Not | Plusplus | Minmin
 
 type typ =
-  Unit
+  Void
   | Bool
   | Int
   | Float
@@ -31,6 +31,7 @@ type expr =
 | Call of string * expr list
 | Index of string * expr
 | Noexpr
+| Unit
 
 type stmt =
   Block of stmt list
@@ -87,7 +88,7 @@ let rec string_of_typ t =
     Int -> "int"
   | Bool -> "bool"
   | Float -> "float"
-  | Unit -> "void"
+  | Void -> "void"
   | Tuple (t1, t2) -> ("(" ^ (string_of_typ t1) ^ ", " ^ (string_of_typ t2) ^ ")")
   | Thread -> "thread"
   | Semaphore -> "semaphore"
@@ -139,6 +140,7 @@ and string_of_expr expr =
   | Noexpr -> ""
   | Index(s, e) -> s ^ "[" ^ string_of_expr e ^ "]"
   | AssignIndex(s, e1, e2) -> s ^ "[" ^ string_of_expr e1 ^ "] = " ^ string_of_expr e2
+  | Unit -> "()"
 
 
 let rec string_of_pattern pat =

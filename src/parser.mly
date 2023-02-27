@@ -51,12 +51,11 @@ decls:
   | decls func_decl { (fst $1, ($2 :: snd $1)) }
 
 typ:
-    VOID { Unit }
+    VOID { Void }
   | INT { Int }
   | BOOL { Bool }
   | FLOAT { Float }
   | LPAREN typ COMMA typ RPAREN { Tuple($2, $4) }
-  | LPAREN RPAREN { Unit }
   | STRING { String }
   | THREAD { Thread }
   | SEMAPHORE { Semaphore }
@@ -70,6 +69,8 @@ expr:
   | SLIT             { StringLit($1)          }
   | LPAREN expr COMMA expr RPAREN { TupleLit($2, $4) }
   | LBRACKET array_elements RBRACKET { ArrayLit(List.rev $2) }
+  // TODO - Double check about our semantics for this
+  | LPAREN RPAREN    { Unit }
   // Names
   | ID               { Id($1)                 }
   // Binary operators
