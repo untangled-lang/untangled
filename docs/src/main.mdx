@@ -348,12 +348,8 @@ literal must have the same type.
 Identifier expressions refer to variables. An identifier expression returns the value of the
 variable it refers to.
 
-There are some built-in identifiers that are not user-defined variables, but are instead keywords
-with special semantics:
-
-- Within each thread, the <a id="parent-keyword"><T>parent</T> keyword</a> holds a thread handle to
-  the thread that invoked <T>spawn</T> to create the current thread. In the top-level instance of
-  the <T>Main</T> thread, the <T>parent</T> keyword refers to the [current thread](#current-thread).
+Some [keywords](#keywords) are also [built-in identifiers](#built-in-identifiers) given special
+values in identifier expressions.
 
 
 #### Operator expressions
@@ -1099,6 +1095,15 @@ thread_def Main {
 
 
 ## Standard library
+
+### Built-in identifiers
+
+- Within each thread, the <a id="parent-keyword"><T>parent</T> keyword</a> holds a thread handle to
+  the thread that invoked <T>spawn</T> to create the current thread. In the top-level instance of
+  the <T>Main</T> thread, the <T>parent</T> keyword refers to the [current thread](#current-thread).
+
+
+### Built-in functions
 
 <table>
   <thead>
