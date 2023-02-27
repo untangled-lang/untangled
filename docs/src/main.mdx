@@ -930,13 +930,13 @@ match common Semaphore semantics defined in [literature](https://greenteapress.c
 
 In message passing and in function calls, every type in Untangled is passed by *value*, with three
 key exceptions:
-1. [Arrays](#nonterminal-array-type) are passed by reference
-2. [Thread handles](#thread-handles) are an opaque reference to a specific spawned thread; a thread
-   handle passed to another function/thread will still refer to the same thread as before (and will
-   not spawn a new thread)
-3. [Semaphores] are passed by reference; if they were not they would not be useful, since
-   semaphore-based synchronization between threads inherently requires two threads to hold a
-   reference to the same thread.
+1. [Arrays](#nonterminal-array-type) are passed by reference.
+2. [Semaphores](#semaphores) are passed by reference; if they were not they would not be useful,
+   since semaphore-based synchronization between threads inherently requires two threads to hold a
+   reference to the same semaphore.
+3. [Thread handles](#thread-handles) are opaque, and Untangled makes no guarantees about whether
+   they are passed by value or by reference. When passed, a thread handle will refer to the same
+   thread as before.
 
 ```untangled
 void referenceFunc(int[4] arr) { arr[0] = 0; }
