@@ -24,7 +24,7 @@ await page.evaluate(() => document.documentElement.style.zoom = 0.66);
 const contentHeight = await page.evaluate(() => document.documentElement.scrollHeight);
 await page.pdf({
   width: '8.5in',
-  height: contentHeight + 96, // add an inch just in case
+  height: contentHeight + 96 * 1.5, // add extra padding to prevent wrapping
   printBackground: true,
   path: 'untangled.pdf',
 });
