@@ -90,6 +90,19 @@ a {
     color: #ff2929;
     cursor: not-allowed;
   }
+
+  svg {
+    width: 1.1em;
+    height: 1.1em;
+    display: inline;
+    vertical-align: -0.25em;
+    margin-left: 0.1em;
+    opacity: 0.4;
+    transition: opacity 0.2s ease;
+  }
+  &:hover svg {
+    opacity: 1;
+  }
 }
 
 p {
