@@ -411,7 +411,6 @@ reference](#types-passed-by-value--reference) (like semaphores and arrays). Oper
 <T>thread</T> ([thread handles](#thread-handles)) are equal if and only if they reference the same
 thread.
 
-
 ##### Prefix operators
 The <T>-</T> prefix operator is negation; it applies to integer and floating-point operands.
 
@@ -778,7 +777,7 @@ If the message queue is empty, the <T>receive</T> statement blocks until it is n
 
 
 
-### Program
+### Programs
 
 The top level of an Untangled program is a set of [function definitions](#function-definitions)
 and [thread procedure definitions](#thread-procedure-definitions).
@@ -870,40 +869,24 @@ thread_def Max {
 
 
 
-## Language features
+## Additional semantics
 
-This section expands on the semantics of key language features mentioned above.
+This section describes the semantics of Untangled features that are not discussed above as part of
+a specific syntactic construction.
 
 
+### Thread semantics
 
-### Multithreaded language features
-
-#### Threads
-
-Threads are the main execution unit in Untangled. <a id="current-thread">Every statement or
-expression evaluated in an Untangled program belongs to a single thread (referred to as the
-**current thread**</a>).
-
-An Untangled program declares one or more
-[thread procedure definitions](#thread-procedure-definitions).
-
-<a id="thread-handles">A value of type <T>thread</T> is called a **thread handle**</a>. It is an
-opaque [resource handle](https://en.wikipedia.org/wiki/Handle_(computing)) to a single running
-instance of a declared thread procedure. Its primary use is as a target for
-[message passing](#message-passing). Thread handles are created via the
-[<T>spawn</T> expression](#thread-spawn-expressions).
-
-Within each thread, the <a id="parent-keyword"><T>parent</T> keyword</a> is a thread handle to the
-thread that invoked <T>spawn</T> to create the current thread. In the top-level instance of the
-<T>Main</T> thread, the <T>parent</T> keyword refers to itself.
-
-##### Lifetime
+#### Thread lifetime
 
 Each thread executes completely independently, and can continue to run after other threads
 (including its parent) have finished executing.
 
 A thread exits once the the last statement in its thread procedure has finished executing, or when
 the [<T>exit</T> built-in function](#built-in-functions) is called.
+
+A thread cannot be resumed after it has exited. A message sent to a thread after it has exited will
+effectively be dropped.
 
 
 #### The Main thread
@@ -916,7 +899,8 @@ Note that another thread can still use the <T>Main</T> thread as a target for <T
 new thread will simply begin executing another copy of the program.
 
 
-#### Message passing
+
+### Message passing
 
 Each thread in Untangled has independent [scope](#scope) and limited access to shared memory.
 Untangled’s **Message passing** system is the primary means of communication between threads.
@@ -925,7 +909,8 @@ Any thread can send a message to any other thread to which it holds a <T>thread<
 <T>&lt;&lt;</T> operator, which sends the value on its right-hand side to the <T>thread</T>
 referenced on its left hand side. A “message” can be any value in Untangled.
 
-##### The message queue
+
+#### The message queue
 
 Each running thread defines a *message queue* internally (i.e. the message queue is not directly
 accessible  to programs). Each message sent is added to the end of the receiving thread’s message
@@ -939,7 +924,8 @@ first message in the receiving thread’s message queue (if the message queue is
 <T>receive</T> statement blocks until it is not).
 
 
-#### Semaphores
+
+### Semaphores
 
 Untangled provides **semaphores** as a primitive with which to implement thread safety mechanisms.
 
@@ -958,65 +944,7 @@ match common Semaphore semantics defined in [literature](https://greenteapress.c
 
 
 
-### Built-in functions
-
-<table>
-  <thead>
-    <tr>
-      <th>Function Name</th>
-      <th>Argument(s)</th>
-      <th>Return types</th>
-      <th>Effect</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>print</td>
-      <td>Any value that is not a thread</td>
-      <td><T.void/></td>
-      <td>Prints out a human-readable representation of the data provided along with a newline in the end</td>
-    </tr>
-    <tr>
-      <td>make_semaphore</td>
-      <td>An optional <T.int/> value to set the semaphore to</td>
-      <td><T.semaphore/></td>
-      <td>Creates a semaphore with an initial value of 0.</td>
-    </tr>
-    <tr>
-      <td>to_string</td>
-      <td>A value that has any type other than a thread</td>
-      <td><T.string/></td>
-      <td>Returns a string of a human-readable version of the argument</td>
-    </tr>
-    <tr>
-      <td>sqrt</td>
-      <td>An <T.int/> or <T.float/></td>
-      <td><T.float/></td>
-      <td>Returns the square root of a given number</td>
-    </tr>
-    <tr>
-      <td>len</td>
-      <td>An array</td>
-      <td><T.int/></td>
-      <td>Returns the length of an array</td>
-    </tr>
-    <tr>
-      <td>exit</td>
-      <td></td>
-      <td><T.void /></td>
-      <td>Exits the current thread execution</td>
-    </tr>
-  </tbody>
-</table>
-
-
-
-
-## Additional program semantics
-
-
-
-### Types passed by value / reference
+### Passing by value / reference
 
 In message passing and in function calls, every type in Untangled is passed by *value*, with three
 key exceptions:
@@ -1135,6 +1063,8 @@ receive {
 }
 ```
 
+
+
 ### Pattern matching
 Inside of a receive block, the message is matched to the corresponding receive case that matches
 its type. Here is an example of pattern-matching in action:
@@ -1154,3 +1084,56 @@ thread_def Main {
 }
 ```
 
+
+
+
+## Standard library
+
+<table>
+  <thead>
+    <tr>
+      <th>Function Name</th>
+      <th>Argument(s)</th>
+      <th>Return types</th>
+      <th>Effect</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>print</td>
+      <td>Any value that is not a thread</td>
+      <td><T.void/></td>
+      <td>Prints out a human-readable representation of the data provided along with a newline in the end</td>
+    </tr>
+    <tr>
+      <td>make_semaphore</td>
+      <td>An optional <T.int/> value to set the semaphore to</td>
+      <td><T.semaphore/></td>
+      <td>Creates a semaphore with an initial value of 0.</td>
+    </tr>
+    <tr>
+      <td>to_string</td>
+      <td>A value that has any type other than a thread</td>
+      <td><T.string/></td>
+      <td>Returns a string of a human-readable version of the argument</td>
+    </tr>
+    <tr>
+      <td>sqrt</td>
+      <td>An <T.int/> or <T.float/></td>
+      <td><T.float/></td>
+      <td>Returns the square root of a given number</td>
+    </tr>
+    <tr>
+      <td>len</td>
+      <td>An array</td>
+      <td><T.int/></td>
+      <td>Returns the length of an array</td>
+    </tr>
+    <tr>
+      <td>exit</td>
+      <td></td>
+      <td><T.void /></td>
+      <td>Exits the current thread execution</td>
+    </tr>
+  </tbody>
+</table>
