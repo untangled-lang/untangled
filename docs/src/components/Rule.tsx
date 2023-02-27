@@ -66,16 +66,17 @@ function NonTerminal({
 } & React.HTMLAttributes<HTMLAnchorElement>) {
   const nonterminalId = `nonterminal-${children.replace(/\s+/g, '-').toLowerCase()}`
   const linkingProps = definition ? { id: nonterminalId } : { href: `#${nonterminalId}` };
-  return <a className="nonterminal" {...linkingProps} {...props}>{children}</a>;
+  return <a {...props} className="nonterminal" {...linkingProps}>{children}</a>;
 }
 
 
 function Terminal({
   children,
+  ...props
 }: {
   children: string,
-}) {
-  return <span className="terminal">{children}</span>;
+} & React.HTMLAttributes<HTMLSpanElement>) {
+  return <span {...props} className="terminal">{children}</span>;
 }
 
 
