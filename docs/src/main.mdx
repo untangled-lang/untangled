@@ -197,8 +197,12 @@ The following are also keywords in Untangled:
 ### Identifiers
 
 Identifiers serve as unique names for variables, thread procedure definitions, and functions.
-Identifiers start with a letter, and can contain letters, digits, and underscores. It is a compiler
-error to use an identifier with the same name as one of the keywords.
+Identifiers start with a letter, and can contain letters, digits, and underscores.
+
+It is a compiler error to declare (by a [variable declaration](#variable-declaration-statements), a
+[function definition](#function-definitions), or a [thread procedure
+definition](#thread-procedure-definitions)) an identifier with the same name as one of the
+[keywords](#keywords).
 
 <Rule name="ident">
   <>
@@ -343,6 +347,13 @@ literal must have the same type.
 
 Identifier expressions refer to variables. An identifier expression returns the value of the
 variable it refers to.
+
+There are some built-in identifiers that are not user-defined variables, but are instead keywords
+with special semantics:
+
+- Within each thread, the <a id="parent-keyword"><T>parent</T> keyword</a> holds a thread handle to
+  the thread that invoked <T>spawn</T> to create the current thread. In the top-level instance of
+  the <T>Main</T> thread, the <T>parent</T> keyword refers to the [current thread](#current-thread).
 
 
 #### Operator expressions
