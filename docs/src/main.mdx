@@ -1,4 +1,5 @@
 import { RuleBlock, Rule, NonTerminal as NT, Terminal as T } from './components/Rule';
+import Code from './components/Code';
 import TableOfContents from './components/TableOfContents';
 
 # Untangled: Language Reference Manual
@@ -137,6 +138,7 @@ The following identifiers are reserved as keywords, and cannot be employed other
 - <T>thread_def</T>
 - <T>spawn</T>
 - <T>receive</T>
+- <T>self</T>
 - <T>parent</T>
 
 - <T>int</T>
@@ -1102,9 +1104,12 @@ thread_def Main {
 
 ### Built-in identifiers
 
+- Within each thread, the <a id="self-keyword"><T>self</T> keyword</a> holds a thread handle
+  to the [current thread](#current-thread).
 - Within each thread, the <a id="parent-keyword"><T>parent</T> keyword</a> holds a thread handle to
   the thread that invoked <T>spawn</T> to create the current thread. In the top-level instance of
-  the <T>Main</T> thread, the <T>parent</T> keyword refers to the [current thread](#current-thread).
+  the <T>Main</T> thread, the <T>parent</T> keyword instead refers to the [current
+  thread](#current-thread), i.e. <Code highlight className="language-untangled">self == parent</Code>.
 
 
 ### Built-in functions
