@@ -418,11 +418,10 @@ power of the right operand. The comparison operators <T>&lt;</T>, <T>&lt;=</T>, 
 operations, respectively.
 
 The <T>==</T> and <T>!=</T> perform *value equality* comparisons for [operands that are passed by
-value](#types-passed-by-value--reference) (like strings, integers, and booleans), and perform
-*reference equality* comparisons between [operands that are passed by
-reference](#types-passed-by-value--reference) (like semaphores and arrays). Operands of type
-<T>thread</T> ([thread handles](#thread-handles)) are equal if and only if they reference the same
-thread.
+value](#passing-by-value--reference) (like strings, integers, and booleans), and perform *reference
+equality* comparisons between [operands that are passed by reference](#passing-by-value--reference)
+(like semaphores and arrays). Operands of type <T>thread</T> ([thread handles](#thread-handles)) are
+equal if and only if they reference the same [thread](#threads).
 
 ##### Prefix operators
 The <T>-</T> prefix operator is negation; it applies to integer and floating-point operands.
