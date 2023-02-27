@@ -902,14 +902,20 @@ Message passing is the mechanism in which threads communicates with each other.
 
 #### Semaphores
 
-A semaphore is constructed using any <NT>integer-literal</NT>. After it is initialized, then
-semaphores can only be changed using two operations: increment and decrement, by the <T>++</T> and
-<T>--</T> postfix operators. These are atomic operations.
+Untangled provides **semaphores** as a primitive with which to implement thread safety mechanisms.
 
-TODO: decide if we are using semaphores to have a built in lock function, stealing from compilers proposal
-1. If a thread decrements a semaphore and the value is negative, the thread blocks until...
-2. ...another thread increments the semaphore. Exactly one thread is unblocked by an increment
-operation, but which thread will be unblocked is not defined.
+A semaphore is a built-in type, which can be constructed using the
+[`make_semaphore` built-in function](#built-in-functions). The semantics of a semaphore in Untangled
+match common Semaphore semantics defined in [literature](https://greenteapress.com/wp/semaphores/):
+
+1. A semaphore can be initialized with any integer value.
+2. After their initialization, semaphores provide only two operations: **increment** and
+   **decrement** (by the <T>++</T> and <T>--</T> postfix operators). There is no mechanism to read
+   the current value. Increment and decrement are **atomic** operations.
+3. If a thread decrements a semaphore and the resulting value is negative, the thread blocks
+   until...
+4. ...another thread increments the semaphore. Exactly one thread is unblocked by an increment
+   operation (but note that *which* thread will be unblocked is not defined).
 
 
 
