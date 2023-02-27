@@ -26,12 +26,12 @@ and abstractions over multithreading.
     parent << sum; // send the result back
   }
 
-thread*def Main {
-thread my_worker = spawn SumWorker;
-my_worker << 100000;
-// Main thread is free to do something else here...
-receive { int x -> int result = x; * -> exit(); };
-print(result);
+thread_def Main {
+    thread my_worker = spawn SumWorker;
+    my_worker << 100000;
+    // Main thread is free to do something else here...
+    receive { int x -> int result = x; * -> exit(); };
+    print(result);
 }
 
 ````
