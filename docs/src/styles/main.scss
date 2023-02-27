@@ -103,6 +103,27 @@ p {
 
 
 
+// Contents
+ol.table-of-contents {
+  list-style-type: upper-roman;
+
+  ol.table-of-contents {
+    list-style-type: decimal;
+
+    ol.table-of-contents {
+      list-style-type: lower-alpha;
+
+      ol.table-of-contents {
+        list-style-type: lower-roman;
+
+        ol.table-of-contents {
+          display: none;
+        }
+      }
+    }
+  }
+}
+
 // Code
 
 :root {
@@ -237,6 +258,7 @@ pre {
 
 
 // Tables
+
 table {
   @include boxed-block;
   --bleed: 0;
