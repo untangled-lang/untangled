@@ -17,7 +17,6 @@ export default defineConfig({
         { src: './node_modules/shiki/languages/*', dest: './languages' },
         // Themes
         { src: './node_modules/shiki/themes/*', dest: './themes' },
-        { src: './node_modules/overnight/themes/*', dest: './themes' },
         // WASM binaries
         { src: './node_modules/shiki/dist/*.wasm', dest: './dist' },
       ],

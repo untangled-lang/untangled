@@ -12,7 +12,6 @@ const UNTANGLED_LANGUAGE_DEFINITION = {
 const LOAD_LANGUAGES = ['ocaml', 'python', UNTANGLED_LANGUAGE_DEFINITION] as const;
 const LOAD_THEMES = [
   'poimandres',
-  'Overnight-Slumber-italic', 'Overnight-Slumber',
   'nord',
   'github-dark', 'github-dark-dimmed',
 ] as const;
