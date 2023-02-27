@@ -1,4 +1,5 @@
 import { RuleBlock, Rule, NonTerminal as NT, Terminal as T } from './components/Rule';
+import TableOfContents from './components/TableOfContents';
 
 # Untangled: Language Reference Manual
 
@@ -30,7 +31,6 @@ and abstractions over multithreading.
     receive { int x -> int result = x; _ -> exit(); };
     print(result);
   }
-
   ```
   <figcaption>
     A simple program demonstrating multithreaded computation in Untangled. The `Main` thread
@@ -41,8 +41,11 @@ and abstractions over multithreading.
 This document serves as an authoritative reference for the Untangled language. It fully specifies
 the language, including its syntax, semantics, and built-in functions.
 
+## Table of contents
+<TableOfContents after="#table-of-contents" />
 
-### Notation
+
+## Notation
 
 The syntax of the language is given in BNF-like notation. Terminal symbols are set in monospace font
 like <T>this</T>. Nonterminal symbols are set in italicized kebab-cased text like
