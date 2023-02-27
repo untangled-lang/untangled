@@ -430,7 +430,7 @@ Operators in the same row have the same precedence.
     </tr>
     <tr>
       <td><T>!</T> <T>++</T> <T>--</T></td>
-      <td>None</td>
+      <td>N/A</td>
     </tr>
   </tbody>
 </table>
@@ -472,8 +472,8 @@ the expression (i.e. the value that is assigned).
 </RuleBlock>
 
 The assignment operators <T>+=</T>, <T>-=</T>, <T>*=</T>, <T>/=</T>, <T>%=</T>, <T>**=</T>
-are shorthands for applying the corresponding infix operator between the left and right sides of the
-expression, and then assigning the result. That is, `a *= b` multiplies `a` by `b` and assigns the
+are shorthands for assigning the *result* of the corresponding infix operation, applied between the
+left and right sides of the expression. That is, `a *= b` multiplies `a` by `b` and assigns the
 result to `a`.
 
 
@@ -536,8 +536,9 @@ discards the evaluated value of the expression.
   <T>{'{'}</T> <NT>stmt</NT>* <T>}</T>
 </Rule>
 
-A <NT>block</NT> is a sequence of statements enclosed in curly braces. A block defines its own
-*scope*, meaning that any variables declared inside the block are only available within the block.
+A block is a sequence of statements enclosed in curly braces. A block always defines its own
+[scope](#scope), meaning that any variables declared inside the block are only available within the
+block.
 
 #### Variable declaration statements
 
@@ -634,7 +635,7 @@ Untangled resolves this ambiguity by associating each <T>else</T> with the close
 
 ###### While loops
 
-A while loop encloses a *condition* expression and a *body* statement. The condition expression
+A while loop encloses a **condition** expression and a **body** statement. The condition expression
 must be a boolean expression.
 
 A while loop performs the following steps:
@@ -645,11 +646,11 @@ A while loop performs the following steps:
 
 ###### For loops
 
-A for loop encloses three semicolon-separated parts in parentheses, followed by a *body* statement.
-We call the first part the *initialization*, the second part the *condition*, and the third part the
-*afterthought*. The initialization is either a variable declaration or an expression, the condition
-is a boolean expression, and the afterthought is an expression. Of the three, only the condition is
-required.
+A for loop encloses three semicolon-separated parts in parentheses, followed by a **body**
+statement. We call the first part the **initialization**, the second part the **condition**, and the
+third part the **afterthought**. The initialization is either a variable declaration or an
+expression, the condition is a boolean expression, and the afterthought is an expression. Of the
+three, only the condition is required.
 
 A for loop is executed as follows:
 
@@ -679,7 +680,7 @@ for (int a = 0; a < 10; a++) { // loop A
 }
 ```
 
-###### Return Statements
+###### Return statements
 <Rule name="return">
   <><T>return</T> <NT>expr</NT>? <T>;</T> </>
 </Rule>
@@ -793,12 +794,12 @@ definitions](#thread-procedure-definitions), which define a sequence of statemen
 
 A function definition has four parts:
 
-1. The *return type* comes first; it indicates the [type](#nonterminal-type) of the value that the
+1. The **return type** comes first; it indicates the [type](#nonterminal-type) of the value that the
   function will return.
-2. The *name* of the function (an <NT>ident</NT>) uniquely identifies it.
-3. The *parameters* are a list of (<NT>type</NT>, <NT>ident</NT>) pairs which define arguments that
+2. The **name** of the function (an <NT>ident</NT>) uniquely identifies it.
+3. The **parameters** are a list of (<NT>type</NT>, <NT>ident</NT>) pairs which define arguments that
   must be passed for each invocation of the function.
-4. The *body* is a list of [statements](#nonterminal-stmt) to be executed when the function is
+4. The **body** is a list of [statements](#nonterminal-stmt) to be executed when the function is
   called.
 
 The following example shows a simple function definition which returns the smaller of two integer
@@ -967,13 +968,9 @@ thread_def Main
 }
 ```
 
-#### Function Features
 
-TODO: keywords like return, explain how functions are run as if part of the same thread, scope of
-functions, restrictions of function calls etc.
-TODO: Talk about how it implicitly returns a unit?
 
-#### Scope
+### Scope
 
 Scope refers to parts of the program where an <NT.ident /> can be referred to.
 Any reference to an <NT.ident /> that does not exist in the current scope is
