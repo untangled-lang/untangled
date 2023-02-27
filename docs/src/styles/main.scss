@@ -37,6 +37,7 @@ body {
 
 html, body {
   scroll-behavior: smooth;
+scroll-padding-top: 0.75rem;
 }
 
 
@@ -61,6 +62,7 @@ h1, h2, h3, h4, h5, h6 {
   margin: 1.5em 0 0.5em;
   &:first-child { margin-top: 0; }
   color: $white;
+  scroll-margin-top: calc(0.5em - 0.75rem);
 }
 $ratio: 1.250;
 @function rem-size($exponent) {
@@ -101,9 +103,15 @@ p {
   color: $text-hint;
 }
 
+strong {
+  font-weight: 800;
+  font-variation-settings: 'wght' 750;
+}
+
 
 
 // Contents
+
 ol.table-of-contents {
   list-style-type: upper-roman;
 
@@ -123,6 +131,8 @@ ol.table-of-contents {
     }
   }
 }
+
+
 
 // Code
 
@@ -248,11 +258,11 @@ pre {
 // Scroll margin for breathing room when anchor link scrolls to a rule-name
 // Give the first rule in the block enough room that the border at the top of the block is visible
 .rule-name a {
-  scroll-margin-top: 2rem;
+  scroll-margin-top: 1.5rem;
 }
 // Subsequent rules in the block don’t need quite that much room
 .rule-block .rule-block ~ .rule-block .rule-name a {
-  scroll-margin-top: 0.75rem;
+  scroll-margin-top: 0; // there’s still the scroll-padding-top from the page
 }
 
 
@@ -261,12 +271,13 @@ pre {
 
 table {
   @include boxed-block;
-  --bleed: 0;
+  --bleed: 1rem;
   padding: 0;
 
   td, th {
-    padding: 0.5em 1em;
+    padding: 0.5rem var(--bleed);
     border: var(--border-width) solid $border-color;
+    text-align: left;
 
     &:first-child { border-left: 0; }
     &:last-child { border-right: 0; }
