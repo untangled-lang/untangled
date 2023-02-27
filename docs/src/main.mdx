@@ -111,7 +111,6 @@ The following identifiers are reserved as keywords, and cannot be employed other
 - <T>return</T>
 
 - <T>thread_def</T>
-- <T>thread</T>
 - <T>spawn</T>
 - <T>receive</T>
 - <T>parent</T>
@@ -177,9 +176,9 @@ The following are also keywords in Untangled:
 
 ### Identifiers
 
-Identifiers serve as unique names for variables, thread definitions, and functions. Identifiers
-start with a letter, and can contain letters, digits, and underscores. It is a compiler error
-to use an identifier with the same name as one of the keywords.
+Identifiers serve as unique names for variables, thread procedure definitions, and functions.
+Identifiers start with a letter, and can contain letters, digits, and underscores. It is a compiler
+error to use an identifier with the same name as one of the keywords.
 
 <Rule name="ident">
   <>
@@ -191,8 +190,9 @@ to use an identifier with the same name as one of the keywords.
 
 
 ### Types
-Untangled includes first-class types for booleans, integers, floats, strings, threads, semaphores,
-tuples, and arrays (as well as a void/Unit type).
+Untangled includes first-class types for booleans, integers, floats, strings,
+[thread handles](#thread-handles), [semaphores](#semaphores), tuples, and arrays (as well as a void
+type).
 
 <RuleBlock>
   <Rule name="type">
@@ -203,7 +203,6 @@ tuples, and arrays (as well as a void/Unit type).
     <T>string</T>
     <T>thread</T>
     <T>semaphore</T>
-    <T>unit</T>
     <NT>tuple-type</NT>
     <NT>array-type</NT>
   </Rule>
@@ -495,9 +494,9 @@ evaluates to the return value of the function.
 
 
 #### Thread spawn expressions
-Thread spawn expressions start a new thread and evaluate to a `thread` value which references the
-new thread. The new thread runs the procedure whose identifier matches the spawn expression, which
-must be defined with a <NT>thread-def</NT>.
+A thread spawn expression starts a new thread to run a given
+[thread procedure](#thread-procedure-definitions), and evaluates to a
+[`thread` handle](#thread-handles) to that new thread.
 
 <Rule name="thread-spawn">
   <><T>spawn</T> <NT>ident</NT></>
@@ -749,25 +748,25 @@ If the message queue is empty, the <T>receive</T> statement blocks until it is n
 
 ### Program
 
-The top level of an Untangled program is a set of [function definitions](#nonterminal-function-def)
-and [thread procedure definitions](#nonterminal-thread-def).
+The top level of an Untangled program is a set of [function definitions](#function-definitions)
+and [thread procedure definitions](#thread-procedure-definitions).
 
-Every program must include exactly one thread declaration with the name <T>Main</T>; its contents
+Every program must include exactly one thread procedure with the name <T>Main</T>; its contents
 run on the main thread when the program starts.
 
 <RuleBlock>
   <Rule name="program">
     <><NT>function-def</NT>\*</>
-    <><NT>thread-def</NT>\+</>
+    <><NT>thread-procedure-def</NT>\+</>
   </Rule>
-  <Rule name="thread-def">
-    <><T>thread_def</T> <NT>ident</NT> <T>{"{"}</T> <NT>stmt</NT>* <T>{"}"}</T></>
+  <Rule name="thread-procedure-def">
+    <><T>thread_def</T> <NT>ident</NT> <NT>block</NT></>
   </Rule>
   <Rule name="function-def">
     <>
       <NT>type</NT> <NT>ident</NT>
       <T>(</T> <NT>function-def-parameters</NT>? <T>)</T>
-      <T>{"{"}</T> <NT>stmt</NT>* <T>{"}"}</T>
+      <NT>block</NT>
     </>
   </Rule>
   <Rule name="function-def-parameters">
@@ -778,8 +777,9 @@ run on the main thread when the program starts.
 
 #### Function definitions
 A **function definition** defines a reusable sequence of statements that will execute directly in
-whichever thread calls it (contrast to [thread definitions](#thread-definitions), which define a
-sequence of statements to be run in a *separate* thread from the calling thread).
+the execution sequence of whichever thread calls it (contrast to [thread procedure
+definitions](#thread-procedure-definitions), which define a sequence of statements to be run in a
+*separate* thread).
 
 A function definition has four parts:
 
@@ -801,16 +801,16 @@ int min (int num1, int num2) {
 }
 ```
 
-#### Thread definitions
+#### Thread procedure definitions
 
-A **thread definition** defines a reusable sequence of statements whose execution will begin in a
-new thread each time it is [spawned](#spawn).
+A **thread procedure definition** is a reusable sequence of statements whose execution can be
+started on a new thread, at any time, by any part of a program, using a
+[<T>spawn</T> expression](#thread-spawn-expressions).
 
-A thread definition has two parts:
-
-1. The *name* of the thread definition uniquely identifies it for use with the
-  [spawn](#nonterminal-thread-spawn) keyword.
-2. The *body* is a list of statements that a newly spawned thread will run.
+A thread procedure definition has two parts:
+1. The **name** of the thread procedure uniquely identifies it for use with the
+   [spawn](#thread-spawn-expressions) keyword.
+2. The **body** is a list of statements that a newly spawned thread will run.
 
 ```untangled
 /* The Max thread procedure expects to receive two numbers, and then sends a
@@ -976,9 +976,9 @@ int foo() {
 }
 ```
 
-##### Function and Threads Declarations
+##### Function and thread procedure definitions
 
-In Untangled, <NT>thread-def</NT> and <NT>function-def</NT> have global scope
+In Untangled, <NT>thread-procedure-def</NT> and <NT>function-def</NT> have global scope
 and can be declared in any order. Their name can be referred to by
 any part of the program, even before they are declared.
 
