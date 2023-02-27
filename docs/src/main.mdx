@@ -19,27 +19,32 @@ and abstractions over multithreading.
   ```untangled
   thread_def SumWorker {
     receive { int x -> int target = x; _ -> exit(); }
+    // Compute the sum of the first `target` integers
     int sum = 0;
     for (int i = 0; i < target; i++) sum += i;
-    parent << sum; // send the result back
+    // Send the result back
+    parent << sum;
   }
 
   thread_def Main {
     thread my_worker = spawn SumWorker;
     my_worker << 100000;
+
     // Main thread is free to do something else here...
+
     receive { int x -> int result = x; _ -> exit(); };
     print(result);
   }
   ```
   <figcaption>
     A simple program demonstrating multithreaded computation in Untangled. The `Main` thread
-    continues running while the `SumWorker` thread does hard, CPU-bound computations.
+    continues running while the `SumWorker` thread performs a CPU-heavy computation (computing the
+    sum of the first 100,000 integers).
   </figcaption>
 </figure>
 
 This document serves as an authoritative reference for the Untangled language. It fully specifies
-the language, including its syntax, semantics, and built-in functions.
+the language, including the syntax and semantics of all language features and built-in functions.
 
 ## Table of contents
 <TableOfContents after="#table-of-contents" />
