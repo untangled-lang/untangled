@@ -53,19 +53,23 @@ the language, including the syntax and semantics of all language features and bu
 
 
 ## Definitions
-A **thread** refers to an operating system thread; a single execution context. Threads are the
-largest unit of Untangled programs.
+
+<a id="threads">
+  A **thread** refers to an operating system thread; a single execution context. Threads are the
+  largest unit of Untangled programs.
+</a>
 
 A [**thread procedure definition**](#thread-procedure-definitions) refers to a block of Untangled
 code that can be executed by one or more thread.
 
-<a id="thread-handles">A **thread handle** refers to a value of [type](#types) <T>thread</T></a>; it
+<a id="thread-handles">A **thread handle**</a> refers to a value of [type](#types) <T>thread</T>; it
 is an opaque [resource handle](https://en.wikipedia.org/wiki/Handle_(computing)) to a single running
 thread.
 
-<a id="current-thread">Every statement or
-expression evaluated in an Untangled program belongs to a single thread, which is called the
-**current thread**</a>.
+<a id="current-thread">
+  Every statement or expression evaluated in an Untangled program belongs to a single thread, which
+  is called the **current thread**.
+</a>
 
 
 

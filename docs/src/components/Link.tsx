@@ -14,8 +14,8 @@ export default function Link({
         {children}
         <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 256 256">
             <rect width="256" height="256" fill="none" />
-            <line x1="64" y1="192" x2="192" y2="64" fill="none" stroke="currentColor" stroke-width="20" />
-            <polyline points="88 64 192 64 192 168" fill="none" stroke="currentColor" stroke-width="20" />
+            <line x1="64" y1="192" x2="192" y2="64" fill="none" stroke="currentColor" strokeWidth="20" />
+            <polyline points="88 64 192 64 192 168" fill="none" stroke="currentColor" strokeWidth="20" />
           </svg>
       </a>
     );
