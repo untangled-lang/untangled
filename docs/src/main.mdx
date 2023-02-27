@@ -513,8 +513,9 @@ Statements are instructions that are executed in sequence.
   <><NT>expr</NT><T.semi /></>
   <NT>block</NT>
   <><NT>variable-decl</NT> <T.semi /></>
-  <><NT>control-flow</NT></>
-  <><NT>message-pass</NT></>
+  <NT>control-flow</NT>
+  <NT>message-send</NT>
+  <NT>message-receive</NT>
 </Rule>
 
 The simplest form of a statement is an expression followed by a semicolon; this statement simply
@@ -683,39 +684,23 @@ function has a non-void return type. Additionally, all non-void functions must i
 <T>return</T> statement.
 
 
-#### Message passing statements
+#### Message send statements
 
-Message passing in Untangled involves one thread “sending” a message, and one thread “receiving” the
-message. See [Message passing](#message-passing) for details on the semantics of the message passing
-system.
-
-<RuleBlock>
-  <Rule name="message-pass">
-    <NT>message-send</NT>
-    <NT>message-receive</NT>
-  </Rule>
-</RuleBlock>
-
-##### Sending messages
-
-A thread can sent messages to any <NT>ident</NT> referring to a `thread` (note that this includes
-the built-in <T>parent</T> keyword, which always refers to the thread that created the current
-thread).
+A thread can send messages to any [thread handle](#thread-handles) it has, including the built-in
+[<T>parent</T> keyword](#parent-keyword).
 
 The expression to the right of the <T>&lt;&lt;</T> operator is the “message” to be sent. A message
-can be a value of any type. See [Message passing](#message-passing) for details on the semantics of
-the message system.
+can be a value of any type. See [Message passing](#message-passing) for an explanation of the
+overall semantics of the message system.
 
 <Rule name="message-send">
   <><NT>ident</NT> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></>
   <><T>parent</T> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></>
 </Rule>
 
-##### Receiving messages
+#### Receive statements
 
-A thread can receive messages from other threads using the keyword <T>receive</T>, followed by
-a set of _<NT>pattern</NT>s_ mapped to [statements](#nonterminal-stmt). See
-[Message passing](#message-passing) for details on the semantics of the message system.
+A thread receives messages from other threads using a <T>receive</T> statement.
 
 <RuleBlock>
   <Rule name="message-receive">
@@ -734,6 +719,32 @@ a set of _<NT>pattern</NT>s_ mapped to [statements](#nonterminal-stmt). See
     <><T>(</T> <NT>pattern</NT> <T>,</T> <NT>pattern</NT> <T>)</T> </>
   </Rule>
 </RuleBlock>
+
+A receive statement consists of an *exhaustive* list of <NT>pattern</NT>s, each followed by a
+[statement](#nonterminal-stmt). A list of <NT>pattern</NT>s is exhaustive if at least one
+pattern matches every possible <NT>type</NT> in Untangled. The compiler checks this constraint for
+each receive statement.
+
+The receive statement performs the following steps:
+1. Pop the first message from the current thread’s [message queue](#the-message-queue).
+2. Match the type of the message against each pattern in the receive statement, in sequential order.
+3. For the first pattern that [matches](#pattern-matching):
+   1. Bind the pattern’s variable(s) according to the message’s value.
+   2. Execute the statement associated with the pattern.
+
+```untangled
+thread_def ReceiveExample {
+  receive {
+    int val                -> print(val + 2)
+    string val             -> print(val);
+    (string s1, string s2) -> print("Hello " + s1 + " " + s2 + "!");
+    (_, string s2)         -> print("Hello " + s2 + "!");
+    _                      -> exit(1);
+  }
+}
+```
+If the message queue is empty, the <T>receive</T> statement blocks until it is not.
+
 
 
 ### Program
@@ -824,81 +835,77 @@ thread_def Max {
 }
 ```
 
+
+
+
 ## Language Features
 
-### Multithreaded features
+This section expands on the semantics of key language features mentioned above.
 
-#### Thread features
 
-One thread is a singular flow of control. All statements within a singular
-thread are executed in sequential order from top to bottom. Any function calls
-that occur within the thread definition are added to the the control flow of the
-thread and do not execute in parallel.
 
-Each thread has a <T>parent</T> thread, which is a keyword that can be used to
-reference the "parent" thread that spawned the current thread. This keyword can
-be used in place of a thread identifier. It is a runtime error(TODO: can a
-parent thread go out of scope before a child thread?) to reference a parent
-thread that has terminated and gone out of scope.
+### Multithreaded language features
 
-A variable declared in the scope of one thread will go out of scope once the
-thread stops its execution.
+#### Threads
 
-A thread needs to be spawned with an existing [thread
-definition](#nonterminal-thread-def). A spawned thread can operate without a
-stored reference and can continue operating even if the parent thread has
-finished operating (TODO: this wholly depends on what we decide for operations
-with parent threads).
+Threads are the main execution unit in Untangled. <a id="current-thread">Every statement or
+expression evaluated in an Untangled program belongs to a single thread (referred to as the
+**current thread**</a>).
 
-#### Main Thread features
+An Untangled program declares one or more
+[thread procedure definitions](#thread-procedure-definitions).
 
-Every program needs to have a <T>Main</T> thread definition which is the
-starting point of any Untangled program. The program starts by spawning a
-thread with the <T>Main</T> thread definition and starts running the procedure
-defined in it. More threads with the <T>Main</T> thread definition can be
-spawned using the <T>spawn</T> keyword.
+<a id="thread-handles">A value of type <T>thread</T> is called a **thread handle**</a>. It is an
+opaque [resource handle](https://en.wikipedia.org/wiki/Handle_(computing)) to a single running
+instance of a declared thread procedure. Its primary use is as a target for
+[message passing](#message-passing). Thread handles are created via the
+[<T>spawn</T> expression](#thread-spawn-expressions).
+
+Within each thread, the <a id="parent-keyword"><T>parent</T> keyword</a> is a thread handle to the
+thread that invoked <T>spawn</T> to create the current thread. In the top-level instance of the
+<T>Main</T> thread, the <T>parent</T> keyword refers to itself.
+
+##### Lifetime
+
+Each thread executes completely independently, and can continue to run after other threads
+(including its parent) have finished executing.
+
+A thread exits once the the last statement in its thread procedure has finished executing, or when
+the [<T>exit</T> built-in function](#built-in-functions) is called.
+
+
+#### The Main thread
+
+Every program must define one thread procedure with the name <T>Main</T>. This thread procedure
+serves as the entry point to an Untangled program; its contents will run directly in the top-level
+process.
+
+Note that another thread can still use the <T>Main</T> thread as a target for <T>spawn</T>; this
+new thread will simply begin executing another copy of the program.
+
 
 #### Message passing
 
-The way different threads communicate with each other in Untangled is through the use of message
-passing.
+Each thread in Untangled has independent [scope](#scope) and limited access to shared memory.
+Untangled’s **Message passing** system is the primary means of communication between threads.
 
-A thread can send a message to any other thread that they have a reference for (including the parent
-thread) as long as they still are within scope. Sending a message to a thread that is no longer running
-is a runtime error. Messages sent by one thread are all sent in sequential order and are also received
-in sequential order (with reference to each other).
+Any thread can send a message to any other thread to which it holds a <T>thread</T> handle using the
+<T>&lt;&lt;</T> operator, which sends the value on its right-hand side to the <T>thread</T>
+referenced on its left hand side. A “message” can be any value in Untangled.
 
-Any message sent to a thread is stored in a queue. Values sent by one thread will be also received in
-sequential order; however, in the case of multiple threads sending values to one thread, there is no
-order guarantee.
+##### The message queue
 
-A receive block needs to be invoked in order to have access to the first message in the receiving
-queue. This message is then pattern matched inside of the receive block. Pattern matching happens
-as follows:
+Each running thread defines a *message queue* internally (i.e. the message queue is not directly
+accessible  to programs). Each message sent is added to the end of the receiving thread’s message
+queue. Message queues store values of any type. Untangled guarantees that messages are received in
+the order they are sent (though when multiple “sender” threads send a message to the same “receiver”
+thread, this order is nondeterministic).
 
-1. The first message in the queue is popped from the receive queue
-2. The type of the message is compared to each pattern in the receive block in sequential order
-3. The message pattern matches against one of the patterns and then bound to variable names (see example below).
-5. The statement attached to the pattern executes.
+In order to take values off of its message queue, a thread uses a
+[<T>receive</T> statement](#receive-statements). The <T>receive</T> statement *always* reads the
+first message in the receiving thread’s message queue (if the message queue is empty, the
+<T>receive</T> statement blocks until it is not).
 
-```untangled
-
-thread_def ReceiveExample {
-
-  receive {
-    int val                -> print(val + 2)
-    string val             -> print(val);
-    (string s1, string s2) -> print("Hello " + s1 + " " + s2 + "!");
-    _                      -> exit(1);
-  }
-
-}
-```
-A receive block blocks the program from running until it receives a message. The pattern matching
-inside of a receive block should be exhaustive.
-
-TODO: keywords like parent, explain pattern matching logic, explain implicit effects
-Message passing is the mechanism in which threads communicates with each other.
 
 #### Semaphores
 
