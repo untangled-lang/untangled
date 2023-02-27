@@ -47,14 +47,14 @@ function TOCList({ sections }: { sections: Section[] }) {
   if (!sections.length) return null;
 
   return (
-    <ul className="table-of-contents-list">
+    <ol className="table-of-contents">
       {sections.map((section) => (
         <li key={section.id}>
           <a href={`#${section.id}`}>{section.name}</a>
           <TOCList sections={section.subsections}></TOCList>
         </li>
       ))}
-    </ul>
+    </ol>
   )
 }
 
