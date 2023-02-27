@@ -128,6 +128,7 @@ The following are also keywords in Untangled:
 <div className="boxed">
 {/* Punctuation */}
 - <T>;</T>
+- <T>,</T>
 - <T>(</T>
 - <T>)</T>
 - <T>\{</T>
@@ -145,13 +146,13 @@ The following are also keywords in Untangled:
 - <T>%</T>
 - <T>\*\*</T>
 - <T>=</T>
-- <T>==</T>
 - <T>+=</T>
 - <T>-=</T>
 - <T>\*=</T>
 - <T>/=</T>
 - <T>%=</T>
 - <T>\*\*=</T>
+- <T>==</T>
 - <T>!=</T>
 - <T>\<</T>
 - <T>\<=</T>
@@ -393,7 +394,7 @@ The <T>++</T> and <T>--</T> postfix operators also apply to semaphores; see
 The table below shows the relative precedence and associativity of operators in
 Untangled. Operators with lower precedence appear in earlier rows of the table
 than operators with higher precedence. Operators in the same row have the same
-precedence. 
+precedence.
 
 <table>
 <thead>
@@ -506,9 +507,9 @@ must be defined with a <NT>thread-def</NT>.
 Statements are instructions that are executed in sequence.
 
 <Rule name="stmt">
-<><NT>expr</NT><T>semi</T></>
+<><NT>expr</NT><T.semi /></>
 <NT>block</NT>
-<><NT>variable-decl</NT></>
+<><NT>variable-decl</NT> <T.semi /></>
 <><NT>control-flow</NT></>
 <><NT>message-pass</NT></>
 </Rule>
@@ -528,7 +529,7 @@ A <NT>block</NT> is a sequence of statements enclosed in curly braces. A block d
 #### Variable declaration statements
 
 <Rule name="variable-decl">
-  <><NT.type /><NT.ident />(<T>=</T> <NT.expr />)? <T.semi /></>
+  <><NT.type /><NT.ident />(<T>=</T> <NT.expr />)?</>
 </Rule>
 
 A variable declaration binds an identifier to a type and, optionally, assigns a
@@ -560,8 +561,9 @@ current <NT.block />.
   <>
     <T>for</T> <T>(</T>
     <NT>variable-decl</NT>
+    <T.semi />
     <NT>expr</NT>
-    <T>;</T>
+    <T.semi />
     <NT>expr</NT>?
     <T>)</T>
     <NT>stmt</NT>
@@ -606,20 +608,22 @@ else print("2");
 
 // Should the above be interpreted like this...
 if (my_boolean_1) {
-if (my_boolean_2) { print("1"); }
+  if (my_boolean_2) { print("1"); }
 } else {
-print("2");
+  print("2");
 }
 
 // ...or like this?
 if (my_boolean_1) {
-if (my_boolean_2) { print("1"); }
-else { print("2"); }
+  if (my_boolean_2) { print("1"); }
+  else { print("2"); }
 }
-````
+```
 
 Untangled resolves this ambiguity by associating each “else” statement with the most recent “if”
 statement (i.e., the second of the two interpretations given above).
+
+Untangled resolves this ambiguity by associating each else with the closest or most recent if statement.
 
 ##### Loops
 
@@ -654,13 +658,9 @@ A for loop is executed as follows:
 
 <T>break</T> and <T>continue</T> statements can only be used within a <NT>loop</NT>.
 
-<T>break</T> jumps to the end of the loop, skipping any remaining statements in the
-loop body and any remaining iterations of the loop. <T>continue</T> jumps to the
-next loop iteration, skipping any remaining statements in the loop body but preserving
-any remaining iterations of the loop.
-
-<T>break</T> and <T>continue</T> both always refer to the innermost loop that contains
-them:
+The <T>break</T> keyword exits the loop, while <T>continue</T> jumps to the
+next iteration of the loop. Both keywords always refer to the innermost loop that contains
+them.
 
 ```untangled
 for (int a = 0; a < 10; a++) { // loop A
@@ -678,7 +678,7 @@ for (int a = 0; a < 10; a++) { // loop A
 ###### Return Statements
 The <T>return</T> keyword can only be used in within a function definition. The expression that
 comes after the <T>return</T> keyword is evaluated and the evaluated value is returned to where
-the function was called. Said expression must evaluate to a value of the same type as the type of
+the function was called. This expression must evaluate to a value of the same type as the type of
 the function. The execution of a return statement finalizes the function. All functions need to
 have a <T>return</T> statement. Because functions with type <T>void</T> do not return a value,
 they are exempt from this rule.
@@ -699,7 +699,7 @@ system.
 ##### Sending messages
 
 A thread can sent messages to any <NT.ident /> of type `thread` or its parent,
-specificied by the keyword <T>parent</T>. A message is the value of the 
+specificied by the keyword <T>parent</T>. A message is the value of the
 evaluated expression.
 
 <Rule name="message-send">
@@ -709,9 +709,11 @@ evaluated expression.
 
 ##### Receiving messages
 
-Receiving messages uses a construction with the keyword <T>receive</T>, followed by a set of
-_<NT>pattern</NT>s_ mapped to [statements](#nonterminal-stmt). See
-[Message passing](#message-passing) for details on the semantics of message receiving.
+A thread can receive messages from other threads using the keyword <T>receive</T>, followed by
+a set of _<NT>pattern</NT>s_ mapped to [statements](#nonterminal-stmt). A message received matches
+exactly 1 pattern based on its type and its value is bind to <T.ident />. See
+[Message passing](#message-passing) for details on the semantics of message
+receiving.
 
 <RuleBlock>
   <Rule name="message-receive">
@@ -733,11 +735,11 @@ _<NT>pattern</NT>s_ mapped to [statements](#nonterminal-stmt). See
   </Rule>
 </RuleBlock>
 
-### Programs
+### Program
 
 The top level of an Untangled program is a set of [function definitions](#nonterminal-function-def)
 and [thread procedure definitions](#nonterminal-thread-def). Every program needs to have a <T>Main</T>
-function definition that invokes other function or thread calls
+thread declaration that invokes other function or thread calls.
 
 <RuleBlock>
   <Rule name="program">
@@ -745,7 +747,7 @@ function definition that invokes other function or thread calls
       <NT>function-def</NT>\*
     </>
     <>
-      <NT>thread-def</NT>\*
+      <NT>thread-def</NT>\+
     </>
   </Rule>
   <Rule name="thread-def">
@@ -772,13 +774,13 @@ function definition that invokes other function or thread calls
 
 #### Function definitions
 Function definitions are a way of defining a block of statements that can be added to the control
-flow of a running thread. There are 4 parts to each function definition: 
+flow of a running thread. There are 4 parts to each function definition:
 
 1. The return type: Indicates the type of the value that will be returned by the function
 2. The name: Used for identifying and refering to the function
-3. The arguments: A list of type and name pairs separated by commas and enclosed in parantheses. 
+3. The arguments: A list of type and name pairs separated by commas and enclosed in parantheses.
 These are the values that will be passed in during the function call.
-4. The body of the function: A list of statements that are executed when the function is called.
+4. The body: A list of statements that are executed when the function is called.
 
 Below you can see a function definition example:
 
@@ -792,14 +794,14 @@ Arguments: num1, the first integer
 Return   : Returns the integer with the smallest value
 */
 
-int min (int num1, int num2) { 
+int min (int num1, int num2) {
   if (num1 <= num2) {
     return num1;
-  } 
+  }
 
   return num2;
 }
-``` 
+```
 
 #### Thread definitions
 
@@ -810,7 +812,7 @@ Thread definitions are blocks of code that can be assigned to run by a thread. T
 
 All thread definitions have access to the <T>parent</T> keyword which is a
 reference to the thread that spawned the current thread. Check out the [thread
-features](#thread-ft) section for more semantic information on threads. Here's
+features](#nonterminal-thread-def) section for more semantic information on threads. Here's
 an example:
 
 
@@ -820,7 +822,7 @@ Name     : Max
 Purpose  : Sending the greater of two integer values back to the parent thread
 */
 
-thread_def Max { 
+thread_def Max {
   int num1;
   int num2;
   receive {
@@ -837,9 +839,9 @@ thread_def Max {
   } else {
     parent << num2;
   }
-  
+
 }
-``` 
+```
 
 ## Language Features
 
@@ -850,7 +852,7 @@ thread_def Max {
 One thread is a singular flow of control. All statements within a singular
 thread are executed in sequential order from top to bottom. Any function calls
 that occur within the thread definition are added to the the control flow of the
-thread and do not execute in parallel. 
+thread and do not execute in parallel.
 
 Each thread has a <T>parent</T> thread, which is a keyword that can be used to
 reference the "parent" thread that spawned the current thread. This keyword can
@@ -859,7 +861,7 @@ parent thread go out of scope before a child thread?) to reference a parent
 thread that has terminated and gone out of scope.
 
 A variable declared in the scope of one thread will go out of scope once the
-thread stops its execution. 
+thread stops its execution.
 
 A thread needs to be spawned with an existing [thread
 definition](#nonterminal-thread-def). A spawned thread can operate without a
@@ -869,21 +871,29 @@ with parent threads).
 
 #### Main Thread features
 
-Every program needs to have a <T>Main</T> thread definition which is the 
+Every program needs to have a <T>Main</T> thread definition which is the
 starting point of any Untangled program. The program starts by spawning a
 thread with the <T>Main</T> thread definition and starts running the procedure
-defined in it. More threads with the <T>Main</T> thread definition can be 
+defined in it. More threads with the <T>Main</T> thread definition can be
 spawned using the <T>spawn</T> keyword.
 
 #### Message passing
 
-The way different threads communicate with each other in Untangled is through the use of message passing. 
+The way different threads communicate with each other in Untangled is through the use of message
+passing.
 
-A thread can send a message to any other thread that they have a reference for (including the parent thread) as long as they still are within scope. Sending a message to a thread that is no longer running is a runtime error. Messages sent by one thread are all sent in sequential order and are also received in sequential order (with reference to each other).
+A thread can send a message to any other thread that they have a reference for (including the parent
+thread) as long as they still are within scope. Sending a message to a thread that is no longer running
+is a runtime error. Messages sent by one thread are all sent in sequential order and are also received
+in sequential order (with reference to each other).
 
-Any message sent to a thread is stored in a queue. Values sent by one thread will be also received in sequential order; however, in the case of multiple threads sending values to one thread, there is no order guarantee.
+Any message sent to a thread is stored in a queue. Values sent by one thread will be also received in
+sequential order; however, in the case of multiple threads sending values to one thread, there is no
+order guarantee.
 
-A receive block needs to be invoked in order to have access to the first message in the receiving queue. This message is then pattern matched inside of the receive block. Pattern matching happens as follows:
+A receive block needs to be invoked in order to have access to the first message in the receiving
+queue. This message is then pattern matched inside of the receive block. Pattern matching happens
+as follows:
 
 1. The first message in the queue is popped from the receive queue
 2. The type of the message is compared to each pattern in the receive block in sequential order
@@ -892,28 +902,41 @@ A receive block needs to be invoked in order to have access to the first message
 
 ```untangled
 
-thread_def ReceiveExample { 
-  
+thread_def ReceiveExample {
+
   receive {
     int val                -> print(val + 2)
     string val             -> print(val);
     (string s1, string s2) -> print("Hello " + s1 + " " + s2 + "!");
     _                      -> exit(1);
   }
-  
+
 }
-``` 
-A receive block blocks the program from running until it receives a message. The pattern matching inside of a receive block should be exhaustive.
+```
+A receive block blocks the program from running until it receives a message. The pattern matching
+inside of a receive block should be exhaustive.
+
 TODO: keywords like parent, explain pattern matching logic, explain implicit effects
 Message passing is the mechanism in which threads communicates with each other.
 
 #### Semaphores
 
-TODO: 
+A semaphore is constructed using any <NT>integer-literal</NT>. After it is initialized, then
+semaphores can only be changed using two operations: increment and decrement, by the <T>++</T> and
+<T>--</T> postfix operators. These are atomic operations.
 
-#### Function features
+TODO: decide if we are using semaphores to have a built in lock function, stealing from compilers proposal
+1. If a thread decrements a semaphore and the value is negative, the thread blocks until...
+2. ...another thread increments the semaphore. Exactly one thread is unblocked by an increment
+operation, but which thread will be unblocked is not defined.
 
-TODO: keywords like return, explain how functions are run as if part of the same thread, scope of functions, restrictions of function calls etc. 
+##### TODO - Passby value vs pass by reference?
+
+#### Function Features
+
+TODO: keywords like return, explain how functions are run as if part of the same thread, scope of
+functions, restrictions of function calls etc.
+TODO: Talk about how it implicitly returns a unit?
 
 #### Scope
 
@@ -924,17 +947,42 @@ a compiler error.
 ```untangled
 int foo() {
   // Compiler error: x is undeclared
-  x += 2; 
+  x += 2;
 }
 ```
 
-##### Functions / Threads scope
+##### Function and Threads Declarations
 
 In Untangled, <NT>thread-def</NT> and <NT>function-def</NT> have global scope
-and can be declared in any order. Their name can be referred to by 
+and can be declared in any order. Their name can be referred to by
 any part of the program, even before they are declared.
 
-##### Variables scope
+##### Local variables
 
-The scope of an <NT.ident /> in a <NT.block /> begins when it is first declared
-and ends at the end of the block. 
+The scope of a [local variable](#nonterminal-variable-decl) begins when it is first declared
+and ends at the end of the block. Declaring a variable with the same
+[identifier](#nonterminal-ident) in a nested block excludes the outer scope of the
+identifier from lookup.
+
+```untangled
+int foo() {
+  int x = 10;
+  int y = 5;
+  // Looked up x in the outer scope
+  x += 5;
+  {
+    // Redclared x in inner block
+    int x = 100;
+    // Looked up x in the inner scope
+    x += 5;
+    // Looked up y in the outer scope
+    y += x;
+  }
+}
+```
+
+##### Formal parameters
+
+Formal paramaters refer to named [identifiers](#nonterminal-ident) in a
+[function definition](#nonterminal-function-def) to stand for values that are passed in a function
+call. The scope of formal parameter is the body of its [function](#nonterminal-function-def).
