@@ -728,8 +728,8 @@ function has a non-void return type. Additionally, all non-void functions must i
 
 #### Message send statements
 
-A thread can send messages to any [thread handle](#thread-handles) it has, including the built-in
-[<T>parent</T> keyword](#parent-keyword).
+A [thread](#threads) can send messages to any [thread handle](#thread-handles) it has, including the
+built-in [<T>parent</T> keyword](#parent-keyword).
 
 The expression to the right of the <T>&lt;&lt;</T> operator is the “message” to be sent. A message
 can be a value of any type. See [Message passing](#message-passing) for an explanation of the
@@ -742,7 +742,7 @@ overall semantics of the message system.
 
 #### Receive statements
 
-A thread receives messages from other threads using a <T>receive</T> statement.
+A [thread](#threads) receives messages from other threads using a <T>receive</T> statement.
 
 <RuleBlock>
   <Rule name="message-receive">
@@ -820,7 +820,7 @@ run on the main thread when the program starts.
 
 #### Function definitions
 A **function definition** defines a reusable sequence of statements that will execute directly in
-the execution sequence of whichever thread calls it (contrast to [thread procedure
+the execution sequence of whichever [thread](#threads) calls it (contrast to [thread procedure
 definitions](#thread-procedure-definitions), which define a sequence of statements to be run in a
 *separate* thread).
 
@@ -891,8 +891,8 @@ a specific syntactic construction.
 
 #### Thread lifetime
 
-Each thread executes completely independently, and can continue to run after other threads
-(including its parent) have finished executing.
+Each [thread](#threads) executes completely independently, and can continue to run after other
+threads (including its parent) have finished executing.
 
 A thread exits once the the last statement in its thread procedure has finished executing, or when
 the [<T>exit</T> built-in function](#built-in-functions) is called.
