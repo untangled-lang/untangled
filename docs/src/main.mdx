@@ -958,6 +958,59 @@ match common Semaphore semantics defined in [literature](https://greenteapress.c
 
 
 
+### Built-in functions
+
+<table>
+  <thead>
+    <tr>
+      <th>Function Name</th>
+      <th>Argument(s)</th>
+      <th>Return types</th>
+      <th>Effect</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>print</td>
+      <td>Any value that is not a thread</td>
+      <td><T.void/></td>
+      <td>Prints out a human-readable representation of the data provided along with a newline in the end</td>
+    </tr>
+    <tr>
+      <td>make_semaphore</td>
+      <td>An optional <T.int/> value to set the semaphore to</td>
+      <td><T.semaphore/></td>
+      <td>Creates a semaphore with an initial value of 0.</td>
+    </tr>
+    <tr>
+      <td>to_string</td>
+      <td>A value that has any type other than a thread</td>
+      <td><T.string/></td>
+      <td>Returns a string of a human-readable version of the argument</td>
+    </tr>
+    <tr>
+      <td>sqrt</td>
+      <td>An <T.int/> or <T.float/></td>
+      <td><T.float/></td>
+      <td>Returns the square root of a given number</td>
+    </tr>
+    <tr>
+      <td>len</td>
+      <td>An array</td>
+      <td><T.int/></td>
+      <td>Returns the length of an array</td>
+    </tr>
+    <tr>
+      <td>exit</td>
+      <td></td>
+      <td><T.void /></td>
+      <td>Exits the current thread execution</td>
+    </tr>
+  </tbody>
+</table>
+
+
+
 
 ## Additional program semantics
 
