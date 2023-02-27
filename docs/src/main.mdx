@@ -1,16 +1,13 @@
-import {
-  RuleBlock,
-  Rule,
-  NonTerminal as NT,
-  Terminal as T,
-} from "./components/Rule";
+import { RuleBlock, Rule, NonTerminal as NT, Terminal as T } from './components/Rule';
 
 # Untangled: Language Reference Manual
 
 <div style={{ marginTop: "-1rem", marginBottom: "3rem" }}>
-  [Luke Deen Taylor](mailto:luke.taylor@tufts.edu), [Nick
-  Doan](mailto:hdoan02@tufts.edu), [Duru Ugurlu](mailto:duru.ugurlu@tufts.edu),
-  [Caleb Ledi](mailto:cledi01@tufts.edu), [Chloe Lam](mailto:clam08@tufts.edu)
+  [Luke Deen Taylor](mailto:luke.taylor@tufts.edu),
+  [Nick Doan](mailto:hdoan02@tufts.edu),
+  [Duru Ugurlu](mailto:duru.ugurlu@tufts.edu),
+  [Caleb Ledi](mailto:cledi01@tufts.edu),
+  [Chloe Lam](mailto:clam08@tufts.edu)
 </div>
 
 **Untangled** is a new programming language with first-class support for multithreading. It
@@ -26,19 +23,19 @@ and abstractions over multithreading.
     parent << sum; // send the result back
   }
 
-thread_def Main {
+  thread_def Main {
     thread my_worker = spawn SumWorker;
     my_worker << 100000;
     // Main thread is free to do something else here...
-    receive { int x -> int result = x; * -> exit(); };
+    receive { int x -> int result = x; _ -> exit(); };
     print(result);
-}
+  }
 
-````
-<figcaption>
-  A simple program demonstrating multithreaded computation in Untangled. The `Main` thread
-  continues running while the `SumWorker` thread does hard, CPU-bound computations.
-</figcaption>
+  ```
+  <figcaption>
+    A simple program demonstrating multithreaded computation in Untangled. The `Main` thread
+    continues running while the `SumWorker` thread does hard, CPU-bound computations.
+  </figcaption>
 </figure>
 
 This document serves as an authoritative reference for the Untangled language. It fully specifies
@@ -53,21 +50,21 @@ like <T>this</T>. Nonterminal symbols are set in italicized kebab-cased text lik
 
 Terminals and nonterminals are combined as followed:
 - A single space between components indicates concatenation—the given components should appear in
-the given order.
+  the given order.
 - Square brackets indicate *character sets*. A character set contains several single-character
-literals, and matches any one of those characters. For example,
-<nobr>[<T>a</T> <T>b</T> <T>c</T>]</nobr> matches exactly one of <T>a</T>, <T>b</T>, or <T>c</T>.
-- Within a character set, a hyphen indicates an ASCII range, e.g. <nobr>[<T>a</T>-<T>z</T>]</nobr>
-  matches any lowercase letter.
-- A caret after the opening square brace of a character set indicates negation, e.g.
-  <nobr>[^<T>a</T>-<T>z</T>]</nobr> matches any character that is *not* a lowercase letter.
+  literals, and matches any one of those characters. For example,
+  <nobr>[<T>a</T> <T>b</T> <T>c</T>]</nobr> matches exactly one of <T>a</T>, <T>b</T>, or <T>c</T>.
+  - Within a character set, a hyphen indicates an ASCII range, e.g. <nobr>[<T>a</T>-<T>z</T>]</nobr>
+    matches any lowercase letter.
+  - A caret after the opening square brace of a character set indicates negation, e.g.
+    <nobr>[^<T>a</T>-<T>z</T>]</nobr> matches any character that is *not* a lowercase letter.
 - Parentheses (<span className="hint">...</span>) indicate grouping.
 - An asterisk <span className="hint">...</span>* indicates that the preceding component may be
-repeated zero or more times.
+  repeated zero or more times.
 - A plus sign <span className="hint">...</span>+ indicates that the preceding component may be
-repeated one or more times.
+  repeated one or more times.
 - A question mark <span className="hint">...</span>? indicates that the preceding component is
-optional.
+  optional.
 
 These forms are combined into *production rules*, each of which gives a single nonterminal on the
 left and one or more possible *expansions* on the right (each separated by a vertical bar). For
@@ -75,8 +72,8 @@ example, the following rule defines a nonterminal <NT>example-nonterminal</NT> t
 either “hello” or “world”.
 
 <Rule name="example-nonterminal">
-<><T>hello</T></>
-<><T>world</T></>
+  <><T>hello</T></>
+  <><T>world</T></>
 </Rule>
 
 
@@ -131,8 +128,8 @@ The following are also keywords in Untangled:
 - <T>,</T>
 - <T>(</T>
 - <T>)</T>
-- <T>\{</T>
-- <T>}</T>
+- <T>{'{'}</T>
+- <T>{'}'}</T>
 - <T>[</T>
 - <T>]</T>
 
@@ -177,49 +174,49 @@ start with a letter, and can contain letters, digits, and underscores. It is a c
 to use an identifier with the same name as one of the keywords.
 
 <Rule name="ident">
-<>
-  [<T>a</T>-<T>z</T> <T>A</T>-<T>Z</T>]
-  [<T>a</T>-<T>z</T> <T>A</T>-<T>Z</T> <T>0</T>-<T>9</T> <T>_</T>]*
-</>
+  <>
+    [<T>a</T>-<T>z</T> <T>A</T>-<T>Z</T>]
+    [<T>a</T>-<T>z</T> <T>A</T>-<T>Z</T> <T>0</T>-<T>9</T> <T>_</T>]*
+  </>
 </Rule>
 
 
 
 ### Types
-Untangled includes first-class types for booleans, integers, floats, strings,
-threads, semaphores, units, tuples, and arrays.
+Untangled includes first-class types for booleans, integers, floats, strings, threads, semaphores,
+tuples, and arrays (as well as a void/Unit type).
 
 <RuleBlock>
-<Rule name="type">
-  <T>void</T>
-  <T>bool</T>
-  <T>int</T>
-  <T>float</T>
-  <T>string</T>
-  <T>thread</T>
-  <T>semaphore</T>
-  <T>unit</T>
-  <NT>tuple-type</NT>
-  <NT>array-type</NT>
-</Rule>
+  <Rule name="type">
+    <T>void</T>
+    <T>bool</T>
+    <T>int</T>
+    <T>float</T>
+    <T>string</T>
+    <T>thread</T>
+    <T>semaphore</T>
+    <T>unit</T>
+    <NT>tuple-type</NT>
+    <NT>array-type</NT>
+  </Rule>
 
-<Rule name="tuple-type">
-  <>
-    <T>(</T>
-    <NT>type</NT>
-    <T>,</T>
-    <NT>type</NT>
-    <T>)</T>
-  </>
-</Rule>
-<Rule name="array-type">
-  <>
-    <NT>type</NT>
-    <T>[</T>
-    <NT>integer-literal</NT>
-    <T>]</T>
-  </>
-</Rule>
+  <Rule name="tuple-type">
+    <>
+      <T>(</T>
+      <NT>type</NT>
+      <T>,</T>
+      <NT>type</NT>
+      <T>)</T>
+    </>
+  </Rule>
+  <Rule name="array-type">
+    <>
+      <NT>type</NT>
+      <T>[</T>
+      <NT>integer-literal</NT>
+      <T>]</T>
+    </>
+  </Rule>
 </RuleBlock>
 
 
@@ -233,14 +230,14 @@ The **type** of an expression refers to the [type](#types) of value that it eval
 There are several forms of expressions:
 
 <Rule name="expr">
-<NT>literal</NT>
-<NT>ident</NT>
-<NT>operation</NT>
-<NT>array-access</NT>
-<NT>assignment</NT>
-<NT>grouping</NT>
-<NT>function-call</NT>
-<NT>thread-spawn</NT>
+  <NT>literal</NT>
+  <NT>ident</NT>
+  <NT>operation</NT>
+  <NT>array-access</NT>
+  <NT>assignment</NT>
+  <NT>grouping</NT>
+  <NT>function-call</NT>
+  <NT>thread-spawn</NT>
 </Rule>
 
 
@@ -251,39 +248,39 @@ In Untangled, boolean, integer, float, string, tuple, and array values can be co
 specific value.
 
 <Rule name="literal">
-<NT>integer-literal</NT>
-<NT>float-literal</NT>
-<NT>boolean-literal</NT>
-<NT>tuple-literal</NT>
-<NT>array-literal</NT>
+  <NT>integer-literal</NT>
+  <NT>float-literal</NT>
+  <NT>boolean-literal</NT>
+  <NT>tuple-literal</NT>
+  <NT>array-literal</NT>
 </Rule>
 
 Numeric literals work as one would expect: they contain sequences of digits, and floating-point
 literal values contain a decimal point.
 
 <RuleBlock>
-<Rule name="digit">
-  <>[<T>0</T>-<T>9</T>]</>
-</Rule>
+  <Rule name="digit">
+    <>[<T>0</T>-<T>9</T>]</>
+  </Rule>
 
-<Rule name="digits">
-  <><NT>digit</NT>+</>
-</Rule>
+  <Rule name="digits">
+    <><NT>digit</NT>+</>
+  </Rule>
 
-<Rule name="integer-literal">
-  <NT>digits</NT>
-</Rule>
+  <Rule name="integer-literal">
+    <NT>digits</NT>
+  </Rule>
 
-<Rule name="float-literal">
-  <><NT>digits</NT> <T>.</T> <NT>digits</NT></>
-</Rule>
+  <Rule name="float-literal">
+    <><NT>digits</NT> <T>.</T> <NT>digits</NT></>
+  </Rule>
 </RuleBlock>
 
 Boolean literals come from the token <T>true</T> or the token <T>false</T>.
 
 <Rule name="boolean-literal">
-<T>true</T>
-<T>false</T>
+  <T>true</T>
+  <T>false</T>
 </Rule>
 
 String literals start and end with a double quote, and any sequence of characters *besides* a double
@@ -291,27 +288,27 @@ quote can go inside. The entire contents between (not including) the double quot
 string value.
 
 <Rule name="string-literal">
-<><T>"</T> [^<T>"</T>]* <T>"</T></>
+  <><T>"</T> [^<T>"</T>]* <T>"</T></>
 </Rule>
 
 A tuple literal groups exactly two expressions, each of which can have any type.
 
 <Rule name="tuple-literal">
-<><T>(</T> <NT>expr</NT> <T>,</T> <NT>expr</NT> <T>)</T></>
+  <><T>(</T> <NT>expr</NT> <T>,</T> <NT>expr</NT> <T>)</T></>
 </Rule>
 
 An array literal includes an arbitrary number of values; all of the expressions inside an array
 literal must have the same type.
 
 <RuleBlock>
-<Rule name="array-literal">
-  <><T>[</T> <NT>array-elements</NT>? <T>]</T></>
-</Rule>
+  <Rule name="array-literal">
+    <><T>[</T> <NT>array-elements</NT>? <T>]</T></>
+  </Rule>
 
-<Rule name="array-elements">
-  <NT>expr</NT>
-  <><NT>array-elements</NT> <T>,</T> <NT>expr</NT></>
-</Rule>
+  <Rule name="array-elements">
+    <NT>expr</NT>
+    <><NT>array-elements</NT> <T>,</T> <NT>expr</NT></>
+  </Rule>
 </RuleBlock>
 
 
@@ -328,38 +325,38 @@ The next type of expression applies an operator to one or two subexpressions (ei
 after an expression).
 
 <RuleBlock>
-<Rule name="operation">
-  <><NT>expr</NT> <NT>infix-op</NT> <NT>expr</NT></>
-  <><NT>prefix-op</NT> <NT>expr</NT></>
-  <><NT>expr</NT> <NT>postfix-op</NT></>
-</Rule>
+  <Rule name="operation">
+    <><NT>expr</NT> <NT>infix-op</NT> <NT>expr</NT></>
+    <><NT>prefix-op</NT> <NT>expr</NT></>
+    <><NT>expr</NT> <NT>postfix-op</NT></>
+  </Rule>
 
-<Rule name="infix-op" inlineCases>
-  <T>+</T>
-  <T>-</T>
-  <T>*</T>
-  <T>/</T>
-  <T>%</T>
-  <T>**</T>
-  <T>==</T>
-  <T>!=</T>
-  <T>&lt;</T>
-  <T>&lt;=</T>
-  <T>&gt;</T>
-  <T>&gt;=</T>
-  <T>&amp;&amp;</T>
-  <T>||</T>
-</Rule>
+  <Rule name="infix-op" inlineCases>
+    <T>+</T>
+    <T>-</T>
+    <T>*</T>
+    <T>/</T>
+    <T>%</T>
+    <T>**</T>
+    <T>==</T>
+    <T>!=</T>
+    <T>&lt;</T>
+    <T>&lt;=</T>
+    <T>&gt;</T>
+    <T>&gt;=</T>
+    <T>&amp;&amp;</T>
+    <T>||</T>
+  </Rule>
 
-<Rule name="prefix-op" inlineCases>
-  <T>-</T>
-  <T>!</T>
-</Rule>
+  <Rule name="prefix-op" inlineCases>
+    <T>-</T>
+    <T>!</T>
+  </Rule>
 
-<Rule name="postfix-op" inlineCases>
-  <T>++</T>
-  <T>--</T>
-</Rule>
+  <Rule name="postfix-op" inlineCases>
+    <T>++</T>
+    <T>--</T>
+  </Rule>
 </RuleBlock>
 
 ##### Infix operators
@@ -390,37 +387,35 @@ The <T>++</T> and <T>--</T> postfix operators also apply to semaphores; see
 [Semaphores](#semaphores) for the semantics of these operations.
 
 ##### Operator precedence and associativity
-
-The table below shows the relative precedence and associativity of operators in
-Untangled. Operators with lower precedence appear in earlier rows of the table
-than operators with higher precedence. Operators in the same row have the same
-precedence.
+The table below shows the relative precedence and associativity of operators in Untangled. Operators
+with lower precedence appear in earlier rows of the table than operators with higher precedence.
+Operators in the same row have the same precedence.
 
 <table>
-<thead>
-  <tr>
-    <th>Operator / Construction</th>
-    <th>Associativity</th>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td><T>=</T> <T>+=</T> <T>-=</T> <T>*=</T> <T>/=</T> <T>%=</T> <T>**=</T></td>
-    <td>Right</td>
-  </tr>
-  <tr>
-    <td><T>||</T> <T>&&</T> <T>==</T> <T>!=</T> <T>&lt;</T> <T>&gt;</T> <T>&lt;=</T> <T>&gt;=</T></td>
-    <td>Left</td>
-  </tr>
-  <tr>
-    <td><T>+</T> <T>-</T> <T>\*</T> <T>/</T> <T>%</T> <T>**</T></td>
-    <td>Left</td>
-  </tr>
-  <tr>
-    <td><T>!</T> <T>++</T> <T>--</T></td>
-    <td>None</td>
-  </tr>
-</tbody>
+  <thead>
+    <tr>
+      <th>Operator / Construction</th>
+      <th>Associativity</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><T>=</T> <T>+=</T> <T>-=</T> <T>*=</T> <T>/=</T> <T>%=</T> <T>**=</T></td>
+      <td>Right</td>
+    </tr>
+    <tr>
+      <td><T>||</T> <T>&&</T> <T>==</T> <T>!=</T> <T>&lt;</T> <T>&gt;</T> <T>&lt;=</T> <T>&gt;=</T></td>
+      <td>Left</td>
+    </tr>
+    <tr>
+      <td><T>+</T> <T>-</T> <T>\*</T> <T>/</T> <T>%</T> <T>**</T></td>
+      <td>Left</td>
+    </tr>
+    <tr>
+      <td><T>!</T> <T>++</T> <T>--</T></td>
+      <td>None</td>
+    </tr>
+  </tbody>
 </table>
 
 
@@ -430,7 +425,7 @@ inside the brackets must evaluate to an integer. The evaluated type of the array
 is the element type of the array.
 
 <Rule name="array-access">
-<><NT>ident</NT> <T>[</T> <NT>expr</NT> <T>]</T></>
+  <><NT>ident</NT> <T>[</T> <NT>expr</NT> <T>]</T></>
 </Rule>
 
 
@@ -443,20 +438,20 @@ element referenced on the left. An assignment expression evaluates to the value 
 the expression (i.e. the value that is assigned).
 
 <RuleBlock>
-<Rule name="assignment">
-  <><NT>assignment-left</NT> <T>=</T> <NT>expr</NT></>
-  <><NT>assignment-left</NT> <T>+=</T> <NT>expr</NT></>
-  <><NT>assignment-left</NT> <T>-=</T> <NT>expr</NT></>
-  <><NT>assignment-left</NT> <T>\*=</T> <NT>expr</NT></>
-  <><NT>assignment-left</NT> <T>/=</T> <NT>expr</NT></>
-  <><NT>assignment-left</NT> <T>%=</T> <NT>expr</NT></>
-  <><NT>assignment-left</NT> <T>\*\*=</T> <NT>expr</NT></>
-</Rule>
+  <Rule name="assignment">
+    <><NT>assignment-left</NT> <T>=</T> <NT>expr</NT></>
+    <><NT>assignment-left</NT> <T>+=</T> <NT>expr</NT></>
+    <><NT>assignment-left</NT> <T>-=</T> <NT>expr</NT></>
+    <><NT>assignment-left</NT> <T>\*=</T> <NT>expr</NT></>
+    <><NT>assignment-left</NT> <T>/=</T> <NT>expr</NT></>
+    <><NT>assignment-left</NT> <T>%=</T> <NT>expr</NT></>
+    <><NT>assignment-left</NT> <T>\*\*=</T> <NT>expr</NT></>
+  </Rule>
 
-<Rule name="assignment-left">
-  <NT>ident</NT>
-  <><NT>ident</NT> <T>[</T> <NT>expr</NT> <T>]</T></>
-</Rule>
+  <Rule name="assignment-left">
+    <NT>ident</NT>
+    <><NT>ident</NT> <T>[</T> <NT>expr</NT> <T>]</T></>
+  </Rule>
 </RuleBlock>
 
 The assignment operators <T>+=</T>, <T>-=</T>, <T>*=</T>, <T>/=</T>, <T>%=</T>, <T>**=</T>
@@ -471,7 +466,7 @@ the group is evaluated in full as an atomic unit, before the value is used in th
 expression.
 
 <Rule name="grouping">
-<><T>(</T> <NT>expr</NT> <T>)</T></>
+  <><T>(</T> <NT>expr</NT> <T>)</T></>
 </Rule>
 
 
@@ -480,14 +475,14 @@ Function call expressions invoke a function with a specified set of arguments. T
 evaluates to the return value of the function.
 
 <RuleBlock>
-<Rule name="function-call">
-  <><NT>ident</NT> <T>(</T> <NT>call-args</NT>? <T>)</T></>
-</Rule>
+  <Rule name="function-call">
+    <><NT>ident</NT> <T>(</T> <NT>call-args</NT>? <T>)</T></>
+  </Rule>
 
-<Rule name="call-args">
-  <NT>expr</NT>
-  <><NT>call-args</NT> <T>,</T> <NT>expr</NT></>
-</Rule>
+  <Rule name="call-args">
+    <NT>expr</NT>
+    <><NT>call-args</NT> <T>,</T> <NT>expr</NT></>
+  </Rule>
 </RuleBlock>
 
 
@@ -497,7 +492,7 @@ new thread. The new thread runs the procedure whose identifier matches the spawn
 must be defined with a <NT>thread-def</NT>.
 
 <Rule name="thread-spawn">
-<><T>spawn</T> <NT>ident</NT></>
+  <><T>spawn</T> <NT>ident</NT></>
 </Rule>
 
 
@@ -507,11 +502,11 @@ must be defined with a <NT>thread-def</NT>.
 Statements are instructions that are executed in sequence.
 
 <Rule name="stmt">
-<><NT>expr</NT><T.semi /></>
-<NT>block</NT>
-<><NT>variable-decl</NT> <T.semi /></>
-<><NT>control-flow</NT></>
-<><NT>message-pass</NT></>
+  <><NT>expr</NT><T.semi /></>
+  <NT>block</NT>
+  <><NT>variable-decl</NT> <T.semi /></>
+  <><NT>control-flow</NT></>
+  <><NT>message-pass</NT></>
 </Rule>
 
 The simplest form of a statement is an expression followed by a semicolon; this statement simply
@@ -520,7 +515,7 @@ discards the evaluated value of the expression.
 
 #### Blocks
 <Rule name="block">
-<T>{'{'}</T> <NT>stmt</NT>* <T>}</T>
+  <T>{'{'}</T> <NT>stmt</NT>* <T>}</T>
 </Rule>
 
 A <NT>block</NT> is a sequence of statements enclosed in curly braces. A block defines its own
@@ -532,63 +527,57 @@ A <NT>block</NT> is a sequence of statements enclosed in curly braces. A block d
   <><NT.type /><NT.ident />(<T>=</T> <NT.expr />)?</>
 </Rule>
 
-A variable declaration binds an identifier to a type and, optionally, assigns a
-value to this new variable. When a declaration includes an assignment, the type
-of the expression must match the declared type of the variable.
+A variable declaration binds an identifier to a type and, optionally, assigns a value to this new
+variable. When a declaration includes an assignment, the type of the expression must match the
+declared type of the variable.
 
-The compiler raises an error if the name being declared already exists in the
-current <NT.block />.
+The compiler raises an error if the name being declared already exists in the current
+<NT>block</NT>.
 
 
 #### Control flow statements
 
 <RuleBlock>
-<Rule name="control-flow">
-  <><NT>conditional</NT></>
-  <><NT>loop</NT></>
-  <><NT>loop-control</NT></>
-  <><NT>return</NT></>
-</Rule>
+  <Rule name="control-flow">
+    <><NT>conditional</NT></>
+    <><NT>loop</NT></>
+    <><NT>loop-control</NT></>
+    <><NT>return</NT></>
+  </Rule>
 
-<Rule name="conditional">
-  <><T>if</T> <T>(</T> <NT>expr</NT> <T>)</T> <NT>stmt</NT> </>
-  <><T>if</T> <T>(</T> <NT>expr</NT> <T>)</T> <NT>stmt</NT> <T>else</T> <NT>stmt</NT> </>
-</Rule>
+  <Rule name="conditional">
+    <><T>if</T> <T>(</T> <NT>expr</NT> <T>)</T> <NT>stmt</NT> </>
+    <><T>if</T> <T>(</T> <NT>expr</NT> <T>)</T> <NT>stmt</NT> <T>else</T> <NT>stmt</NT> </>
+  </Rule>
 
-<Rule name="loop">
-  <><T>while</T> <T>(</T> <NT>expr</NT> <T>)</T> <NT>stmt</NT> </>
+  <Rule name="loop">
+    <><T>while</T> <T>(</T> <NT>expr</NT> <T>)</T> <NT>stmt</NT> </>
+    <>
+      <T>for</T> <T>(</T>
+      <NT>variable-decl</NT>
+      <T.semi />
+      <NT>expr</NT>
+      <T.semi />
+      <NT>expr</NT>?
+      <T>)</T>
+      <NT>stmt</NT>
+    </>
+    <>
+      <T>for</T> <T>(</T>
+      <NT>expr</NT>?
+      <T>;</T>
+      <NT>expr</NT>
+      <T>;</T>
+      <NT>expr</NT>?
+      <T>)</T>
+      <NT>stmt</NT>
+    </>
+  </Rule>
 
-  <>
-    <T>for</T> <T>(</T>
-    <NT>variable-decl</NT>
-    <T.semi />
-    <NT>expr</NT>
-    <T.semi />
-    <NT>expr</NT>?
-    <T>)</T>
-    <NT>stmt</NT>
-  </>
-  <>
-    <T>for</T> <T>(</T>
-    <NT>expr</NT>?
-    <T>;</T>
-    <NT>expr</NT>
-    <T>;</T>
-    <NT>expr</NT>?
-    <T>)</T>
-    <NT>stmt</NT>
-  </>
-</Rule>
-
-<Rule name="loop-control">
-  <><T>break</T><T.semi/></>
-  <><T>continue</T><T.semi/></>
-</Rule>
-
-<Rule name="return">
-  <><T>return</T> <NT>expr</NT>? <T>;</T> </>
-</Rule>
-
+  <Rule name="loop-control">
+    <><T>break</T><T.semi/></>
+    <><T>continue</T><T.semi/></>
+  </Rule>
 </RuleBlock>
 
 ##### Conditionals
@@ -620,16 +609,14 @@ if (my_boolean_1) {
 }
 ```
 
-Untangled resolves this ambiguity by associating each “else” statement with the most recent “if”
-statement (i.e., the second of the two interpretations given above).
-
-Untangled resolves this ambiguity by associating each else with the closest or most recent if statement.
+Untangled resolves this ambiguity by associating each <T>else</T> with the closest/most recent
+<T>if</T> statement.
 
 ##### Loops
 
 ###### While loops
 
-A while loop encloses a _condition_ expression and a _body_ statement. The condition expression
+A while loop encloses a *condition* expression and a *body* statement. The condition expression
 must be a boolean expression.
 
 A while loop performs the following steps:
@@ -640,9 +627,9 @@ A while loop performs the following steps:
 
 ###### For loops
 
-A for loop encloses three semicolon-separated parts in parentheses, followed by a _body_ statement.
-We call the first part the _initialization_, the second part the _condition_, and the third part the
-_afterthought_. The initialization is either a variable declaration or an expression, the condition
+A for loop encloses three semicolon-separated parts in parentheses, followed by a *body* statement.
+We call the first part the *initialization*, the second part the *condition*, and the third part the
+*afterthought*. The initialization is either a variable declaration or an expression, the condition
 is a boolean expression, and the afterthought is an expression. Of the three, only the condition is
 required.
 
@@ -658,9 +645,8 @@ A for loop is executed as follows:
 
 <T>break</T> and <T>continue</T> statements can only be used within a <NT>loop</NT>.
 
-The <T>break</T> keyword exits the loop, while <T>continue</T> jumps to the
-next iteration of the loop. Both keywords always refer to the innermost loop that contains
-them.
+The <T>break</T> keyword exits the loop, while <T>continue</T> jumps to the next iteration of the
+oop. Both keywords always refer to the innermost loop that contains them.
 
 ```untangled
 for (int a = 0; a < 10; a++) { // loop A
@@ -676,12 +662,18 @@ for (int a = 0; a < 10; a++) { // loop A
 ```
 
 ###### Return Statements
-The <T>return</T> keyword can only be used in within a function definition. The expression that
-comes after the <T>return</T> keyword is evaluated and the evaluated value is returned to where
-the function was called. This expression must evaluate to a value of the same type as the type of
-the function. The execution of a return statement finalizes the function. All functions need to
-have a <T>return</T> statement. Because functions with type <T>void</T> do not return a value,
-they are exempt from this rule.
+<Rule name="return">
+  <><T>return</T> <NT>expr</NT>? <T>;</T> </>
+</Rule>
+
+The <T>return</T> keyword can only be used in within a function definition.
+
+The <T>return</T> keyword is used to return a value from a function. The expression on the right
+side of the <T>return</T> keyword becomes the return value of the function, and the function exits
+immediately. The expression must be provided (and have the same type as the function) if the
+function has a non-void return type. Additionally, all non-void functions must include a
+<T>return</T> statement.
+
 
 #### Message passing statements
 
@@ -698,9 +690,13 @@ system.
 
 ##### Sending messages
 
-A thread can sent messages to any <NT.ident /> of type `thread` or its parent,
-specificied by the keyword <T>parent</T>. A message is the value of the
-evaluated expression.
+A thread can sent messages to any <NT>ident</NT> referring to a `thread` (note that this includes
+the built-in <T>parent</T> keyword, which always refers to the thread that created the current
+thread).
+
+The expression to the right of the <T>&lt;&lt;</T> operator is the “message” to be sent. A message
+can be a value of any type. See [Message passing](#message-passing) for details on the semantics of
+the message system.
 
 <Rule name="message-send">
   <><NT>ident</NT> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></>
@@ -710,23 +706,19 @@ evaluated expression.
 ##### Receiving messages
 
 A thread can receive messages from other threads using the keyword <T>receive</T>, followed by
-a set of _<NT>pattern</NT>s_ mapped to [statements](#nonterminal-stmt). A message received matches
-exactly 1 pattern based on its type and its value is bind to <T.ident />. See
-[Message passing](#message-passing) for details on the semantics of message
-receiving.
+a set of _<NT>pattern</NT>s_ mapped to [statements](#nonterminal-stmt). See
+[Message passing](#message-passing) for details on the semantics of the message system.
 
 <RuleBlock>
   <Rule name="message-receive">
     <><T>receive</T><T.lbrace/> <NT>receive-pattern</NT>? <T.rbrace/></>
   </Rule>
 
-{" "}
-
-<Rule name="receive-pattern">
-  <>
-    <NT>pattern</NT> <T>-></T> <NT>stmt</NT>
-  </>
-</Rule>
+  <Rule name="receive-pattern">
+    <>
+      <NT>pattern</NT> <T>-></T> <NT>stmt</NT>
+    </>
+  </Rule>
 
   <Rule name="pattern">
     <><NT>type</NT> <NT>ident</NT></>
@@ -735,93 +727,75 @@ receiving.
   </Rule>
 </RuleBlock>
 
+
 ### Program
 
 The top level of an Untangled program is a set of [function definitions](#nonterminal-function-def)
-and [thread procedure definitions](#nonterminal-thread-def). Every program needs to have a <T>Main</T>
-thread declaration that invokes other function or thread calls.
+and [thread procedure definitions](#nonterminal-thread-def).
+
+Every program must include exactly one thread declaration with the name <T>Main</T>; its contents
+run on the main thread when the program starts.
 
 <RuleBlock>
   <Rule name="program">
-    <>
-      <NT>function-def</NT>\*
-    </>
-    <>
-      <NT>thread-def</NT>\+
-    </>
+    <><NT>function-def</NT>\*</>
+    <><NT>thread-def</NT>\+</>
   </Rule>
   <Rule name="thread-def">
-    <>
-      <T>thread_def</T> <NT>ident</NT> <T>{"{"}</T> <NT>stmt</NT>* <T>{"}"}</T>
-    </>
+    <><T>thread_def</T> <NT>ident</NT> <T>{"{"}</T> <NT>stmt</NT>* <T>{"}"}</T></>
   </Rule>
   <Rule name="function-def">
     <>
-      <NT>type</NT> <NT>ident</NT> <T>(</T> <NT>function-def-parameters</NT>?{" "}
-      <T>)</T>
+      <NT>type</NT> <NT>ident</NT>
+      <T>(</T> <NT>function-def-parameters</NT>? <T>)</T>
       <T>{"{"}</T> <NT>stmt</NT>* <T>{"}"}</T>
     </>
   </Rule>
   <Rule name="function-def-parameters">
-    <>
-      <NT>type</NT> <NT>ident</NT>
-    </>
-    <>
-      <NT>function-def-parameters</NT> <T>,</T> <NT>type</NT> <NT>ident</NT>
-    </>
+    <><NT>type</NT> <NT>ident</NT></>
+    <><NT>function-def-parameters</NT> <T>,</T> <NT>type</NT> <NT>ident</NT></>
   </Rule>
 </RuleBlock>
 
 #### Function definitions
-Function definitions are a way of defining a block of statements that can be added to the control
-flow of a running thread. There are 4 parts to each function definition:
+A **function definition** defines a reusable sequence of statements that will execute directly in
+whichever thread calls it (contrast to [thread definitions](#thread-definitions), which define a
+sequence of statements to be run in a *separate* thread from the calling thread).
 
-1. The return type: Indicates the type of the value that will be returned by the function
-2. The name: Used for identifying and refering to the function
-3. The arguments: A list of type and name pairs separated by commas and enclosed in parantheses.
-These are the values that will be passed in during the function call.
-4. The body: A list of statements that are executed when the function is called.
+A function definition has four parts:
 
-Below you can see a function definition example:
+1. The *return type* comes first; it indicates the [type](#nonterminal-type) of the value that the
+  function will return.
+2. The *name* of the function (an <NT>ident</NT>) uniquely identifies it.
+3. The *parameters* are a list of (<NT>type</NT>, <NT>ident</NT>) pairs which define arguments that
+  must be passed for each invocation of the function.
+4. The *body* is a list of [statements](#nonterminal-stmt) to be executed when the function is
+  called.
 
-
+The following example shows a simple function definition which returns the smaller of two integer
+arguments:
 ```untangled
-/*
-Name     : min
-Purpose  : Returning the smaller of two integer values
-Arguments: num1, the first integer
-           num2, the second integer
-Return   : Returns the integer with the smallest value
-*/
-
+/* Returns the smaller of two integers */
 int min (int num1, int num2) {
-  if (num1 <= num2) {
-    return num1;
-  }
-
+  if (num1 <= num2) return num1;
   return num2;
 }
 ```
 
 #### Thread definitions
 
-Thread definitions are blocks of code that can be assigned to run by a thread. There are 2 parts to any thread definition:
+A **thread definition** defines a reusable sequence of statements whose execution will begin in a
+new thread each time it is [spawned](#spawn).
 
-1. The name: Used for identifying the thread definition.
-2. The body: The list of statements that the thread would run.
+A thread definition has two parts:
 
-All thread definitions have access to the <T>parent</T> keyword which is a
-reference to the thread that spawned the current thread. Check out the [thread
-features](#nonterminal-thread-def) section for more semantic information on threads. Here's
-an example:
-
+1. The *name* of the thread definition uniquely identifies it for use with the
+  [spawn](#nonterminal-thread-spawn) keyword.
+2. The *body* is a list of statements that a newly spawned thread will run.
 
 ```untangled
-/*
-Name     : Max
-Purpose  : Sending the greater of two integer values back to the parent thread
-*/
-
+/* The Max thread procedure expects to receive two numbers, and then sends a
+ * message back to its parent thread with the maximum of the two. */
 thread_def Max {
   int num1;
   int num2;
@@ -839,7 +813,6 @@ thread_def Max {
   } else {
     parent << num2;
   }
-
 }
 ```
 
