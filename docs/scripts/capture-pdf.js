@@ -10,13 +10,19 @@ if (!hasDist) {
 }
 
 // Serve the built app
-const previewServer = await preview({ preview: { port: 5174 } });
+const previewServer = await preview({
+  base: process.env.DOCS_BASE_PATH ?? '/',
+  preview: { port: 5174 },
+});
+console.log('Started server');
 
 // Load the page
 const browser = await puppeteer.launch({ headless: true });
 const page = await browser.newPage();
-await page.goto('http://localhost:5174');
+await page.goto(previewServer.resolvedUrls.local[0]);
+console.log('Launched browser');
 await page.waitForSelector('h1');
+console.log('Loaded page');
 
 
 // Capture PDF
@@ -32,6 +38,8 @@ await page.pdf({
   printBackground: true,
   path: 'untangled.pdf',
 });
+
+console.log('Captured PDF');
 
 // Clean up
 await browser.close();
