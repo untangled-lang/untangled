@@ -768,15 +768,15 @@ A [thread](#threads) receives messages from other threads using a <T>receive</T>
 
 A receive statement consists of an exhaustive list of <NT>pattern</NT>s, each followed by a
 [statement](#nonterminal-stmt). A list of <NT>pattern</NT>s is **exhaustive** if at least one
-pattern [matches](#pattern-matching) every possible <NT>type</NT> in Untangled. The compiler checks
-this constraint for each receive statement.
+pattern [matches](#pattern-matching-semantics) every possible <NT>type</NT> in Untangled. The
+compiler checks this constraint for each receive statement.
 
 Executing a receive statement performs the following steps:
 1. Pop the first message from the current thread’s [message queue](#the-message-queue).
 2. Attempt to match each pattern in the <T>receive</T> statement against the message, by the
-   algorithm described in [pattern matching](#pattern-matching).
+   algorithm described in [pattern matching semantics](#pattern-matching-semantics).
 3. For the first (in the order they are given in the <T>receive</T> statement) pattern that passes:
-   1. Bind the pattern’s variable(s) according to the message’s value. (TODO: explain this?)
+   1. Bind the pattern’s variable(s) according to the message’s value. {/* TODO: explain this? */}
    2. Execute the statement associated with the pattern.
 
 ```untangled
@@ -791,6 +791,37 @@ thread_def ReceiveExample {
 }
 ```
 If the message queue is empty, the <T>receive</T> statement blocks until it is not.
+
+
+
+##### Pattern matching semantics
+
+<a id="matching-procedure">A</a> <NT>pattern</NT> is said to **match** a value if any of the
+following is true:
+
+  1. The pattern is of the form <NT>type</NT> <NT>ident</NT>, and the type of the pattern is exactly
+     the type of the value being matched against.
+  2. The pattern is of the form <T>(</T> <NT>pattern</NT> <T>,</T> <NT>pattern</NT> <T>)</T>, and
+     the value being matched against is a tuple where the first element
+     [match](#matching-procedure)es (by recursive application of these steps) the first pattern, and
+     the second element [match](#matching-procedure)es the second pattern.
+  3. The pattern is the wildcard pattern `_`.
+
+**Example 1**: The value `int x` matches a message whose <NT>type</NT> is `int` by the “exact type”
+rule (#1) because the type of the pattern is exactly the type of the message.
+
+**Example 2**: the value `(int x, string y)` matches a message whose <NT>type</NT> is
+`(int, string)` by the “tuple” rule (#2), because both the first and second elements of the tuple
+match by the “exact type” rule (#1).
+
+**Example 3**: the value `(_, string y)` matches a message whose <NT>type</NT> is `(int, string)`
+by the “tuple” rule (#2) because the first element matches by the “wildcard” rule (#3), and the
+second element matches by the “exact type” rule (#1).
+
+**Example 4**: the value `(_, string y)` does *not* match a message whose <NT>type</NT> is
+`(string, int)`, because the “exact match” (#1) and “wildcard” (#3) rules do not apply trivially,
+and the “tuple” rule does not succeed either—although the first element matches by the “wildcard”
+rule (#3), the second element does not match under any of the three rules.
 
 
 
@@ -943,39 +974,6 @@ In order to take values off of its message queue, a thread uses a
 first message in the receiving thread’s message queue (if the message queue is empty, the
 <T>receive</T> statement blocks until it is not).
 
-
-
-### Pattern matching
-
-The following is a formal description of the pattern matching semantics of Untangled.
-
-
-<a id="matching-procedure">A</a> <NT>pattern</NT> is said to **match** a value if any of the
-following is true:
-
-  1. The pattern is of the form <NT>type</NT> <NT>ident</NT>, and the type of the pattern is exactly
-     the type of the value being matched against.
-  2. The pattern is of the form <T>(</T> <NT>pattern</NT> <T>,</T> <NT>pattern</NT> <T>)</T>, and
-     the value being matched against is a tuple where the first element
-     [match](#matching-procedure)es (by recursive application of these steps) the first pattern, and
-     the second element [match](#matching-procedure)es the second pattern.
-  3. The pattern is the wildcard pattern `_`.
-
-**Example 1**: The value `int x` matches a message whose <NT>type</NT> is `int` by the “exact type”
-rule (#1) because the type of the pattern is exactly the type of the message.
-
-**Example 2**: the value `(int x, string y)` matches a message whose <NT>type</NT> is
-`(int, string)` by the “tuple” rule (#2), because both the first and second elements of the tuple
-match by the “exact type” rule (#1).
-
-**Example 3**: the value `(_, string y)` matches a message whose <NT>type</NT> is `(int, string)`
-by the “tuple” rule (#2) because the first element matches by the “wildcard” rule (#3), and the
-second element matches by the “exact type” rule (#1).
-
-**Example 4**: the value `(_, string y)` does *not* match a message whose <NT>type</NT> is
-`(string, int)`, because the “exact match” (#1) and “wildcard” (#3) rules do not apply trivially,
-and the “tuple” rule does not succeed either—although the first element matches by the “wildcard”
-rule (#3), the second element does not match under any of the three rules.
 
 
 ### Semaphores
