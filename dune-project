@@ -3,7 +3,7 @@
 (name untangled)
 (authors "Luke Taylor" "Nick Doan" "Duru Ugurlu" "Caleb Ledi" "Chloe Lam")
 (source
- (github nickbar01234/untangled))
+ (github untangled-lang/untangled))
 
 
 (package
