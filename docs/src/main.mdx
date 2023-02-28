@@ -56,12 +56,12 @@ the language, including the syntax and semantics of all language features and bu
 ## Definitions
 
 <a id="threads">
-  A **thread** refers to an operating system thread; a single execution context. Threads are the
-  largest unit of Untangled programs.
+  A **thread** refers to an operating system thread, which is an isolated execution context for
+  Untangled instructions.
 </a>
 
 A [**thread procedure definition**](#thread-procedure-definitions) refers to a block of Untangled
-code that can be executed by one or more thread.
+code that can be executed by one or more threads.
 
 <a id="thread-handles">A **thread handle**</a> refers to a value of [type](#types) <T>thread</T>; it
 is an opaque [resource handle](https://en.wikipedia.org/wiki/Handle_(computing)) to a single running
@@ -81,15 +81,15 @@ The syntax of the language is given in BNF-like notation. Terminal symbols are s
 like <T>this</T>. Nonterminal symbols are set in italicized kebab-cased text like
 <NT>example-nonterminal</NT>.
 
-Terminals and nonterminals are combined as followed:
+Terminals and nonterminals are combined as follows:
 - A single space between components indicates concatenation—the given components should appear in
   the given order.
-- Square brackets indicate *character sets*. A character set contains several single-character
+- Square brackets indicate **character sets**. A character set contains several single-character
   literals, and matches any one of those characters. For example,
   <nobr>[<T>a</T> <T>b</T> <T>c</T>]</nobr> matches exactly one of <T>a</T>, <T>b</T>, or <T>c</T>.
-  - Within a character set, a hyphen indicates an ASCII range, e.g. <nobr>[<T>a</T>-<T>z</T>]</nobr>
-    matches any lowercase letter.
-  - A caret after the opening square brace of a character set indicates negation, e.g.
+  - Within a character set, a hyphen indicates an ASCII range. For example,
+    <nobr>[<T>a</T>-<T>z</T>]</nobr> matches any lowercase letter.
+  - A caret after the opening square brace of a character set indicates negation. For example,
     <nobr>[^<T>a</T>-<T>z</T>]</nobr> matches any character that is *not* a lowercase letter.
 - Parentheses (<span className="hint">...</span>) indicate grouping.
 - An asterisk <span className="hint">...</span>* indicates that the preceding component may be
@@ -99,8 +99,8 @@ Terminals and nonterminals are combined as followed:
 - A question mark <span className="hint">...</span>? indicates that the preceding component is
   optional.
 
-These forms are combined into *production rules*, each of which gives a single nonterminal on the
-left and one or more possible *expansions* on the right (each separated by a vertical bar). For
+These forms are combined into **production rules**, each of which gives a single nonterminal on the
+left and one or more possible **expansions** on the right (each separated by a vertical bar). For
 example, the following rule defines a nonterminal <NT>example-nonterminal</NT> that expands to
 either “hello” or “world”.
 
@@ -205,10 +205,9 @@ The following are also keywords in Untangled:
 Identifiers serve as unique names for variables, thread procedure definitions, and functions.
 Identifiers start with a letter, and can contain letters, digits, and underscores.
 
-It is a compiler error to declare (by a [variable declaration](#variable-declaration-statements), a
-[function definition](#function-definitions), or a [thread procedure
-definition](#thread-procedure-definitions)) an identifier with the same name as one of the
-[keywords](#keywords).
+It is a compiler error to declare a [variable](#variable-declaration-statements),
+[function](#function-definitions), or a [thread procedure](#thread-procedure-definitions) with an
+identifier that has the same name as one of the [keywords](#keywords).
 
 <Rule name="ident">
   <>
@@ -220,6 +219,7 @@ definition](#thread-procedure-definitions)) an identifier with the same name as 
 
 
 ### Types
+
 Untangled includes first-class types for booleans, integers, floats, strings,
 [thread handles](#thread-handles), [semaphores](#semaphores), tuples, and arrays (as well as a void
 type).
@@ -947,7 +947,7 @@ A semaphore is a built-in type, which can be constructed using the
 match common Semaphore semantics defined in [literature](https://greenteapress.com/wp/semaphores/):
 
 1. A semaphore can be initialized with any integer value.
-2. After their initialization, semaphores provide only two operations: **increment** and
+2. After its initialization, a semaphore provides only two operations: **increment** and
    **decrement** (by the <T>++</T> and <T>--</T> postfix operators). There is no mechanism to read
    the current value. Increment and decrement are **atomic** operations.
 3. If a thread decrements a semaphore and the resulting value is negative, the thread blocks
@@ -979,7 +979,7 @@ thread_def Main
   int[4] arr = [1, 2, 3, 4];
   referenceFunc(arr)
 
-// integers are passed by value
+  // integers are passed by value
   int num = 1000000;
   valueFunc(num);
 
@@ -1112,6 +1112,7 @@ thread_def Main {
   thread](#current-thread), i.e. <Code highlight className="language-untangled">self == parent</Code>.
 
 
+
 ### Built-in functions
 
 <table>
@@ -1119,7 +1120,7 @@ thread_def Main {
     <tr>
       <th>Function Name</th>
       <th>Argument(s)</th>
-      <th>Return types</th>
+      <th>Return type</th>
       <th>Effect</th>
     </tr>
   </thead>
