@@ -539,6 +539,15 @@ evaluates to the return value of the function.
   </Rule>
 </RuleBlock>
 
+The type of each [call argument](#nonterminal-call-args) must match the type of the parameter at the
+same position in the function’s [parameter list](#function-parameter-list). The number of arguments
+must match as well.
+
+Calling a function executes the sequence of statements in the function body directly in the
+execution sequence of the calling thread. The “current thread” is still the thread that is executing
+the function, for the purpose of features like the [<T>parent</T> and <T>self</T>
+identifiers](#built-in-identifiers) and the [`receive` statement](#receive-statements).
+
 
 #### Thread spawn expressions
 A thread spawn expression starts a new thread to run a given
