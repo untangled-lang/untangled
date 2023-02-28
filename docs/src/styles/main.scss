@@ -412,3 +412,15 @@ div.authors {
     }
   }
 }
+
+.browser-cta {
+  font-weight: 600;
+  margin-bottom: 3rem;
+}
+
+.print-only {
+  display: none;
+}
+@media print {
+  .print-only { display: block; }
+}

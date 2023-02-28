@@ -18,13 +18,17 @@ const page = await browser.newPage();
 await page.goto('http://localhost:5174');
 await page.waitForSelector('h1');
 
+
 // Capture PDF
+
+await page.emulateMediaType('print');
+await new Promise((resolve) => setTimeout(resolve, 1000));
 // @ts-ignore
 await page.evaluate(() => document.documentElement.style.zoom = 0.66);
 const contentHeight = await page.evaluate(() => document.documentElement.scrollHeight);
 await page.pdf({
   width: '8.5in',
-  height: contentHeight + 96 * 1.5, // add extra padding to prevent wrapping
+  height: contentHeight + 96 * 1, // add extra padding to prevent wrapping
   printBackground: true,
   path: 'untangled.pdf',
 });
