@@ -65,8 +65,8 @@ the language, including the syntax and semantics of all language features and bu
   Untangled instructions.
 </a>
 
-A [**thread procedure definition**](#thread-procedure-definitions) refers to a block of Untangled
-code that can be executed by one or more threads.
+A [**thread procedure definition**](#thread-procedure-definitions) refers to a predefined sequence
+of statements that can be executed in one or more threads.
 
 <a id="thread-handles">A **thread handle**</a> refers to a value of [type](#types) <T>thread</T>; it
 is an opaque [resource handle](https://en.wikipedia.org/wiki/Handle_(computing)) to a single running
@@ -297,7 +297,7 @@ specific value.
   <NT>array-literal</NT>
 </Rule>
 
-Numeric literals work as one would expect: they contain sequences of digits, and floating-point
+Numeric literals work as one would expect: they contain sequences of digits and floating-point
 literal values contain a decimal point.
 
 <RuleBlock>
@@ -474,7 +474,7 @@ Operators in the same row have the same precedence.
 
 
 #### Array access expressions
-Array access expressions retrieves an element from the specified index of an array. The expression
+Array access expressions retrieve an element from the specified index of an array. The expression
 inside the brackets must evaluate to an integer. The evaluated type of the array access expression
 is the element type of the array.
 
@@ -516,7 +516,7 @@ result to `a`.
 
 #### Grouping expressions
 Grouping expressions are used to clarify order of operations. They ensure that the expression inside
-the group is evaluated in full as an atomic unit, before the value is used in the surrounding
+the group is evaluated in full as an atomic unit before the value is used in the surrounding
 expression.
 
 <Rule name="grouping">
@@ -721,7 +721,7 @@ for (int a = 0; a < 10; a++) { // loop A
   <><T>return</T> <NT>expr</NT>? <T>;</T> </>
 </Rule>
 
-The <T>return</T> keyword can only be used in within a function definition.
+The <T>return</T> keyword can only be used within a function definition.
 
 The <T>return</T> keyword is used to return a value from a function. The expression on the right
 side of the <T>return</T> keyword becomes the return value of the function, and the function exits
@@ -823,6 +823,7 @@ run on the main thread when the program starts.
   </Rule>
 </RuleBlock>
 
+
 #### Function definitions
 A **function definition** defines a reusable sequence of statements that will execute directly in
 the execution sequence of whichever [thread](#threads) calls it (contrast to [thread procedure
@@ -834,12 +835,13 @@ A function definition has four parts:
 1. The **return type** comes first; it indicates the [type](#nonterminal-type) of the value that the
   function will return.
 2. The **name** of the function (an <NT>ident</NT>) uniquely identifies it.
-3. The **parameters** are a list of (<NT>type</NT>, <NT>ident</NT>) pairs which define arguments that
-  must be passed for each invocation of the function.
+3. <a id="function-parameter-list">The **parameters** are a list</a> of (<NT>type</NT>,
+   <NT>ident</NT>) pairs which define arguments that must be passed for each invocation of the
+   function.
 4. The **body** is a list of [statements](#nonterminal-stmt) to be executed when the function is
   called.
 
-The following example shows a simple function definition which returns the smaller of two integer
+The following example shows a simple function definition that returns the smaller of two integer
 arguments:
 ```untangled
 /* Returns the smaller of two integers */
@@ -848,6 +850,7 @@ int min (int num1, int num2) {
   return num2;
 }
 ```
+
 
 #### Thread procedure definitions
 
@@ -896,10 +899,10 @@ a specific syntactic construction.
 
 #### Thread lifetime
 
-Each [thread](#threads) executes completely independently, and can continue to run after other
+Each [thread](#threads) executes completely independently and can continue to run after other
 threads (including its parent) have finished executing.
 
-A thread exits once the the last statement in its thread procedure has finished executing, or when
+A thread exits once the last statement in its thread procedure has finished executing, or when
 the [<T>exit</T> built-in function](#built-in-functions) is called.
 
 A thread cannot be resumed after it has exited. A message sent to a thread after it has exited will
@@ -924,13 +927,13 @@ Untangled’s **Message passing** system is the primary means of communication b
 
 Any thread can send a message to any other thread to which it holds a <T>thread</T> handle using the
 <T>&lt;&lt;</T> operator, which sends the value on its right-hand side to the <T>thread</T>
-referenced on its left hand side. A “message” can be any value in Untangled.
+referenced on its left-hand side. A “message” can be any value in Untangled.
 
 
 #### The message queue
 
 Each running thread defines a *message queue* internally (i.e. the message queue is not directly
-accessible  to programs). Each message sent is added to the end of the receiving thread’s message
+accessible to programs). Each message sent is added to the end of the receiving thread’s message
 queue. Message queues store values of any type. Untangled guarantees that messages are received in
 the order they are sent (though when multiple “sender” threads send a message to the same “receiver”
 thread, this order is nondeterministic).
@@ -972,7 +975,7 @@ second element matches by the “exact type” rule (#1).
 **Example 4**: the value `(_, string y)` does *not* match a message whose <NT>type</NT> is
 `(string, int)`, because the “exact match” (#1) and “wildcard” (#3) rules do not apply trivially,
 and the “tuple” rule does not succeed either—although the first element matches by the “wildcard”
-rule (#3), the second element does not match by any of the three rules.
+rule (#3), the second element does not match under any of the three rules.
 
 
 ### Semaphores
@@ -1123,7 +1126,7 @@ definition](#thread-procedure-definitions).
 #### Scope of function parameters
 
 [Function parameters](#function-definitions) belong to the context created by the function
-definition. Their scope begins before the beginning of the function body, and ends after the
+definition. Their scope begins before the beginning of the function body and ends after the
 function body.
 
 
@@ -1131,7 +1134,7 @@ function body.
 
 If the [**initialization**](#for-loops) of a for loop is a variable declaration, that variable
 belongs to the context created by the for loop. Its scope begins before the beginning of the for
-loop body, and ends after the for loop body.
+loop body and ends after the for loop body.
 
 ```untangled
 int i = 0;
@@ -1149,9 +1152,9 @@ for (; i < 10; i += 2) print(i % 2 == 0);
 
 #### Scope of receive statement pattern identifiers
 
-Each indentifier declared as part of a <NT>pattern</NT> in a [receive
-statement](#receive-statements) belongs to the context created by the pattern matching case, which
-encapsulates the [statement](#nonterminal-stmt) immediately following the <T>-></T> terminal.
+Each identifier declared as part of a <NT>pattern</NT> in a [receive statement](#receive-statements)
+belongs to the context created by the pattern matching case, which encapsulates the
+[statement](#nonterminal-stmt) immediately following the <T>-></T> terminal.
 
 ```untangled
 receive {
@@ -1195,7 +1198,7 @@ receive {
       <td>print</td>
       <td>Any value that is not a thread</td>
       <td><T.void/></td>
-      <td>Prints out a human-readable representation of the data provided along with a newline in the end</td>
+      <td>Prints out a human-readable representation of the data provided, followed by a newline.</td>
     </tr>
     <tr>
       <td>make_semaphore</td>
