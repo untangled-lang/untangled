@@ -1,17 +1,18 @@
 import React, { useState, useCallback, useEffect } from 'react';
 
+/** Get the numeric level of a heading element (h1–h6) */
+function getLevel(heading: HTMLHeadingElement): number {
+  return parseInt(heading.tagName.slice(1));
+}
+
 type Section = {
   name: string;
   id: string;
   level: number;
   subsections: Section[];
 }
-
-function getLevel(heading: HTMLHeadingElement): number {
-  return parseInt(heading.tagName.slice(1));
-}
-
-function getSection(heading: HTMLHeadingElement) {
+/** Get a Section from a HTML heading element */
+function parseSection(heading: HTMLHeadingElement) {
   return {
     name: heading.innerText,
     id: heading.id,
@@ -21,14 +22,18 @@ function getSection(heading: HTMLHeadingElement) {
 }
 
 
+/** Create a Section encapsulating nested structure from a list of HTMLHeadingElements */
 function makeStructure(headings: NodeListOf<HTMLHeadingElement>): Section {
   const headingsQueue = [...headings];
 
   function makeStructureInner(workingSection: Section): Section {
     // While the next heading is a subsection of this heading
     while (headingsQueue[0] && getLevel(headingsQueue[0]) > workingSection.level) {
+      if (getLevel(headingsQueue[0]) > workingSection.level + 1) {
+        console.warn(`Heading level skipped between h${workingSection.level}#${workingSection.id} () to h${getLevel(headingsQueue[0])}#${headingsQueue[0].id}`);
+      }
       workingSection.subsections.push(
-        makeStructureInner(getSection(headingsQueue.shift()!)),
+        makeStructureInner(parseSection(headingsQueue.shift()!)),
       );
     }
     return workingSection;
@@ -37,9 +42,34 @@ function makeStructure(headings: NodeListOf<HTMLHeadingElement>): Section {
   return makeStructureInner({
     name: '(toplevel)',
     id: '(toplevel)',
-    level: 0,
+    level: getLevel(headingsQueue[0]) - 1,
     subsections: [],
   });
+}
+
+/**
+ * Return a list of nested Sections
+ * @param after A selector to find headings *after*
+ */
+function useHeadingSections(after?: string): Section[] | null {
+  const [structure, setStructure] = useState<Section | null>(null);
+
+  const update = useCallback(() => {
+    const headings = document.querySelectorAll(`${after ? `${after} ~ ` : ''} :is(h1, h2, h3, h4, h5, h6)`);
+    setStructure(makeStructure(headings as NodeListOf<HTMLHeadingElement>));
+  }, [after]);
+
+  useEffect(() => {
+    update();
+    const mutationObserver = new MutationObserver(update);
+    mutationObserver.observe(document, {
+      childList: true,
+      subtree: true,
+    });
+    return () => mutationObserver.disconnect();
+  }, [update]);
+
+  return structure?.subsections ?? null;
 }
 
 
@@ -59,23 +89,7 @@ function TOCList({ sections }: { sections: Section[] }) {
 }
 
 
-export default function TableOfContents({ after = null }: { after?: string | null }) {
-  const [structure, setStructure] = useState<Section | null>(null);
-
-  const update = useCallback(() => {
-    const headings = document.querySelectorAll(`${after ? `${after} ~ ` : ''} :is(h1, h2, h3, h4, h5, h6)`);
-    setStructure(makeStructure(headings as NodeListOf<HTMLHeadingElement>));
-  }, []);
-
-  useEffect(() => {
-    update();
-    const mutationObserver = new MutationObserver(update);
-    mutationObserver.observe(document, {
-      childList: true,
-      subtree: true,
-    });
-    return () => mutationObserver.disconnect();
-  }, []);
-
-  return <TOCList sections={structure?.subsections ?? []} />;
+export default function TableOfContents({ after }: { after?: string }) {
+  const sections = useHeadingSections(after);
+  return <TOCList sections={sections ?? []} />;
 }

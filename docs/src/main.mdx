@@ -56,7 +56,11 @@ and abstractions over multithreading.
 This document serves as an authoritative reference for the Untangled language. It fully specifies
 the language, including the syntax and semantics of all language features and built-in functions.
 
+
+
+
 ## Table of contents
+
 <TableOfContents after="#table-of-contents" />
 
 
@@ -119,18 +123,26 @@ either “hello” or “world”.
 </Rule>
 
 
+
+
 ## Syntax and semantics
 
 ### Blanks
+
 Spaces, tabs, carriage returns (`\r`), and newlines (`\n`) are considered “blank” characters. Blanks
 are ignored, except that they separate adjacent identifiers, keywords, etc. that would otherwise be
 considered a single token. Blanks are *not* ignored within string literals.
 
+
+
 ### Comments
+
 Comments in Untangled follow C-style comment syntax: single-line comments start with two forward
 slashes <T>//</T>, and continue until the end of the line; multi-line comments start with <T>/\*</T>
 and end with <T>\*/</T>. Comments separate identifiers, keywords, etc. in the same way as blanks.
 Comments do not occur within strings.
+
+
 
 ### Keywords
 
@@ -161,7 +173,6 @@ The following identifiers are reserved as keywords, and cannot be employed other
 - <T>true</T>
 - <T>false</T>
 </div>
-
 
 The following are also keywords in Untangled:
 <div className="boxed">
@@ -581,6 +592,7 @@ The simplest form of a statement is an expression followed by a semicolon; this 
 evaluates that expression (which may have side effects, such as assignment or function calls) and
 discards the evaluated value of the expression.
 
+
 #### Blocks
 <Rule name="block">
   <T>{'{'}</T> <NT>stmt</NT>* <T>}</T>
@@ -589,6 +601,7 @@ discards the evaluated value of the expression.
 A block is a sequence of statements enclosed in curly braces. A block always defines its own
 [context](#context), meaning that any variables declared inside a block are only available within
 that block.
+
 
 #### Variable declaration statements
 
@@ -649,7 +662,6 @@ See also: [Scope](#scope)
 </RuleBlock>
 
 ##### Conditionals
-
 The <T>if</T> statement evaluates the expression in parentheses and executes the statement following
 if and only if the expression evaluates to `true`. It is a compiler error to use a non-boolean
 expression in an <T>if</T> statement. When the <T>else</T> block is included, the statement
@@ -757,6 +769,7 @@ overall semantics of the message system.
   <><T>parent</T> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></>
 </Rule>
 
+
 #### Receive statements
 
 A [thread](#threads) receives messages from other threads using a <T>receive</T> statement.
@@ -804,8 +817,6 @@ thread_def ReceiveExample {
 }
 ```
 If the message queue is empty, the <T>receive</T> statement blocks until it is not.
-
-
 
 ##### Pattern matching semantics
 
@@ -869,6 +880,7 @@ run on the main thread when the program starts.
 
 
 #### Function definitions
+
 A **function definition** defines a reusable sequence of statements that will execute directly in
 the execution sequence of whichever [thread](#threads) calls it (contrast to [thread procedure
 definitions](#thread-procedure-definitions), which define a sequence of statements to be run in a
@@ -937,6 +949,7 @@ thread_def Max {
 
 This section describes the semantics of Untangled features that are not discussed above as part of
 a specific syntactic construction.
+
 
 
 ### Thread semantics
