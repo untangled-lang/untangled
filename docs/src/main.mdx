@@ -2,6 +2,7 @@ import { RuleBlock, Rule, NonTerminal as NT, Terminal as T } from './components/
 import Code from './components/Code';
 import TableOfContents from './components/TableOfContents';
 
+
 # Untangled: Language Reference Manual
 
 <div className="authors">
@@ -19,7 +20,7 @@ and abstractions over multithreading.
 <figure>
   ```untangled
   thread_def SumWorker {
-    receive { int x -> int target = x; _ -> exit(); }
+    receive { int x -> int target = x; _ -> exit(1); }
     // Compute the sum of the first `target` integers
     int sum = 0;
     for (int i = 0; i < target; i++) sum += i;
@@ -28,19 +29,23 @@ and abstractions over multithreading.
   }
 
   thread_def Main {
-    thread my_worker = spawn SumWorker;
-    my_worker << 100000;
+    thread my_worker_1 = spawn SumWorker;
+    thread my_worker_2 = spawn SumWorker;
+    my_worker_1 << 100000;
+    my_worker_2 << 42;
 
     // Main thread is free to do something else here...
 
-    receive { int x -> int result = x; _ -> exit(); };
-    print(result);
+    for (int i = 0; i < 100042; i++) {
+      receive { int x -> int result = x; _ -> exit(1); };
+      print(result);
+    }
   }
   ```
   <figcaption>
     A simple program demonstrating multithreaded computation in Untangled. The `Main` thread
-    continues running while the `SumWorker` thread performs a CPU-heavy computation (computing the
-    sum of the first 100,000 integers).
+    continues running while two `SumWorker` threads perform a CPU-heavy computation (the sum of the
+    first 100,000 natural numbers, and the sum of the first 42 natural numbers, respectively).
   </figcaption>
 </figure>
 
