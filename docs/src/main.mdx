@@ -903,7 +903,7 @@ Each [thread](#threads) executes completely independently and can continue to ru
 threads (including its parent) have finished executing.
 
 A thread exits once the last statement in its thread procedure has finished executing, or when
-the [<T>exit</T> built-in function](#built-in-functions) is called.
+the [<T>end</T> built-in function](#built-in-functions) is called.
 
 A thread cannot be resumed after it has exited. A message sent to a thread after it has exited will
 effectively be dropped.
@@ -1195,40 +1195,67 @@ receive {
   </thead>
   <tbody>
     <tr>
-      <td>print</td>
+      <td>`print`</td>
       <td>Any value that is not a thread</td>
       <td><T.void/></td>
       <td>Prints out a human-readable representation of the data provided, followed by a newline.</td>
     </tr>
     <tr>
-      <td>make_semaphore</td>
-      <td>An optional <T.int/> value to set the semaphore to</td>
+      <td>`input`</td>
+      <td></td>
+      <td><T.string/></td>
+      <td>Blocks the program until a string is provided via standard input and the return keyboard is pressed, at which point it returns that entry</td>
+    </tr>
+    <tr>
+      <td>`make_semaphore`</td>
+      <td>An <T.int/> value to set the semaphore to</td>
       <td><T.semaphore/></td>
       <td>Creates a semaphore with an initial value of 0.</td>
     </tr>
     <tr>
-      <td>to_string</td>
+      <td>`to_string`</td>
       <td>A value that has any type other than a thread</td>
       <td><T.string/></td>
       <td>Returns a string of a human-readable version of the argument</td>
     </tr>
     <tr>
-      <td>sqrt</td>
+      <td>`int_of_string`</td>
+      <td>A <T.string /></td>
+      <td><T.int/></td>
+      <td>
+        Returns the integer representation of the string. If the string cannot be parsed as an
+        integer, throws a runtime error.
+      </td>
+    </tr>
+    <tr>
+      <td>`float_of_string`</td>
+      <td>A string</td>
+      <td><T.float/></td>
+      <td>Returns the floating point representation of the string. If the string cannot be parsed as a floating point number, throws a runtime error.</td>
+    </tr>
+    <tr>
+      <td>`sqrt`</td>
       <td>An <T.int/> or <T.float/></td>
       <td><T.float/></td>
       <td>Returns the square root of a given number</td>
     </tr>
     <tr>
-      <td>len</td>
-      <td>An array</td>
+      <td>`len`</td>
+      <td>An array of any type</td>
       <td><T.int/></td>
-      <td>Returns the length of an array</td>
+      <td>Returns the length of the array</td>
     </tr>
     <tr>
-      <td>exit</td>
+      <td>`exit`</td>
+      <td>An <T.int /> for the status code</td>
+      <td><T.void /></td>
+      <td>Exits the program</td>
+    </tr>
+    <tr>
+      <td>`end`</td>
       <td></td>
       <td><T.void /></td>
-      <td>Exits the current thread execution</td>
+      <td>Ends the current thread</td>
     </tr>
   </tbody>
 </table>
