@@ -360,7 +360,7 @@ figure {
 }
 
 figcaption {
-  font-size: math.div(1rem, $ratio);
+  font-size: rem-size(-0.5);
   color: $text-secondary;
   font-style: italic;
   font-variation-settings: 'wght' 450;
