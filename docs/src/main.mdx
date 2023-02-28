@@ -40,7 +40,7 @@ and abstractions over multithreading.
 
     // Main thread is free to do something else here...
 
-    for (int i = 0; i < 100042; i++) {
+    for (int i = 0; i < 2; i++) {
       receive { int x -> int result = x; _ -> exit(1); };
       print(result);
     }
