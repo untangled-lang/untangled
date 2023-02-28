@@ -392,3 +392,23 @@ ol, ul {
     p:not(:last-child) { margin-bottom: 0.35em; }
   }
 }
+
+div.authors {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  grid-template-rows: auto;
+  gap: 0.1rem 1.5rem;
+  margin: 2rem 0;
+
+  span {
+    font-weight: 600;
+  }
+  a {
+    color: $text-secondary;
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+
+    &:hover {
+      color: $text;
+    }
+  }
+}
