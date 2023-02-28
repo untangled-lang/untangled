@@ -4,7 +4,7 @@ name: Deploy docs
 on:
   # Runs on pushes targeting the default branch
   push:
-    branches: [$default-branch]
+    branches: [ main ]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -44,6 +44,8 @@ jobs:
         uses: actions/configure-pages@v3
       - name: Build
         run: npm run build
+        env:
+          DOCS_BASE_PATH: '/untangled'
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
