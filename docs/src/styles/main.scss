@@ -286,6 +286,7 @@ table {
   @include boxed-block;
   --bleed: 1rem;
   padding: 0;
+  width: calc(100% + 2 * var(--bleed));
 
   td, th {
     padding: 0.5rem var(--bleed);
