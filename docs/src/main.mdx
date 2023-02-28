@@ -569,8 +569,8 @@ discards the evaluated value of the expression.
 </Rule>
 
 A block is a sequence of statements enclosed in curly braces. A block always defines its own
-[scope](#scope), meaning that any variables declared inside the block are only available within the
-block.
+[context](#context), meaning that any variables declared inside a block are only available within
+that block.
 
 #### Variable declaration statements
 
@@ -582,9 +582,7 @@ A variable declaration binds an identifier to a type and, optionally, assigns a 
 variable. When a declaration includes an assignment, the type of the expression must match the
 declared type of the variable.
 
-The compiler raises an error if the name being declared has already been declared in the current
-<NT>block</NT> (but re-declaration of variables in nested blocks is allowed; see [Local
-variables](#local-variables)).
+See also: [Scope](#scope)
 
 
 #### Control flow statements
@@ -916,7 +914,7 @@ new thread will simply begin executing another copy of the program.
 
 ### Message passing
 
-Each thread in Untangled has independent [scope](#scope) and limited access to shared memory.
+Each thread in Untangled has an independent [context](#context) and limited access to shared memory.
 Untangled’s **Message passing** system is the primary means of communication between threads.
 
 Any thread can send a message to any other thread to which it holds a <T>thread</T> handle using the
@@ -941,7 +939,7 @@ first message in the receiving thread’s message queue (if the message queue is
 
 ### Pattern matching
 
-The following is a formal description of the pattern matching semantics of Untangled:
+The following is a formal description of the pattern matching semantics of Untangled.
 
 
 <a id="matching-procedure">A</a> <NT>pattern</NT> is said to **match** a value if any of the
@@ -1026,84 +1024,134 @@ thread_def Main
 
 ### Scope
 
-A scope is a part of the program where a set of <NT.ident /> can be referred to.
-Any reference to an <NT.ident /> that does not exist in the current scope is
-a compiler error.
+The **scope** of a binding is the part of a program in which that binding is visible and valid.
+A **binding** refers to a mapping between an [identifier](#identifiers), and a [function
+definition](#function-definitions), [thread procedure definition](#thread-procedure-definitions),
+or value.
 
-```untangled
-int foo() { // The function body is its own scope
-  // Compiler error: x is undeclared
-  x += 2;
-}
-```
+Any reference to an <NT>ident</NT> for which no binding is in scope causes a compiler error.
 
-##### Function and thread procedure definitions
+A binding is created by the following Untangled language constructs:
+- [Function definitions](#function-definitions)
+- [Thread procedure definitions](#thread-procedure-definitions)
+- [Variable declaration statements](#variable-declaration-statements)
+- [Function parameters](#function-definitions)
+- [Receive statement](#receive-statements) pattern matching cases
 
-In Untangled, <NT>thread-procedure-def</NT> and <NT>function-def</NT> have global scope
-and can be declared in any order. Their name can be referred to by
-any part of the program, even before they are declared.
+This section describes the concept of [Context](#context), and the scope of the bindings created by
+each of these constructs.
 
-##### Local variables
 
-The scope of a [local variable](#nonterminal-variable-decl) begins when it is first declared
-and ends at the end of the block. Each declaration in a block must have a unique
-name, otherwise, it is a compiler error. Declaring a variable with the same
-[identifier](#nonterminal-ident) in a nested block excludes the outer scope of
-the identifier from lookup.
+#### Context
 
-```untangled
-int foo() {
-  int x = 10;
-  int y = 5;
-  // Looked up x in the outer scope
-  x += 5;
-  {
-    // Redclared x in inner block
-    int x = 100;
-    // Looked up x in the inner scope
-    x += 5;
-    // Looked up y in the outer scope
-    y += x;
+A **context** is a part of a program in which identifier declarations are contained.
+
+Context in Untangled is *nested*, meaning that a context is often contained within a larger context.
+When one context is nested inside another, the inner context inherits the declarations of the outer
+context.
+
+Declaring the same identifier twice in the same context causes a compiler error.
+
+However, an identifier *may* be redeclared in a nested context, even if it is already declared in an
+outer context. In this case, the inner declaration “shadows” the outer declaration for the duration
+of its scope, hiding the outer declaration.
+
+<figure>
+  ```untangled
+  int foo() {
+    int x = 10;    // Declaration 1
+    int y = 5;
+    x += 5;        // Here, `x` refers to declaration 1
+    {              // A block defines a new context
+      int x = 100; // Declaration 2 “shadows” declaration 1
+      x += 5;      // Here, `x` refers to declaration 2
+      y += x;      // `y` still refers to the outer declaration
+    }              // Declaration 2 goes out of scope here
+    print(x);      // prints 15
+    print(y);      // prints 115
   }
-}
+  ```
+  <figcaption>
+    An illustrative example of “shadowing” with variable declarations in nested contexts. See the
+    section on the
+    [scope of variable declaration statements](#scope-of-variable-declaration-statements).
+  </figcaption>
+</figure>
+
+The following are the Untangled constructs that define a context:
+- [Function definitions](#function-definitions)
+- [Thread procedure definitions](#thread-procedure-definitions)
+- [Block statements](#blocks)
+- [<T>for</T> statements](#for-loops)
+- [Receive statement](#receive-statements) pattern matching cases
+
+
+#### Scope of function / thread procedure definitions
+
+[Function definitions](#function-definitions) and [thread procedure
+definitions](#thread-procedure-definitions) always appear at the top level of a program; their
+identifiers have **global scope**. These identifiers are usable anywhere in the program, including
+before the definition occurs.
+
+Function and thread procedure definitions share a single “global context,” so using the same
+identifier for more than one causes a compiler error.
+
+
+#### Scope of variable declaration statements
+
+The scope of a [variable declaration](#nonterminal-variable-decl) statement begins directly after
+the statement:
+```
+// a is not in scope here
+int a = 0 /* a is not in scope here either */;
+// a is in scope here
 ```
 
-##### Formal parameters
+A variable declaration’s scope ends at the end of the innermost [context](#context) containing the
+declaration.
 
-Formal paramaters refer to named [identifiers](#nonterminal-ident) in a
-[function definition](#nonterminal-function-def) to stand for values that are passed in a function
-call. The scope of formal parameter is the body of its [function](#nonterminal-function-def).
+There are no global variables in Untangled; the widest scope a variable declaration can have is a
+[function definition](#function-definitions) or [thread procedure
+definition](#thread-procedure-definitions).
 
-##### For loops
 
-A [for loop](#for-loops) body has its own scope. *Initializer*, if present, follows the
-scoping rule of [local variables](#local-variables).
+#### Scope of function parameters
+
+[Function parameters](#function-definitions) belong to the context created by the function
+definition. Their scope begins before the beginning of the function body, and ends after the
+function body.
+
+
+#### Scope of for loop initialization
+
+If the [**initialization**](#for-loops) of a for loop is a variable declaration, that variable
+belongs to the context created by the for loop. Its scope begins before the beginning of the for
+loop body, and ends after the for loop body.
 
 ```untangled
 int i = 0;
-for (int i = 1; i < 10; i += 2) {
-  // Looked up i in the scope of the for loop
-  print(i % 2 == 0);
-}
+for (int i = 1; i < 10; i += 2) print(i % 2 == 0);
+// the `i` within the loop       here ^
+// refers to the declaration in the initialization, which shadows the
+// outer declaration
 
-int i = 0;
-for (; i < 10; i += 2) {
-  // Looked up i in the outer scope of the for loop
-  print(i % 2 == 0);
-}
+for (; i < 10; i += 2) print(i % 2 == 0);
+// the `i` within this loop  ^
+// refers to the outer declaration, which is not shadowed in this second
+// loop’s context
 ```
 
-##### Receive statement
 
-Each pattern indentifier in a [receive statement](#receive-statements) is scoped to the
-[statement](#nonterminal-stmt) immediately following <T.arrow />.
+#### Scope of receive statement pattern identifiers
+
+Each indentifier declared as part of a <NT>pattern</NT> in a [receive
+statement](#receive-statements) belongs to the context created by the pattern matching case, which
+encapsulates the [statement](#nonterminal-stmt) immediately following the <T>-></T> terminal.
 
 ```untangled
 receive {
-  // x is scoped to the block following it
-  int x -> {
-    x += 5;
-  }
+  // x is scoped to the statement following the pattern
+  int x -> x++;
 
   // Compiler error: x is not defined
   _ -> print(x);
