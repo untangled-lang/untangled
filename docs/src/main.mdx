@@ -2,14 +2,19 @@ import { RuleBlock, Rule, NonTerminal as NT, Terminal as T } from './components/
 import Code from './components/Code';
 import TableOfContents from './components/TableOfContents';
 
+
 # Untangled: Language Reference Manual
 
-<div style={{ marginTop: "-1rem", marginBottom: "3rem" }}>
-  [Luke Deen Taylor](mailto:luke.taylor@tufts.edu),
-  [Nick Doan](mailto:hdoan02@tufts.edu),
-  [Duru Ugurlu](mailto:duru.ugurlu@tufts.edu),
-  [Caleb Ledi](mailto:cledi01@tufts.edu),
-  [Chloe Lam](mailto:clam08@tufts.edu)
+<div className="print-only browser-cta">
+  [View this document in your browser](https://untangled-lang.github.io/untangled/)
+</div>
+
+<div className="authors">
+  <span>Luke Deen Taylor</span> <a href="mailto:luke.taylor@tufts.edu">luke.taylor@tufts.edu</a>
+  <span>Nick Doan</span> <a href="mailto:hdoan02@tufts.edu">hdoan02@tufts.edu</a>
+  <span>Duru Ugurlu</span> <a href="mailto:duru.ugurlu@tufts.edu">duru.ugurlu@tufts.edu</a>
+  <span>Caleb Ledi</span> <a href="mailto:cledi01@tufts.edu">cledi01@tufts.edu</a>
+  <span>Chloe Lam</span> <a href="mailto:clam08@tufts.edu">clam08@tufts.edu</a>
 </div>
 
 **Untangled** is a new programming language with first-class support for multithreading. It
@@ -19,7 +24,7 @@ and abstractions over multithreading.
 <figure>
   ```untangled
   thread_def SumWorker {
-    receive { int x -> int target = x; _ -> exit(); }
+    receive { int x -> int target = x; _ -> exit(1); }
     // Compute the sum of the first `target` integers
     int sum = 0;
     for (int i = 0; i < target; i++) sum += i;
@@ -28,26 +33,34 @@ and abstractions over multithreading.
   }
 
   thread_def Main {
-    thread my_worker = spawn SumWorker;
-    my_worker << 100000;
+    thread my_worker_1 = spawn SumWorker;
+    thread my_worker_2 = spawn SumWorker;
+    my_worker_1 << 100000;
+    my_worker_2 << 42;
 
     // Main thread is free to do something else here...
 
-    receive { int x -> int result = x; _ -> exit(); };
-    print(result);
+    for (int i = 0; i < 2; i++) {
+      receive { int x -> int result = x; _ -> exit(1); };
+      print(result);
+    }
   }
   ```
   <figcaption>
     A simple program demonstrating multithreaded computation in Untangled. The `Main` thread
-    continues running while the `SumWorker` thread performs a CPU-heavy computation (computing the
-    sum of the first 100,000 integers).
+    continues running while two `SumWorker` threads perform a CPU-heavy computation (the sum of the
+    first 100,000 natural numbers, and the sum of the first 42 natural numbers, respectively).
   </figcaption>
 </figure>
 
 This document serves as an authoritative reference for the Untangled language. It fully specifies
 the language, including the syntax and semantics of all language features and built-in functions.
 
+
+
+
 ## Table of contents
+
 <TableOfContents after="#table-of-contents" />
 
 
@@ -60,8 +73,8 @@ the language, including the syntax and semantics of all language features and bu
   Untangled instructions.
 </a>
 
-A [**thread procedure definition**](#thread-procedure-definitions) refers to a block of Untangled
-code that can be executed by one or more threads.
+A [**thread procedure definition**](#thread-procedure-definitions) refers to a predefined sequence
+of statements that can be executed in one or more threads.
 
 <a id="thread-handles">A **thread handle**</a> refers to a value of [type](#types) <T>thread</T>; it
 is an opaque [resource handle](https://en.wikipedia.org/wiki/Handle_(computing)) to a single running
@@ -110,18 +123,26 @@ either “hello” or “world”.
 </Rule>
 
 
+
+
 ## Syntax and semantics
 
 ### Blanks
+
 Spaces, tabs, carriage returns (`\r`), and newlines (`\n`) are considered “blank” characters. Blanks
 are ignored, except that they separate adjacent identifiers, keywords, etc. that would otherwise be
 considered a single token. Blanks are *not* ignored within string literals.
 
+
+
 ### Comments
+
 Comments in Untangled follow C-style comment syntax: single-line comments start with two forward
 slashes <T>//</T>, and continue until the end of the line; multi-line comments start with <T>/\*</T>
 and end with <T>\*/</T>. Comments separate identifiers, keywords, etc. in the same way as blanks.
 Comments do not occur within strings.
+
+
 
 ### Keywords
 
@@ -152,7 +173,6 @@ The following identifiers are reserved as keywords, and cannot be employed other
 - <T>true</T>
 - <T>false</T>
 </div>
-
 
 The following are also keywords in Untangled:
 <div className="boxed">
@@ -292,7 +312,7 @@ specific value.
   <NT>array-literal</NT>
 </Rule>
 
-Numeric literals work as one would expect: they contain sequences of digits, and floating-point
+Numeric literals work as one would expect: they contain sequences of digits and floating-point
 literal values contain a decimal point.
 
 <RuleBlock>
@@ -469,7 +489,7 @@ Operators in the same row have the same precedence.
 
 
 #### Array access expressions
-Array access expressions retrieves an element from the specified index of an array. The expression
+Array access expressions retrieve an element from the specified index of an array. The expression
 inside the brackets must evaluate to an integer. The evaluated type of the array access expression
 is the element type of the array.
 
@@ -511,7 +531,7 @@ result to `a`.
 
 #### Grouping expressions
 Grouping expressions are used to clarify order of operations. They ensure that the expression inside
-the group is evaluated in full as an atomic unit, before the value is used in the surrounding
+the group is evaluated in full as an atomic unit before the value is used in the surrounding
 expression.
 
 <Rule name="grouping">
@@ -533,6 +553,15 @@ evaluates to the return value of the function.
     <><NT>call-args</NT> <T>,</T> <NT>expr</NT></>
   </Rule>
 </RuleBlock>
+
+The type of each [call argument](#nonterminal-call-args) must match the type of the parameter at the
+same position in the function’s [parameter list](#function-parameter-list). The number of arguments
+must match as well.
+
+Calling a function executes the sequence of statements in the function body directly in the
+execution sequence of the calling thread. The “current thread” is still the thread that is executing
+the function, for the purpose of features like the [<T>parent</T> and <T>self</T>
+identifiers](#built-in-identifiers) and the [`receive` statement](#receive-statements).
 
 
 #### Thread spawn expressions
@@ -563,14 +592,16 @@ The simplest form of a statement is an expression followed by a semicolon; this 
 evaluates that expression (which may have side effects, such as assignment or function calls) and
 discards the evaluated value of the expression.
 
+
 #### Blocks
 <Rule name="block">
   <T>{'{'}</T> <NT>stmt</NT>* <T>}</T>
 </Rule>
 
 A block is a sequence of statements enclosed in curly braces. A block always defines its own
-[scope](#scope), meaning that any variables declared inside the block are only available within the
-block.
+[context](#context), meaning that any variables declared inside a block are only available within
+that block.
+
 
 #### Variable declaration statements
 
@@ -582,9 +613,7 @@ A variable declaration binds an identifier to a type and, optionally, assigns a 
 variable. When a declaration includes an assignment, the type of the expression must match the
 declared type of the variable.
 
-The compiler raises an error if the name being declared has already been declared in the current
-<NT>block</NT> (but re-declaration of variables in nested blocks is allowed; see [Local
-variables](#local-variables)).
+See also: [Scope](#scope)
 
 
 #### Control flow statements
@@ -633,7 +662,6 @@ variables](#local-variables)).
 </RuleBlock>
 
 ##### Conditionals
-
 The <T>if</T> statement evaluates the expression in parentheses and executes the statement following
 if and only if the expression evaluates to `true`. It is a compiler error to use a non-boolean
 expression in an <T>if</T> statement. When the <T>else</T> block is included, the statement
@@ -718,7 +746,7 @@ for (int a = 0; a < 10; a++) { // loop A
   <><T>return</T> <NT>expr</NT>? <T>;</T> </>
 </Rule>
 
-The <T>return</T> keyword can only be used in within a function definition.
+The <T>return</T> keyword can only be used within a function definition.
 
 The <T>return</T> keyword is used to return a value from a function. The expression on the right
 side of the <T>return</T> keyword becomes the return value of the function, and the function exits
@@ -740,6 +768,7 @@ overall semantics of the message system.
   <><NT>ident</NT> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></>
   <><T>parent</T> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></>
 </Rule>
+
 
 #### Receive statements
 
@@ -765,15 +794,15 @@ A [thread](#threads) receives messages from other threads using a <T>receive</T>
 
 A receive statement consists of an exhaustive list of <NT>pattern</NT>s, each followed by a
 [statement](#nonterminal-stmt). A list of <NT>pattern</NT>s is **exhaustive** if at least one
-pattern [matches](#pattern-matching) every possible <NT>type</NT> in Untangled. The compiler checks
-this constraint for each receive statement.
+pattern [matches](#pattern-matching-semantics) every possible <NT>type</NT> in Untangled. The
+compiler checks this constraint for each receive statement.
 
 Executing a receive statement performs the following steps:
 1. Pop the first message from the current thread’s [message queue](#the-message-queue).
 2. Attempt to match each pattern in the <T>receive</T> statement against the message, by the
-   algorithm described in [pattern matching](#pattern-matching).
+   algorithm described in [pattern matching semantics](#pattern-matching-semantics).
 3. For the first (in the order they are given in the <T>receive</T> statement) pattern that passes:
-   1. Bind the pattern’s variable(s) according to the message’s value. (TODO: explain this?)
+   1. Bind the pattern’s variable(s) according to the message’s value. {/* TODO: explain this? */}
    2. Execute the statement associated with the pattern.
 
 ```untangled
@@ -788,6 +817,35 @@ thread_def ReceiveExample {
 }
 ```
 If the message queue is empty, the <T>receive</T> statement blocks until it is not.
+
+##### Pattern matching semantics
+
+<a id="matching-procedure">A</a> <NT>pattern</NT> is said to **match** a value if any of the
+following is true:
+
+  1. The pattern is of the form <NT>type</NT> <NT>ident</NT>, and the type of the pattern is exactly
+     the type of the value being matched against.
+  2. The pattern is of the form <T>(</T> <NT>pattern</NT> <T>,</T> <NT>pattern</NT> <T>)</T>, and
+     the value being matched against is a tuple where the first element
+     [match](#matching-procedure)es (by recursive application of these steps) the first pattern, and
+     the second element [match](#matching-procedure)es the second pattern.
+  3. The pattern is the wildcard pattern `_`.
+
+**Example 1**: The value `int x` matches a message whose <NT>type</NT> is `int` by the “exact type”
+rule (#1) because the type of the pattern is exactly the type of the message.
+
+**Example 2**: the value `(int x, string y)` matches a message whose <NT>type</NT> is
+`(int, string)` by the “tuple” rule (#2), because both the first and second elements of the tuple
+match by the “exact type” rule (#1).
+
+**Example 3**: the value `(_, string y)` matches a message whose <NT>type</NT> is `(int, string)`
+by the “tuple” rule (#2) because the first element matches by the “wildcard” rule (#3), and the
+second element matches by the “exact type” rule (#1).
+
+**Example 4**: the value `(_, string y)` does *not* match a message whose <NT>type</NT> is
+`(string, int)`, because the “exact match” (#1) and “wildcard” (#3) rules do not apply trivially,
+and the “tuple” rule does not succeed either—although the first element matches by the “wildcard”
+rule (#3), the second element does not match under any of the three rules.
 
 
 
@@ -820,7 +878,9 @@ run on the main thread when the program starts.
   </Rule>
 </RuleBlock>
 
+
 #### Function definitions
+
 A **function definition** defines a reusable sequence of statements that will execute directly in
 the execution sequence of whichever [thread](#threads) calls it (contrast to [thread procedure
 definitions](#thread-procedure-definitions), which define a sequence of statements to be run in a
@@ -831,12 +891,13 @@ A function definition has four parts:
 1. The **return type** comes first; it indicates the [type](#nonterminal-type) of the value that the
   function will return.
 2. The **name** of the function (an <NT>ident</NT>) uniquely identifies it.
-3. The **parameters** are a list of (<NT>type</NT>, <NT>ident</NT>) pairs which define arguments that
-  must be passed for each invocation of the function.
+3. <a id="function-parameter-list">The **parameters** are a list</a> of (<NT>type</NT>,
+   <NT>ident</NT>) pairs which define arguments that must be passed for each invocation of the
+   function.
 4. The **body** is a list of [statements](#nonterminal-stmt) to be executed when the function is
   called.
 
-The following example shows a simple function definition which returns the smaller of two integer
+The following example shows a simple function definition that returns the smaller of two integer
 arguments:
 ```untangled
 /* Returns the smaller of two integers */
@@ -845,6 +906,7 @@ int min (int num1, int num2) {
   return num2;
 }
 ```
+
 
 #### Thread procedure definitions
 
@@ -889,15 +951,16 @@ This section describes the semantics of Untangled features that are not discusse
 a specific syntactic construction.
 
 
+
 ### Thread semantics
 
 #### Thread lifetime
 
-Each [thread](#threads) executes completely independently, and can continue to run after other
+Each [thread](#threads) executes completely independently and can continue to run after other
 threads (including its parent) have finished executing.
 
-A thread exits once the the last statement in its thread procedure has finished executing, or when
-the [<T>exit</T> built-in function](#built-in-functions) is called.
+A thread exits once the last statement in its thread procedure has finished executing, or when
+the [<T>end</T> built-in function](#built-in-functions) is called.
 
 A thread cannot be resumed after it has exited. A message sent to a thread after it has exited will
 effectively be dropped.
@@ -916,18 +979,18 @@ new thread will simply begin executing another copy of the program.
 
 ### Message passing
 
-Each thread in Untangled has independent [scope](#scope) and limited access to shared memory.
+Each thread in Untangled has an independent [context](#context) and limited access to shared memory.
 Untangled’s **Message passing** system is the primary means of communication between threads.
 
 Any thread can send a message to any other thread to which it holds a <T>thread</T> handle using the
 <T>&lt;&lt;</T> operator, which sends the value on its right-hand side to the <T>thread</T>
-referenced on its left hand side. A “message” can be any value in Untangled.
+referenced on its left-hand side. A “message” can be any value in Untangled.
 
 
 #### The message queue
 
 Each running thread defines a *message queue* internally (i.e. the message queue is not directly
-accessible  to programs). Each message sent is added to the end of the receiving thread’s message
+accessible to programs). Each message sent is added to the end of the receiving thread’s message
 queue. Message queues store values of any type. Untangled guarantees that messages are received in
 the order they are sent (though when multiple “sender” threads send a message to the same “receiver”
 thread, this order is nondeterministic).
@@ -937,39 +1000,6 @@ In order to take values off of its message queue, a thread uses a
 first message in the receiving thread’s message queue (if the message queue is empty, the
 <T>receive</T> statement blocks until it is not).
 
-
-
-### Pattern matching
-
-The following is a formal description of the pattern matching semantics of Untangled:
-
-
-<a id="matching-procedure">A</a> <NT>pattern</NT> is said to **match** a value if any of the
-following is true:
-
-  1. The pattern is of the form <NT>type</NT> <NT>ident</NT>, and the type of the pattern is exactly
-     the type of the value being matched against.
-  2. The pattern is of the form <T>(</T> <NT>pattern</NT> <T>,</T> <NT>pattern</NT> <T>)</T>, and
-     the value being matched against is a tuple where the first element
-     [match](#matching-procedure)es (by recursive application of these steps) the first pattern, and
-     the second element [match](#matching-procedure)es the second pattern.
-  3. The pattern is the wildcard pattern `_`.
-
-**Example 1**: The value `int x` matches a message whose <NT>type</NT> is `int` by the “exact type”
-rule (#1) because the type of the pattern is exactly the type of the message.
-
-**Example 2**: the value `(int x, string y)` matches a message whose <NT>type</NT> is
-`(int, string)` by the “tuple” rule (#2), because both the first and second elements of the tuple
-match by the “exact type” rule (#1).
-
-**Example 3**: the value `(_, string y)` matches a message whose <NT>type</NT> is `(int, string)`
-by the “tuple” rule (#2) because the first element matches by the “wildcard” rule (#3), and the
-second element matches by the “exact type” rule (#1).
-
-**Example 4**: the value `(_, string y)` does *not* match a message whose <NT>type</NT> is
-`(string, int)`, because the “exact match” (#1) and “wildcard” (#3) rules do not apply trivially,
-and the “tuple” rule does not succeed either—although the first element matches by the “wildcard”
-rule (#3), the second element does not match by any of the three rules.
 
 
 ### Semaphores
@@ -1026,84 +1056,134 @@ thread_def Main
 
 ### Scope
 
-A scope is a part of the program where a set of <NT.ident /> can be referred to.
-Any reference to an <NT.ident /> that does not exist in the current scope is
-a compiler error.
+The **scope** of a binding is the part of a program in which that binding is visible and valid.
+A **binding** refers to a mapping between an [identifier](#identifiers), and a [function
+definition](#function-definitions), [thread procedure definition](#thread-procedure-definitions),
+or value.
 
-```untangled
-int foo() { // The function body is its own scope
-  // Compiler error: x is undeclared
-  x += 2;
-}
-```
+Any reference to an <NT>ident</NT> for which no binding is in scope causes a compiler error.
 
-##### Function and thread procedure definitions
+A binding is created by the following Untangled language constructs:
+- [Function definitions](#function-definitions)
+- [Thread procedure definitions](#thread-procedure-definitions)
+- [Variable declaration statements](#variable-declaration-statements)
+- [Function parameters](#function-definitions)
+- [Receive statement](#receive-statements) pattern matching cases
 
-In Untangled, <NT>thread-procedure-def</NT> and <NT>function-def</NT> have global scope
-and can be declared in any order. Their name can be referred to by
-any part of the program, even before they are declared.
+This section describes the concept of [Context](#context), and the scope of the bindings created by
+each of these constructs.
 
-##### Local variables
 
-The scope of a [local variable](#nonterminal-variable-decl) begins when it is first declared
-and ends at the end of the block. Each declaration in a block must have a unique
-name, otherwise, it is a compiler error. Declaring a variable with the same
-[identifier](#nonterminal-ident) in a nested block excludes the outer scope of
-the identifier from lookup.
+#### Context
 
-```untangled
-int foo() {
-  int x = 10;
-  int y = 5;
-  // Looked up x in the outer scope
-  x += 5;
-  {
-    // Redclared x in inner block
-    int x = 100;
-    // Looked up x in the inner scope
-    x += 5;
-    // Looked up y in the outer scope
-    y += x;
+A **context** is a part of a program in which identifier declarations are contained.
+
+Context in Untangled is *nested*, meaning that a context is often contained within a larger context.
+When one context is nested inside another, the inner context inherits the declarations of the outer
+context.
+
+Declaring the same identifier twice in the same context causes a compiler error.
+
+However, an identifier *may* be redeclared in a nested context, even if it is already declared in an
+outer context. In this case, the inner declaration “shadows” the outer declaration for the duration
+of its scope, hiding the outer declaration.
+
+<figure>
+  ```untangled
+  int foo() {
+    int x = 10;    // Declaration 1
+    int y = 5;
+    x += 5;        // Here, `x` refers to declaration 1
+    {              // A block defines a new context
+      int x = 100; // Declaration 2 “shadows” declaration 1
+      x += 5;      // Here, `x` refers to declaration 2
+      y += x;      // `y` still refers to the outer declaration
+    }              // Declaration 2 goes out of scope here
+    print(x);      // prints 15
+    print(y);      // prints 115
   }
-}
+  ```
+  <figcaption>
+    An illustrative example of “shadowing” with variable declarations in nested contexts. See the
+    section on the
+    [scope of variable declaration statements](#scope-of-variable-declaration-statements).
+  </figcaption>
+</figure>
+
+The following are the Untangled constructs that define a context:
+- [Function definitions](#function-definitions)
+- [Thread procedure definitions](#thread-procedure-definitions)
+- [Block statements](#blocks)
+- [<T>for</T> statements](#for-loops)
+- [Receive statement](#receive-statements) pattern matching cases
+
+
+#### Scope of function / thread procedure definitions
+
+[Function definitions](#function-definitions) and [thread procedure
+definitions](#thread-procedure-definitions) always appear at the top level of a program; their
+identifiers have **global scope**. These identifiers are usable anywhere in the program, including
+before the definition occurs.
+
+Function and thread procedure definitions share a single “global context,” so using the same
+identifier for more than one causes a compiler error.
+
+
+#### Scope of variable declaration statements
+
+The scope of a [variable declaration](#nonterminal-variable-decl) statement begins directly after
+the statement:
+```
+// a is not in scope here
+int a = 0 /* a is not in scope here either */;
+// a is in scope here
 ```
 
-##### Formal parameters
+A variable declaration’s scope ends at the end of the innermost [context](#context) containing the
+declaration.
 
-Formal paramaters refer to named [identifiers](#nonterminal-ident) in a
-[function definition](#nonterminal-function-def) to stand for values that are passed in a function
-call. The scope of formal parameter is the body of its [function](#nonterminal-function-def).
+There are no global variables in Untangled; the widest scope a variable declaration can have is a
+[function definition](#function-definitions) or [thread procedure
+definition](#thread-procedure-definitions).
 
-##### For loops
 
-A [for loop](#for-loops) body has its own scope. *Initializer*, if present, follows the
-scoping rule of [local variables](#local-variables).
+#### Scope of function parameters
+
+[Function parameters](#function-definitions) belong to the context created by the function
+definition. Their scope begins before the beginning of the function body and ends after the
+function body.
+
+
+#### Scope of for loop initialization
+
+If the [**initialization**](#for-loops) of a for loop is a variable declaration, that variable
+belongs to the context created by the for loop. Its scope begins before the beginning of the for
+loop body and ends after the for loop body.
 
 ```untangled
 int i = 0;
-for (int i = 1; i < 10; i += 2) {
-  // Looked up i in the scope of the for loop
-  print(i % 2 == 0);
-}
+for (int i = 1; i < 10; i += 2) print(i % 2 == 0);
+// the `i` within the loop       here ^
+// refers to the declaration in the initialization, which shadows the
+// outer declaration
 
-int i = 0;
-for (; i < 10; i += 2) {
-  // Looked up i in the outer scope of the for loop
-  print(i % 2 == 0);
-}
+for (; i < 10; i += 2) print(i % 2 == 0);
+// the `i` within this loop  ^
+// refers to the outer declaration, which is not shadowed in this second
+// loop’s context
 ```
 
-##### Receive statement
 
-Each pattern indentifier in a [receive statement](#receive-statements) is scoped to the
-[statement](#nonterminal-stmt) immediately following <T.arrow />.
+#### Scope of receive statement pattern identifiers
+
+Each identifier declared as part of a <NT>pattern</NT> in a [receive statement](#receive-statements)
+belongs to the context created by the pattern matching case, which encapsulates the
+[statement](#nonterminal-stmt) immediately following the <T>-></T> terminal.
 
 ```untangled
 receive {
-  // x is scoped to the block following it
-  int x -> {
-    x += 5;
-  }
+  // x is scoped to the statement following the pattern
+  int x -> x++;
 
   // Compiler error: x is not defined
   _ -> print(x);
@@ -1139,40 +1219,67 @@ receive {
   </thead>
   <tbody>
     <tr>
-      <td>print</td>
+      <td>`print`</td>
       <td>Any value that is not a thread</td>
       <td><T.void/></td>
-      <td>Prints out a human-readable representation of the data provided along with a newline in the end</td>
+      <td>Prints out a human-readable representation of the data provided, followed by a newline.</td>
     </tr>
     <tr>
-      <td>make_semaphore</td>
-      <td>An optional <T.int/> value to set the semaphore to</td>
+      <td>`input`</td>
+      <td></td>
+      <td><T.string/></td>
+      <td>Blocks the program until a string is provided via standard input and the return keyboard is pressed, at which point it returns that entry</td>
+    </tr>
+    <tr>
+      <td>`make_semaphore`</td>
+      <td>An <T.int/> value to set the semaphore to</td>
       <td><T.semaphore/></td>
       <td>Creates a semaphore with an initial value of 0.</td>
     </tr>
     <tr>
-      <td>to_string</td>
+      <td>`to_string`</td>
       <td>A value that has any type other than a thread</td>
       <td><T.string/></td>
       <td>Returns a string of a human-readable version of the argument</td>
     </tr>
     <tr>
-      <td>sqrt</td>
+      <td>`int_of_string`</td>
+      <td>A <T.string /></td>
+      <td><T.int/></td>
+      <td>
+        Returns the integer representation of the string. If the string cannot be parsed as an
+        integer, throws a runtime error.
+      </td>
+    </tr>
+    <tr>
+      <td>`float_of_string`</td>
+      <td>A string</td>
+      <td><T.float/></td>
+      <td>Returns the floating point representation of the string. If the string cannot be parsed as a floating point number, throws a runtime error.</td>
+    </tr>
+    <tr>
+      <td>`sqrt`</td>
       <td>An <T.int/> or <T.float/></td>
       <td><T.float/></td>
       <td>Returns the square root of a given number</td>
     </tr>
     <tr>
-      <td>len</td>
-      <td>An array</td>
+      <td>`len`</td>
+      <td>An array of any type</td>
       <td><T.int/></td>
-      <td>Returns the length of an array</td>
+      <td>Returns the length of the array</td>
     </tr>
     <tr>
-      <td>exit</td>
+      <td>`exit`</td>
+      <td>An <T.int /> for the status code</td>
+      <td><T.void /></td>
+      <td>Exits the program</td>
+    </tr>
+    <tr>
+      <td>`end`</td>
       <td></td>
       <td><T.void /></td>
-      <td>Exits the current thread execution</td>
+      <td>Ends the current thread</td>
     </tr>
   </tbody>
 </table>

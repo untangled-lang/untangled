@@ -360,7 +360,7 @@ figure {
 }
 
 figcaption {
-  font-size: math.div(1rem, $ratio);
+  font-size: rem-size(-0.5);
   color: $text-secondary;
   font-style: italic;
   font-variation-settings: 'wght' 450;
@@ -391,4 +391,36 @@ ol, ul {
     // significant than spaces between separate list items
     p:not(:last-child) { margin-bottom: 0.35em; }
   }
+}
+
+div.authors {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  grid-template-rows: auto;
+  gap: 0.1rem 1.5rem;
+  margin: 2rem 0;
+
+  span {
+    font-weight: 600;
+  }
+  a {
+    color: $text-secondary;
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+
+    &:hover {
+      color: $text;
+    }
+  }
+}
+
+.browser-cta {
+  font-weight: 600;
+  margin-bottom: 3rem;
+}
+
+.print-only {
+  display: none;
+}
+@media print {
+  .print-only { display: block; }
 }

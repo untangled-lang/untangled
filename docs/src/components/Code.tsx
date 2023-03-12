@@ -6,7 +6,7 @@ const UNTANGLED_LANGUAGE_DEFINITION = {
   id: 'untangled',
   scopeName: 'source.untangled',
   aliases: ['untangled'],
-  path: '/languages/untangled.tmLanguage.json',
+  path: './languages/untangled.tmLanguage.json',
 } as const;
 
 const LOAD_LANGUAGES = ['ocaml', 'python', UNTANGLED_LANGUAGE_DEFINITION] as const;
@@ -27,7 +27,14 @@ const DEFAULT_THEME = 'github-dark' satisfies Theme;
 
 // Create shiki highlighter instance (requires some messy type gymnastics to remove `readonly`)
 type DeepReadonly<T> = T extends Function ? T : T extends object ? { readonly [K in keyof T]: DeepReadonly<T[K]> } : T;
-const options: HighlighterOptions = { themes: LOAD_THEMES, langs: LOAD_LANGUAGES } satisfies DeepReadonly<HighlighterOptions> as any;
+const options: HighlighterOptions = {
+  themes: LOAD_THEMES,
+  langs: LOAD_LANGUAGES,
+  paths: {
+    themes: './themes',
+    languages: './languages',
+  },
+} satisfies DeepReadonly<HighlighterOptions> as any;
 const highlighter = await getHighlighter(options);
 
 

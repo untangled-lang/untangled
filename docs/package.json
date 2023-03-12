@@ -3,7 +3,7 @@
   "description": "Documentation for the Untangled programming language.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/nickbar01234/untangled",
+    "url": "https://github.com/untangled-lang/untangled",
     "directory": "docs"
   },
   "type": "module",
