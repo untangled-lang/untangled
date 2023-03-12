@@ -9,7 +9,7 @@ clean: clean-untangled clean-vscode clean-docs
 
 # Untangled language
 
-untangled.exe: src/untangled.ml src/ast.ml src/parser.mly src/scanner.mll
+untangled.exe: src/untangled.ml src/ast.ml src/parser.mly src/scanner.mll src/sast.ml
 	dune build
 
 clean-untangled:

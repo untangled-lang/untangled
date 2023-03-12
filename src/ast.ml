@@ -3,7 +3,7 @@ type op = Add | Sub | Mult | Div | Mod | Pow | Equality | Neq | Less | Leq | Gre
 type unop = Neg | Not | Plusplus | Minmin
 
 type typ =
-  Void
+    Void
   | Bool
   | Int
   | Float
