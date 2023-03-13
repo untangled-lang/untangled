@@ -6,22 +6,22 @@ open Sast
  * Adding a built-in functions
  * Checking for function calls (type and parameters)
  *)
- 
+
  (*
   thread_def Main {
     print("Hello World!");
-  }   
+  }
  *)
 
 exception TODO of string
 
 module StringMap = Map.Make(String)
 
-let check (tdecls, fdecls) = 
+let check (tdecls, fdecls) =
   (* Note, the kind argument is just to provide better error messages *)
-  let check_binds (kind : string) (to_check : bind list) = 
+  let check_binds (kind : string) (to_check : bind list) =
     let name_compare (_, n1) (_, n2) = compare n1 n2 in
-    let check_it checked binding = 
+    let check_it checked binding =
       let void_err = "illegal void " ^ kind ^ " " ^ snd binding
       and dup_err = "duplicate " ^ kind ^ " " ^ snd binding
       in match binding with
@@ -32,33 +32,33 @@ let check (tdecls, fdecls) =
                       ((_, n2) :: _) when n1 = n2 -> raise (Failure dup_err)
                     | _ -> binding :: checked
 
-    in let _ = List.fold_left check_it [] (List.sort name_compare to_check) 
+    in let _ = List.fold_left check_it [] (List.sort name_compare to_check)
        in to_check
-  in 
+  in
 
   let fmap =
     let add_bind map (name, formal_type, return_type) = StringMap.add name
       { fname = name;
         formals = [(formal_type, "x")];
         body = [];
-        ret_type = return_type } map 
+        ret_type = return_type } map
     in List.fold_left add_bind StringMap.empty [("print", String, Void)] in (* TODO: - Add more builtin functions *)
-  
+
   let add_func map fd =
-    let built_in_err = "function " ^ fd.fname ^ " may not be defined" 
+    let built_in_err = "function " ^ fd.fname ^ " may not be defined"
       and dup_err = "duplicate function " ^ fd.fname
       and make_err er = raise (Failure er)
       and n = fd.fname
     in match fd with
-      _ when StringMap.mem n fmap -> make_err built_in_err
-    | _ when StringMap.mem n fmap -> make_err dup_err
-    | _ -> StringMap.add n fd fmap
+      _ when StringMap.mem n map -> make_err built_in_err
+    | _ when StringMap.mem n map -> make_err dup_err
+    | _ -> StringMap.add n fd map
   in
   let function_decls = List.fold_left add_func fmap fdecls
   in
 
 
-  let add_thread map thread_def = 
+  let add_thread map thread_def =
     let dup_error = "duplicate thread " ^ thread_def.tname
       and tname = thread_def.tname
     in match thread_def with
@@ -66,21 +66,21 @@ let check (tdecls, fdecls) =
       | _ -> StringMap.add tname thread_def map
   in
   let thread_defs = List.fold_left add_thread StringMap.empty tdecls in
-  
-  let find_func s = 
+
+  let find_func s =
     try StringMap.find s function_decls
     with Not_found -> raise (Failure ("unrecognized function " ^ s))
   in
 
-  let find_thread_def s = 
+  let find_thread_def s =
     try StringMap.find s thread_defs
     with Not_found -> raise (Failure ("unrecognized thread definition " ^ s))
   in
 
   let _ = find_thread_def "Main" in
 
-(*   
-type sstmt = 
+(*
+type sstmt =
 SBlock of sstmt list
 | SExpr of sexpr
 | SReturn of sexpr
@@ -113,8 +113,8 @@ and pattern =
 | WildcardPattern
 | TuplePattern of pattern * pattern *)
 
-  let rec check_stmt env stmt =
-    let check_assign lvaluet rvaluet err = 
+  (* let rec check_stmt env stmt =
+    let check_assign lvaluet rvaluet err =
       if lvaluet = rvaluet then lvaluet else raise (Failure err)
     in
     (* Decide whether to add environment to expressio *)
@@ -123,9 +123,9 @@ and pattern =
           let fd = find_func fname in
           let param_length = List.length fd.formals in
           if List.length args != param_length then
-            raise (Failure ("expecting " ^ string_of_int param_length ^ 
+            raise (Failure ("expecting " ^ string_of_int param_length ^
                             " arguments in " ^ string_of_expr call))
-          else let check_call (ft, _) e = 
+          else let check_call (ft, _) e =
             let (et, e') = expr e in
             let err = "illegal argument found " ^ string_of_typ et ^
               " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr e
@@ -137,30 +137,73 @@ and pattern =
       | FloatLit n -> (Float, SFloatLit n)
       | BoolLit b -> (Bool, SBoolLit b)
       | StringLit s -> (String, SStringLit s)
-      | TupleLit (e1, e2) ->
-          let (e1_env, sexps) = expr e1
-          
-          (* raise (TODO "Left as exercise") *)
+      | TupleLit (e1, e2) -> raise (TODO "Left as exercise")
       | ArrayLit exps -> raise (TODO "Left as exercise")
       | _ -> raise (TODO "Implement expression handler")
     in
     match stmt with
-      | Block stmts -> 
-          let check_stmt_list (env, acc) s = 
+      | Block stmts ->
+          let check_stmt_list (env, acc) s =
             let (extended_env, checked_stmt) = check_stmt env s
             in (extended_env, [acc] @ checked_stmt)
           in let (block_env, checked_stmts) = List.fold_left check_stmt_list
-                                                (env, []) stmts 
-          in (block_env, SBlock checked_stmts) 
+                                                (env, []) stmts
+          in (block_env, SBlock checked_stmts)
       | Expr ex -> SExpr (expr ex)
       (* | While
       | Receive rcs -> (Void, SReceive rcs) *)
-      | _ -> raise (TODO "Left as exercise")
+      | _ -> raise (TODO "Left as exercise") *)
 
-  in let rec check_function fdecl = check_stmt StringMap.empty env fdecl.body
+  let rec check_stmt env stmt =
+    match stmt with
+      Block stmts ->
+        (* TODO - Merge only takes v2 if type matches with the existing locals *)
+        let merge _ v1 v2 =
+          match (v1, v2) with
+            (Some _, Some v2) -> Some v2
+            | (v1, None) -> v1
+            | _ -> None
+        in let check_stmt_list (env, sstmt_list) stmt =
+          (* TODO - Semantic checks for RETURN *)
+          match stmt with
+            (* TODO - Should blocks be flattened? *)
+            Block _ as b -> let (env', sstmt) = check_stmt env b in
+                              (StringMap.merge merge env env', sstmt :: sstmt_list)
+            | s ->
+              let (env', sstmt) = check_stmt env s in (env', sstmt :: sstmt_list)
+        in let (env', sstmt_list) = List.fold_left check_stmt_list (env, []) stmts
+        in (env', SBlock (List.rev sstmt_list))
+      | Expr expr -> let (env', sexpr) = check_expr env expr in (env', SExpr sexpr)
+      | _ -> raise (TODO "Implement other stmt")
+  and check_expr env ex =
+    let check_assign lvaluet rvaluet err =
+      if lvaluet = rvaluet then lvaluet else raise (Failure err)
+    in match ex with
+      IntLit n -> (env, (Int, SIntLit n))
+      | Call (fname, args) as call ->
+        let fd = find_func fname in
+        let param_length = List.length fd.formals in
+        if List.length args != param_length then
+          raise (Failure ("expecting " ^ string_of_int param_length ^
+                          " arguments in " ^ string_of_expr call))
+        else let check_call (env, sargs) (ft, _) e =
+          let (env', (et, e')) = check_expr env e in
+          let err = "illegal argument found " ^ string_of_typ et ^
+                    " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr e
+          in (env', (check_assign ft et err, e') :: sargs)
+        in let (env', sargs) = List.fold_left2 check_call (env, []) fd.formals args
+        in (env', (fd.ret_type, SCall (fname, List.rev sargs)))
+      | _ -> raise (TODO "Implement expr")
 
-  in let rec check_thread tdecl = check_stmt StringMap.empty env tdecl.body
+  (* TODO - Add check binds *)
+  in let check_function (fdecl: func_decl) =
+    { sfname = fdecl.fname; sformals = fdecl.formals; sbody = []; sret_type = fdecl.ret_type }
 
-  in (List.map check_thread thread_defs, List.map check_function function_decls)
+  in let check_thread (tdecl: thread_decl) =
+    let (_, stmts) = check_stmt StringMap.empty (Block tdecl.body)
+    in match stmts with
+      SBlock (sl) -> { stname = tdecl.tname; sbody = sl }
+      | _ -> raise (Failure "Failed to parsed thread")
 
-  
+  in (List.map check_thread tdecls, List.map check_function fdecls)
+

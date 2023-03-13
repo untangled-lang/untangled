@@ -5,4 +5,9 @@
 (executable
  (name untangled)
  (public_name untangled)
- (promote (into "..") (until-clean)))
+ (promote (into "..") (until-clean))
+ (libraries llvm))
+
+(env
+ (dev
+  (flags (:standard -warn-error -A))))
