@@ -1,0 +1,6 @@
+thread_def Main {
+  int i = (int : 0);
+  bool b = (bool : true);
+  float f = (float : 0.5);
+  string s = (string : "hello world");
+}

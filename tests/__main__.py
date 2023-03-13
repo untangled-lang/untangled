@@ -57,6 +57,7 @@ def report_status(exit_code, test_name):
 
 # PARSE ARGS ==================================================================
 
+actionMapper = { "ast": "-a", "sast": "-s", "llvm": "-l", "compile": "-c" }
 
 parser = ArgumentParser()
 group = parser.add_mutually_exclusive_group(required=False)
@@ -66,9 +67,11 @@ group.add_argument("-tg", "--test-groups", nargs="*", required=False,
                    help="Limits tests to those in the specified test groups.")
 group.add_argument("-gt", "--record-ground-truths", nargs="*", required=False,
                    help="Regenerate ground truths from test outputs for the specified tests. Leave list blank to regenerate all.")  # noqa: E501
+parser.add_argument("-a", "--action", choices=["ast", "sast", "llvm", "compile"],
+                    default="compile", required=False, help="Specify compiler's stopping point. Leave blank for full compilation")
 args = parser.parse_args()
 
-
+ACTION = actionMapper[args.action]
 TEST_GROUPS_FILTER = args.test_groups
 TESTS_FILTER = args.tests
 REGENERATE_GTS = args.record_ground_truths
@@ -112,7 +115,7 @@ for test_group_path in sorted(test_group_folders):
 
         # Run the test
         print(f"Running test {Format.bold}{full_test_name}{Format.reset}...")
-        os.system(f"./{BINARY} < {input_file_path} > {output_path} 2>&1")
+        os.system(f"./{BINARY} {ACTION} < {input_file_path} > {output_path} 2>&1")
         # Record a new ground truth if requested
         if REGENERATE_GTS and test_name in REGENERATE_GTS:
             subprocess.run(

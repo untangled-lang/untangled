@@ -154,32 +154,43 @@ and pattern =
       | Receive rcs -> (Void, SReceive rcs) *)
       | _ -> raise (TODO "Left as exercise") *)
 
-  let rec check_stmt env stmt =
+  let check_assign lvaluet rvaluet e =
+    let err = "illegal argument found " ^ string_of_typ rvaluet ^ " expected " ^
+              string_of_typ lvaluet ^ " in " ^ string_of_expr e
+    in if lvaluet = rvaluet then lvaluet else raise (Failure err)
+  in let rec lookup id envs =
+    match envs with
+      [] -> raise (Failure ("variable " ^ id ^ " not found"))
+      | env :: envs -> try StringMap.find id env with Not_found -> lookup id envs
+  in let rec check_stmt (envs: 'a StringMap.t list) (stmt: stmt) =
     match stmt with
       Block stmts ->
-        (* TODO - Merge only takes v2 if type matches with the existing locals *)
-        let merge _ v1 v2 =
-          match (v1, v2) with
-            (Some _, Some v2) -> Some v2
-            | (v1, None) -> v1
-            | _ -> None
-        in let check_stmt_list (env, sstmt_list) stmt =
+        let check_stmt_list (envs, sstmt_list) stmt =
           (* TODO - Semantic checks for RETURN *)
           match stmt with
             (* TODO - Should blocks be flattened? *)
-            Block _ as b -> let (env', sstmt) = check_stmt env b in
-                              (StringMap.merge merge env env', sstmt :: sstmt_list)
-            | s ->
-              let (env', sstmt) = check_stmt env s in (env', sstmt :: sstmt_list)
-        in let (env', sstmt_list) = List.fold_left check_stmt_list (env, []) stmts
-        in (env', SBlock (List.rev sstmt_list))
-      | Expr expr -> let (env', sexpr) = check_expr env expr in (env', SExpr sexpr)
+            Block _ as b ->
+              let (_, sstmt) = check_stmt (StringMap.empty :: envs) b in (envs, sstmt :: sstmt_list)
+            | s -> let (envs', sstmt) = check_stmt envs s in (envs', sstmt :: sstmt_list)
+        in let (envs', sstmt_list) = List.fold_left check_stmt_list (envs, []) stmts
+        in (envs', SBlock (List.rev sstmt_list))
+      | Expr expr -> let (envs', sexpr) = check_expr envs expr in (envs', SExpr sexpr)
+      | Decl (rt, id, expr) ->
+          match envs with
+            env :: _ ->
+              if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
+              else let (envs', (lt, e')) = check_expr envs expr
+                    in (envs', SDecl (check_assign lt rt expr, id, (lt, e')))
+            | [] -> raise (Failure "Implementation bug: empty environments")
       | _ -> raise (TODO "Implement other stmt")
-  and check_expr env ex =
-    let check_assign lvaluet rvaluet err =
-      if lvaluet = rvaluet then lvaluet else raise (Failure err)
-    in match ex with
+  and check_expr (env: 'a StringMap.t list) (expr: expr) =
+    match expr with
       IntLit n -> (env, (Int, SIntLit n))
+      | StringLit s -> (env, (String, SStringLit s))
+      | FloatLit n -> (env, (Float, SFloatLit n))
+      | BoolLit b -> (env, (Bool, SBoolLit b))
+      | TupleLit (e1, e2) -> raise (TODO "Implement tuple literal")
+      | ArrayLit xs -> raise (TODO "Implement array literal")
       | Call (fname, args) as call ->
         let fd = find_func fname in
         let param_length = List.length fd.formals in
@@ -187,10 +198,7 @@ and pattern =
           raise (Failure ("expecting " ^ string_of_int param_length ^
                           " arguments in " ^ string_of_expr call))
         else let check_call (env, sargs) (ft, _) e =
-          let (env', (et, e')) = check_expr env e in
-          let err = "illegal argument found " ^ string_of_typ et ^
-                    " expected " ^ string_of_typ ft ^ " in " ^ string_of_expr e
-          in (env', (check_assign ft et err, e') :: sargs)
+          let (env', (et, e')) = check_expr env e in (env', (check_assign ft et e, e') :: sargs)
         in let (env', sargs) = List.fold_left2 check_call (env, []) fd.formals args
         in (env', (fd.ret_type, SCall (fname, List.rev sargs)))
       | _ -> raise (TODO "Implement expr")
@@ -200,7 +208,7 @@ and pattern =
     { sfname = fdecl.fname; sformals = fdecl.formals; sbody = []; sret_type = fdecl.ret_type }
 
   in let check_thread (tdecl: thread_decl) =
-    let (_, stmts) = check_stmt StringMap.empty (Block tdecl.body)
+    let (_, stmts) = check_stmt [StringMap.empty] (Block tdecl.body)
     in match stmts with
       SBlock (sl) -> { stname = tdecl.tname; sbody = sl }
       | _ -> raise (Failure "Failed to parsed thread")

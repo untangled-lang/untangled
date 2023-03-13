@@ -18,9 +18,9 @@ and sx =
 | SCall of string * sexpr list
 | SIndex of string * sexpr
 | SNoexpr
-| SUnit 
+| SUnit
 
-type sstmt = 
+type sstmt =
   SBlock of sstmt list
 | SExpr of sexpr
 | SReturn of sexpr
@@ -73,25 +73,27 @@ let rec string_of_unop unop e =
   | Minmin -> string_of_sexpr e ^ "--"
 
 and string_of_sexpr (t, expr) =
-  "(" ^ string_of_typ t ^ " : " ^ (match expr with
-    SIntLit(n) -> Int.to_string n
-  | SFloatLit(n) -> n
-  | SBoolLit(b) -> Bool.to_string b
-  | SStringLit(s) -> "\"" ^ s ^ "\""
-  | STupleLit(t1, t2) -> "(" ^ string_of_sexpr t1 ^ ", " ^ string_of_sexpr t2 ^ ")"
-  | SArrayLit(n) -> "[" ^ String.concat ", " (List.map string_of_sexpr n) ^ "]"
-  | SId(s) -> s
-  | SBinop (e1, o, e2) -> "(" ^ string_of_sexpr e1 ^ string_of_op o ^ string_of_sexpr e2 ^ ")"
-  | SUnop(unop, e) -> "(" ^ string_of_unop unop e ^ ")"
-  | SAssign(s, e) -> "(" ^ s ^ " = " ^ string_of_sexpr e ^ ")"
-  | SSpawn(s) -> "spawn " ^ s
-  | SCall(s, es) ->
-    (let expressionStrings = List.map string_of_sexpr es in
-    s ^ "(" ^ String.concat ", " expressionStrings ^ ")")
-  | SNoexpr -> ""
-  | SIndex(s, e) -> s ^ "[" ^ string_of_sexpr e ^ "]"
-  | SAssignIndex(s, e1, e2) -> s ^ "[" ^ string_of_sexpr e1 ^ "] = " ^ string_of_sexpr e2
-  | SUnit -> "()" )
+  "(" ^ string_of_typ t ^ " : " ^
+    (match expr with
+      SIntLit(n) -> Int.to_string n
+    | SFloatLit(n) -> n
+    | SBoolLit(b) -> Bool.to_string b
+    | SStringLit(s) -> "\"" ^ s ^ "\""
+    | STupleLit(t1, t2) -> "(" ^ string_of_sexpr t1 ^ ", " ^ string_of_sexpr t2 ^ ")"
+    | SArrayLit(n) -> "[" ^ String.concat ", " (List.map string_of_sexpr n) ^ "]"
+    | SId(s) -> s
+    | SBinop (e1, o, e2) -> "(" ^ string_of_sexpr e1 ^ string_of_op o ^ string_of_sexpr e2 ^ ")"
+    | SUnop(unop, e) -> "(" ^ string_of_unop unop e ^ ")"
+    | SAssign(s, e) -> "(" ^ s ^ " = " ^ string_of_sexpr e ^ ")"
+    | SSpawn(s) -> "spawn " ^ s
+    | SCall(s, es) ->
+      (let expressionStrings = List.map string_of_sexpr es in
+      s ^ "(" ^ String.concat ", " expressionStrings ^ ")")
+    | SNoexpr -> ""
+    | SIndex(s, e) -> s ^ "[" ^ string_of_sexpr e ^ "]"
+    | SAssignIndex(s, e1, e2) -> s ^ "[" ^ string_of_sexpr e1 ^ "] = " ^ string_of_sexpr e2
+    | SUnit -> "()" )
+  ^ ")"
 
 
 let rec string_of_spattern pat =

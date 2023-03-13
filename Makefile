@@ -19,6 +19,8 @@ clean-untangled:
 test: clean-untangled untangled.exe
 	python3 tests
 
+test-semants: clean-untangled untangled.exe
+	python3 tests -tg semantics -a sast
 
 # VSCode extension
 
