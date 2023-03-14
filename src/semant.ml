@@ -176,12 +176,12 @@ and pattern =
         in (envs', SBlock (List.rev sstmt_list))
       | Expr expr -> let (envs', sexpr) = check_expr envs expr in (envs', SExpr sexpr)
       | Decl (rt, id, expr) ->
-          match envs with
+          (match envs with
             env :: _ ->
               if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
               else let (envs', (lt, e')) = check_expr envs expr
                     in (envs', SDecl (check_assign lt rt expr, id, (lt, e')))
-            | [] -> raise (Failure "Implementation bug: empty environments")
+            | [] -> raise (Failure "Implementation bug: empty environments"))
       | _ -> raise (TODO "Implement other stmt")
   and check_expr (env: 'a StringMap.t list) (expr: expr) =
     match expr with
