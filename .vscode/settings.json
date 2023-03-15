@@ -13,4 +13,7 @@
   },
 
   "mdx.experimentalLanguageServer": true,
+  "ocaml.sandbox": {
+    "kind": "global"
+  },
 }

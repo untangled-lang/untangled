@@ -162,6 +162,10 @@ and pattern =
     match envs with
       [] -> raise (Failure ("variable " ^ id ^ " not found"))
       | env :: envs -> try StringMap.find id env with Not_found -> lookup id envs
+  and bind id typ envs =
+    match envs with
+      [] -> raise (Failure ("Implementation bug: empty environments"))
+      | env :: envs -> (StringMap.add id typ env) :: envs
   in let rec check_stmt (envs: 'a StringMap.t list) (stmt: stmt) =
     match stmt with
       Block stmts ->
@@ -180,7 +184,7 @@ and pattern =
             env :: _ ->
               if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
               else let (envs', (lt, e')) = check_expr envs expr
-                    in (envs', SDecl (check_assign lt rt expr, id, (lt, e')))
+                    in (bind id lt envs', SDecl (check_assign lt rt expr, id, (lt, e')))
             | [] -> raise (Failure "Implementation bug: empty environments"))
       | _ -> raise (TODO "Implement other stmt")
   and check_expr (env: 'a StringMap.t list) (expr: expr) =
