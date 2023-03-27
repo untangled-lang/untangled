@@ -27,8 +27,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
   let printf_func : L.llvalue =
      L.declare_function "printf" printf_t the_module in
-  let print_t : L.lltype = L.function_type void_t [||] in
-  let print_func : L.llvalue = L.declare_function "print" print_t the_module in
 
   (* TODO - Extend map with extra information? For example, message passing? *)
   let thread_decls =
@@ -43,12 +41,32 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let builder = L.builder_at_end context (L.entry_block the_thread) in
     let string_format_str = L.build_global_stringptr "%s" "fmt" builder in
 
+    (* printf("Hello %s", variable) *)
+    (* printf(variableA, variableB) *)
     let rec expr (builder: L.llbuilder) ((_, sexpr : sexpr)) =
       match sexpr with
         (* | SStringLit s -> L.const_stringz context s *)
         | SStringLit s -> L.build_global_stringptr s "tmp" builder
-        | SCall ("print", [sexpr]) ->
-            L.build_call printf_func [| string_format_str; (expr builder sexpr) |] "printf" builder
+        | SCall ("print", printArgs) ->
+            (* "%s %s %s %s" *)
+          let format_string_of (acc: string) ((ty, _ : sexpr)) =
+            acc ^ " " ^ (match ty with
+              | Void -> ""
+              | Bool ->  raise (Failure "Unimplemented")
+              | Int ->  "%d"
+              | Float ->  raise (Failure "Unimplemented")
+              | String ->  "%s"
+              | Thread ->  raise (Failure "Unimplemented")
+              | Semaphore ->  raise (Failure "Unimplemented")
+              | Tuple (t1, t2) ->  raise (Failure "Unimplemented")
+              | Array (arrayType, count) ->  raise (Failure "Unimplemented"))
+          in let format_string = List.fold_left format_string_of "" printArgs and
+                 llvalues = List.map (fun arg -> expr builder arg) printArgs in
+          let printf_arg_arr = Array.append [| L.build_global_stringptr format_string "fmt" builder |] (Array.of_list llvalues)
+          in L.build_call printf_func printf_arg_arr "printf" builder
+          (* let printFormatString = build_format_string printFormatString in
+          let printArgs = List.map  sexprs in *)
+          (* L.build_call printf_func [| string_format_str; (expr builder sexpr) |] "printf" builder *)
         | _ -> raise (Failure "Implement other exprs builder")
     and stmt (builder: L.llbuilder) = function
       (* TODO - Update SBlock to account for scoping rules *)

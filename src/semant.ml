@@ -57,7 +57,6 @@ let check (tdecls, fdecls) =
   let function_decls = List.fold_left add_func fmap fdecls
   in
 
-
   let add_thread map thread_def =
     let dup_error = "duplicate thread " ^ thread_def.tname
       and tname = thread_def.tname
@@ -195,6 +194,11 @@ and pattern =
       | BoolLit b -> (env, (Bool, SBoolLit b))
       | TupleLit (e1, e2) -> raise (TODO "Implement tuple literal")
       | ArrayLit xs -> raise (TODO "Implement array literal")
+      | Call ("print", args) ->
+          let check_call (env, sargs) e =
+            let (env', sexp) = check_expr env e in (env', sexp :: sargs)
+          in let (env', sargs) = List.fold_left check_call (env, []) args
+          in (env', (Void, SCall ("print", List.rev sargs)))
       | Call (fname, args) as call ->
         let fd = find_func fname in
         let param_length = List.length fd.formals in
