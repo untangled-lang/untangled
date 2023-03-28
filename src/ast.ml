@@ -191,4 +191,4 @@ let string_of_func_decl func =
 let string_of_program (thread_decls, function_decls) = String.concat "\n\n" (List.filter (fun x -> x <> "") [
   String.concat "\n\n" (List.map string_of_thread_decl thread_decls);
   String.concat "\n\n" (List.map string_of_func_decl function_decls)
-])
+]) ^ "\n"

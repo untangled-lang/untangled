@@ -1,0 +1,23 @@
+thread_def Wassup {
+  parent << 0;
+}
+
+thread_def Main {
+  thread t = spawn Wassup;
+  t << 10;
+  int num = 0;
+  receive {
+    int i -> (num = i);
+    (int i, (bool x, bool y)) -> (num = i);
+    _ -> (num = (-1));
+  }
+  receive {
+    int i -> {
+      int y = 0;
+      (num = 7);
+    }
+    bool j -> receive {
+      _ -> 0;
+    }
+  }
+}

@@ -142,4 +142,4 @@ let string_of_sfunc_decl func =
 let string_of_sprogram (thread_decls, function_decls) = String.concat "\n\n" (List.filter (fun x -> x <> "") [
   String.concat "\n\n" (List.map string_of_sthread_decl thread_decls);
   String.concat "\n\n" (List.map string_of_sfunc_decl function_decls)
-])
+]) ^ "\n"

@@ -19,8 +19,15 @@ clean-untangled:
 test: clean-untangled untangled.exe
 	python3 tests
 
+test-ast: clean-untangled untangled.exe
+	python3 tests --step ast
+
 test-semants: clean-untangled untangled.exe
-	python3 tests -tg semantics -a sast
+	python3 tests --step sast
+
+test-llvm: clean-untangled untangled.exe
+	python3 tests --step llvm
+
 
 # VSCode extension
 
