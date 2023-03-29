@@ -13,7 +13,9 @@ untangled.exe: src/untangled.ml src/ast.ml src/parser.mly src/scanner.mll src/sa
 	dune build
 
 clean-untangled:
-	find tests | grep ".output$$" | xargs rm
+	find tests | grep "\\.output$$" | xargs rm
+	find tests | grep "\\.ll$$" | xargs rm
+	find tests | grep "\\.s$$" | xargs rm
 	dune clean
 
 test: clean-untangled untangled.exe
