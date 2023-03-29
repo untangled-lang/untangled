@@ -9,13 +9,12 @@ Chloe Lam (clam08@tufts.edu)
 
 
 ## Instructions
+
 First, install required dependencies:
 ```sh
 opam install dune
 opam install llvm.14.0.6 # or whatever version of llvm you have installed
 ```
-*(Note that [Dune](https://github.com/ocaml/dune) supersedes [Ocamlbuild](https://github.com/ocaml/ocamlbuild);
-the Ocamlbuild README has recommended to use Dune instead for several years.)*
 
 After installing dependencies, you will be able to:
 - Run `make` to build the main `untangled.exe` executable.
@@ -80,6 +79,8 @@ The following end-to-end tests are currently included:
 
 1. `tests/e2e/hello-world.unt` - a simple program which prints the string "Hello, World!" from the
    main thread
+
+
 
 ## Documentation
 The MDX file at `docs/src/main.mdx` (MDX is Markdown with support for React components) is the
