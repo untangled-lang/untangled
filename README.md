@@ -83,6 +83,7 @@ The following end-to-end tests are currently included:
 
 
 ## Documentation
+
 The MDX file at `docs/src/main.mdx` (MDX is Markdown with support for React components) is the
 source file for the Language Reference Manual. You can edit it like a normal markdown file. You can
 also define additional react components in `docs/src/components`, and then import/use them in the
