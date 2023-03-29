@@ -6,7 +6,7 @@
  (name untangled)
  (public_name untangled)
  (promote (into "..") (until-clean))
- (libraries llvm))
+ (libraries llvm llvm.analysis))
 
 (env
  (dev
