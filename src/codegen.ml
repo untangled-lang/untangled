@@ -47,10 +47,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
       match sexpr with
         (* | SStringLit s -> L.const_stringz context s *)
         | SStringLit s -> L.build_global_stringptr s "tmp" builder
-        | SCall ("print", printArgs) ->
-            (* "%s %s %s %s" *)
-          let format_string_of (acc: string) ((ty, _ : sexpr)) =
-            acc ^ " " ^ (match ty with
+        | SCall ("print", [sexpr]) ->
+            L.build_call printf_func [| string_format_str; (expr builder sexpr) |] "printf" builder
+          (* let format_string_of (acc: string) ((ty, _ : sexpr)) = *)
+            (* acc ^ " " ^ (match ty with
               | Void -> ""
               | Bool ->  raise (Failure "Unimplemented")
               | Int ->  "%d"
@@ -63,7 +63,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
           in let format_string = List.fold_left format_string_of "" printArgs and
                  llvalues = List.map (fun arg -> expr builder arg) printArgs in
           let printf_arg_arr = Array.append [| L.build_global_stringptr format_string "fmt" builder |] (Array.of_list llvalues)
-          in L.build_call printf_func printf_arg_arr "printf" builder
+          in L.build_call printf_func printf_arg_arr "printf" builder *)
           (* let printFormatString = build_format_string printFormatString in
           let printArgs = List.map  sexprs in *)
           (* L.build_call printf_func [| string_format_str; (expr builder sexpr) |] "printf" builder *)

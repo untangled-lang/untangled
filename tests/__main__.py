@@ -10,7 +10,7 @@ import glob
 from argparse import ArgumentParser
 
 STEPS = [
-    "ast", "sast", "llvm"
+    "ast", "sast", "e2e"
 ]
 PWD = os.getcwd()
 BINARY = "untangled.exe"
@@ -66,7 +66,7 @@ def get_current_folders(path):
 
 # PARSE ARGS ==================================================================
 
-ACTION_MAPPER = {"ast": "-a", "sast": "-s", "llvm": "-l", "compile": "-c"}
+ACTION_MAPPER = {"ast": "-a", "sast": "-s", "e2e": "-l", "compile": "-c"}
 
 parser = ArgumentParser()
 group = parser.add_mutually_exclusive_group(required=False)
@@ -77,16 +77,11 @@ group.add_argument("-tg", "--test-groups", nargs="*", required=False,
 group.add_argument("-gt", "--record-ground-truths", nargs="*", required=False,
                    help="Regenerate ground truths from test outputs for the specified tests. Leave list blank to regenerate all.")  # noqa: E501
 parser.add_argument(
-    "-a", "--action", choices=STEPS,
-    required=False, help="Specify compiler's stopping point. Leave blank for full compilation"
-)
-parser.add_argument(
     "-s", "--step", nargs="*", choices=STEPS, default=[], required=False, help="Specify which compiler's step to test. Leave blank to run all steps"
 )
 parser.add_argument("-l", "--link", nargs="*", help="Link executable with other .o files", required=False, default=[])
 args = parser.parse_args()
 
-ACTION = ACTION_MAPPER.get(args.action)
 TEST_GROUPS_FILTER = args.test_groups
 TESTS_FILTER = args.tests
 REGENERATE_GTS = args.record_ground_truths
@@ -136,9 +131,6 @@ for step_dir in COMPILER_STEPS_DIR:
         print(f"Skipping {compiler_step}")
         continue
 
-    if ACTION is not None:
-        ocaml_driver_option = ACTION
-
     while len(test_groups) > 0:
         test_group_path = test_groups.pop(0)
         group_name = os.path.basename(os.path.normpath(test_group_path))
@@ -161,11 +153,24 @@ for step_dir in COMPILER_STEPS_DIR:
             output_path = os.path.join(test_group_path, f"{test_name}.output")
             ground_truth_path = os.path.join(test_group_path, f"{test_name}.gt")
 
-            # Run the test
             print(f"Running test {Format.bold}{full_test_name}{Format.reset}...")
-            os.system(
-                f"./{BINARY} {ocaml_driver_option} < {input_file_path} > {output_path} 2>&1"
-            )
+
+            if compiler_step != "e2e":
+                # Run the test
+                os.system(
+                    f"./{BINARY} {ocaml_driver_option} < {input_file_path} > {output_path} 2>&1"
+                )
+
+            else:
+                ll_path = os.path.join(test_group_path, f"{test_name}.ll")
+                s_path = os.path.join(test_group_path, f"{test_name}.s")
+                exe_path = os.path.join(test_group_path, f"{test_name}")
+                os.system(
+                    f"./{BINARY} {ocaml_driver_option} < {input_file_path} > {ll_path} 2>&1"
+                )
+                os.system(f"llc {ll_path} > {s_path}")
+                os.system(f"clang -o {exe_path} {s_path}")
+                os.system(f"{exe_path} > {output_path}")
 
             # Record a new ground truth if requested
             if REGENERATE_GTS and test_name in REGENERATE_GTS:
