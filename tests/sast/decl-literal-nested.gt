@@ -1,0 +1,6 @@
+thread_def Main {
+  int x = (int : 0);
+  {
+    bool x = (bool : true);
+  }
+}
