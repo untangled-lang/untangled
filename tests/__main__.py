@@ -115,7 +115,7 @@ else:
 print()
 
 num_tests = 0
-print(COMPILER_STEPS_DIR)
+
 for step_dir in COMPILER_STEPS_DIR:
     compiler_step = os.path.basename(os.path.normpath(step_dir))
     test_groups = get_current_folders(step_dir)
