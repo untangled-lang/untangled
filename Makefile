@@ -16,7 +16,7 @@ clean-untangled:
 	find tests | grep "\\.output$$" | xargs rm
 	find tests | grep "\\.ll$$" | xargs rm
 	find tests | grep "\\.s$$" | xargs rm
-	find tests/e2e | grep "\\.unt$$" | sed s/\\.unt$$// | xargs rm
+	find tests/e2e | grep "\\.unt$$" | sed s/\\.unt$$// | xargs rm -f
 	dune clean
 
 test: clean-untangled untangled.exe
@@ -62,4 +62,4 @@ docs: docs-build docs-pdf
 clean-docs:
 	-rm -rf docs/node_modules
 	-rm -rf docs/dist
-	-rm docs/untangled.pdf
+	-rm -f docs/untangled.pdf
