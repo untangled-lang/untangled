@@ -13,6 +13,11 @@ open Sast
 
 module StringMap = Map.Make(String)
 
+let deep_copy_stringmap map =
+  let new_map = StringMap.empty in
+  let new_map = StringMap.fold (fun k v acc -> StringMap.add k v acc) map new_map in
+  new_map
+
 let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let context = L.global_context () in
   let i32_t      = L.i32_type    context
@@ -23,6 +28,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let the_module = L.create_module context "Untangled" in
 
   (* TODO - Add type *)
+
   let printf_t : L.lltype =
     L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
   let printf_func : L.llvalue =
@@ -43,12 +49,25 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
     (* printf("Hello %s", variable) *)
     (* printf(variableA, variableB) *)
-    let rec expr (builder: L.llbuilder) ((_, sexpr : sexpr)) =
+    let rec expr ((builder: L.llbuilder), env) ((_, sexpr : sexpr)) =
       match sexpr with
-        (* | SStringLit s -> L.const_stringz context s *)
-        | SStringLit s -> L.build_global_stringptr s "tmp" builder
+        | SIntLit i -> (L.const_int i32_t i, env)
+        | SStringLit s -> (L.build_global_stringptr s "tmp" builder, env)
+        | SBoolLit b -> (L.const_int i1_t (if b then 1 else 0), env)
+        | SFloatLit l -> (L.const_float_of_string float_t l, env)
+        | SNoexpr -> (L.const_int i32_t 0, env)
+        | SId s -> (L.build_load (StringMap.find s env) s builder, env)
         | SCall ("print", [sexpr]) ->
-            L.build_call printf_func [| string_format_str; (expr builder sexpr) |] "printf" builder
+            let (llvalue, env') =  expr (builder, env) sexpr in
+              (L.build_call printf_func [| string_format_str; llvalue |] "printf" builder, env')
+        | SCall ("string_of_int", [sexpr]) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+            (* Format is typ value *)
+            (* TODO - Ask richard if this is gucci :) *)
+            let ocamlvalue = String.split_on_char ' ' (L.string_of_llvalue llvalue)
+            in
+            let stringP = L.build_global_stringptr (List.hd (List.rev ocamlvalue)) "tmp" builder
+              in (stringP, env')
           (* let format_string_of (acc: string) ((ty, _ : sexpr)) = *)
             (* acc ^ " " ^ (match ty with
               | Void -> ""
@@ -67,14 +86,30 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
           (* let printFormatString = build_format_string printFormatString in
           let printArgs = List.map  sexprs in *)
           (* L.build_call printf_func [| string_format_str; (expr builder sexpr) |] "printf" builder *)
+        (* | SAssign varname sx -> *)
         | _ -> raise (Failure "Implement other exprs builder")
-    and stmt (builder: L.llbuilder) = function
-      (* TODO - Update SBlock to account for scoping rules *)
-      SBlock sblock -> List.fold_left stmt builder sblock
-      | SExpr sexpr -> let _ = expr builder sexpr in builder
-      | _ -> builder
+    and stmt ((builder: L.llbuilder), env) sstmt =
+      match sstmt with
+        (* TODO - Update SBlock to account for scoping rules *)
+          SBlock sblock ->
+            let _ = List.fold_left stmt (builder, env) sblock in (builder, env) 
+        | SExpr sexpr -> let (_, env2) = expr (builder, env) sexpr in (builder, env2)
+        | SDecl (ty, var_name, sx) -> let (llvalue, env2) = expr (builder, env) sx in
+                                  let alloca = L.build_alloca (match ty with
+                                    | Void -> void_t
+                                    | Bool -> i1_t
+                                    | Int -> i32_t
+                                    | Float -> float_t
+                                    | String -> L.pointer_type i8_t
+                                    | Thread -> void_t
+                                    | Semaphore -> void_t
+                                    | Tuple (t1, t2) -> void_t
+                                    | Array (arrayType, count) -> void_t) var_name builder in
+                                  let _ = L.build_store llvalue alloca builder in
+                                  (builder, StringMap.add var_name alloca env2)
+        | _ -> (builder, env)
     in
-    let builder = stmt builder (SBlock tdecl.sbody) in
-    L.build_ret_void builder
+    let (builder, _) = stmt (builder, StringMap.empty) (SBlock tdecl.sbody) in
+                        L.build_ret_void builder
 
   in let _ = List.map build_thread_body tdecls in the_module

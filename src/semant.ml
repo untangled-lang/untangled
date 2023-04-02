@@ -42,8 +42,14 @@ let check (tdecls, fdecls) =
         formals = [(formal_type, "x")];
         body = [];
         ret_type = return_type } map
-    in List.fold_left add_bind StringMap.empty [("print", String, Void)] in (* TODO: - Add more builtin functions *)
-
+    (* 
+     * @TODO - we currently have a to_string function which takes any type. But
+     * our language is statically type
+     *)
+    (* TODO: - Add more builtin functions *)
+    in List.fold_left add_bind StringMap.empty
+       [("print", String, Void); ("string_of_int", Int, String)]
+  in 
   let add_func map fd =
     let built_in_err = "function " ^ fd.fname ^ " may not be defined"
       and dup_err = "duplicate function " ^ fd.fname
@@ -209,6 +215,7 @@ and pattern =
           let (env', (et, e')) = check_expr env e in (env', (check_assign ft et e, e') :: sargs)
         in let (env', sargs) = List.fold_left2 check_call (env, []) fd.formals args
         in (env', (fd.ret_type, SCall (fname, List.rev sargs)))
+      | Id s -> let t = (lookup s env) in (env, (t, SId s))
       | _ -> raise (TODO "Implement expr")
 
   (* TODO - Add check binds *)
@@ -222,4 +229,3 @@ and pattern =
       | _ -> raise (Failure "Failed to parsed thread")
 
   in (List.map check_thread tdecls, List.map check_function fdecls)
-
