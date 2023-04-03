@@ -32,13 +32,18 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let printf_t : L.lltype =
     L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
   let printf_func : L.llvalue =
-     L.declare_function "printf" printf_t the_module in
+    L.declare_function "printf" printf_t the_module in
+  (* let thread_func_t : L.lltype = 
+    L.var_arg_function_type  in 
+  let thread_func : L.llvalue = 
+    L.declare_function "std::thread" thread_func_t the_module in *)
 
   (* TODO - Extend map with extra information? For example, message passing? *)
   let thread_decls =
     let thread_decl m tdecl =
       let stname = tdecl.stname and
           ttype = L.function_type void_t [||] in
+      (* Add paramaters for threads *)
       StringMap.add stname (L.define_function (if tdecl.stname = "Main" then "main" else tdecl.stname) ttype the_module, tdecl) m in
     List.fold_left thread_decl StringMap.empty tdecls in
 
@@ -70,6 +75,43 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               (match L.float_of_const llvalue with
                 Some v -> (L.build_global_stringptr (string_of_float v) "tmp" builder, env')
                 | None -> raise (Failure "Bug in parsing float expression"))
+        (* | SBinop (e1, op, e2) ->
+            let (t1, _) = e1 in
+            let (e1', env') = expr (builder, env) e1 in
+            let (e2', env'') = expr (builder, env') e2 in
+            if t1 = A.Float then (match op with 
+              A.Add              -> L.build_fadd
+            | A.Sub              -> L.build_fsub
+            | A.Mult             -> L.build_fmul
+            | A.Div              -> L.build_fdiv 
+            | A.Equality         -> L.build_fcmp L.Fcmp.Oeq
+            | A.Pow              -> raise (Failure "Implement power on float")
+            | A.Neq              -> L.build_fcmp L.Fcmp.One
+            | A.Less             -> L.build_fcmp L.Fcmp.Olt
+            | A.Leq              -> L.build_fcmp L.Fcmp.Ole
+            | A.Greater          -> L.build_fcmp L.Fcmp.Ogt
+            | A.Geq              -> L.build_fcmp L.Fcmp.Oge
+            | A.And | A.Or | Mod ->
+                raise (Failure "internal error: semant should have rejected
+                                and/or/mod on float")
+            ) (e1' e2' "tmp" builder, env'')
+            else (match op with
+            | A.Add       -> L.build_add
+            | A.Sub       -> L.build_sub
+            | A.Mult      -> L.build_mul
+            | A.Div       -> L.build_sdiv
+            | A.And       -> L.build_and
+            | A.Mod       -> L.build_srem
+            | A.Or        -> L.build_or
+            | A.Equality  -> L.build_icmp L.Icmp.Eq
+            | A.Neq       -> L.build_icmp L.Icmp.Ne
+            | A.Less      -> L.build_icmp L.Icmp.Slt
+            | A.Leq       -> L.build_icmp L.Icmp.Sle
+            | A.Greater   -> L.build_icmp L.Icmp.Sgt
+            | A.Geq       -> L.build_icmp L.Icmp.Sge
+            | A.Pow       -> raise (Failure "Implement power on int")
+            ) ((e1' e2' "tmp" builder), env'') *)
+        (* | SSpawn s ->  *)
             (* let llvalue = Llvm.const_int (Llvm.i64_type context) 1 in
             let value = Int64.to_int (Llvm.int64_of_const llvalue) in
             (llvalue, env') *)

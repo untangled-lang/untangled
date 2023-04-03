@@ -1,0 +1,4 @@
+thread_def Main {
+    string my_string = "hello!";
+    print(my_string);
+}

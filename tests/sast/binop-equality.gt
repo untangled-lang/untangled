@@ -1,0 +1,7 @@
+thread_def Main {
+  (bool : ((int : 5) < (int : 3)));
+  (bool : ((bool : true) && (bool : false)));
+  (bool : ((bool : true) == (bool : true)));
+  (bool : ((bool : true) != (bool : false)));
+  (bool : ((bool : ((float : 4.3) >= (float : 5.2))) || (bool : ((float : 4.0) == (float : 1.0)))));
+}

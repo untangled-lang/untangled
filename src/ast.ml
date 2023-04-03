@@ -1,4 +1,18 @@
-type op = Add | Sub | Mult | Div | Mod | Pow | Equality | Neq | Less | Leq | Greater | Geq | And | Or
+type op =
+    Add
+  | Sub
+  | Mult
+  | Div
+  | Mod
+  | Pow
+  | Equality
+  | Neq
+  | Less
+  | Leq
+  | Greater
+  | Geq
+  | And
+  | Or
 
 type unop = Neg | Not | Plusplus | Minmin
 

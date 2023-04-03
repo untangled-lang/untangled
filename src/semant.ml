@@ -212,7 +212,25 @@ and pattern =
           let (env', (et, e')) = check_expr env e in (env', (check_assign ft et e, e') :: sargs)
         in let (env', sargs) = List.fold_left2 check_call (env, []) fd.formals args
         in (env', (fd.ret_type, SCall (fname, List.rev sargs)))
+      | Binop(e1, op, e2) as e -> 
+          let (env', (t1, e1')) = check_expr env e1 in
+          let (env'', (t2, e2')) = check_expr env' e2 in
+          (* All binary operators require operands of the same type *)
+          let same = t1 = t2 in
+          (* Determine expression type based on operator and operand types *)
+          let ty = match op with
+            Add | Sub | Mult | Div | Mod | Pow when same && t1 = Int -> Int
+          | Add | Sub | Mult | Div | Pow       when same && t1 = Float -> Float
+          | Equality | Neq                     when same               -> Bool
+          | Less | Leq | Greater | Geq
+                                               when same && (t1 = Int || t1 = Float) -> Bool
+          | And | Or                           when same && t1 = Bool -> Bool
+          | _ -> raise (Failure ("illegal binary operator " ^
+                          string_of_typ t1 ^ string_of_op op ^
+                          string_of_typ t2 ^ " in " ^ string_of_expr e))
+          in (env'', (ty, SBinop((t1, e1'), op, (t2, e2'))))
       | Id s -> let t = (lookup s env) in (env, (t, SId s))
+      (* | Spawn t -> let _ = find_thread_def t in (env, SSpawn t) *)
       | _ -> raise (TODO "Implement expr")
 
   (* TODO - Add check binds *)

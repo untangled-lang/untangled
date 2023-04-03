@@ -1,0 +1,9 @@
+thread_def Main {
+  int x = 0;
+  int y = 1;
+
+  x + y;
+
+  float a = 3.0;
+  a + 4.2;
+}
