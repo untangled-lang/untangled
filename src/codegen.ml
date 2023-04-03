@@ -62,12 +62,23 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               (L.build_call printf_func [| string_format_str; llvalue |] "printf" builder, env')
         | SCall ("string_of_int", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
+              (match L.int64_of_const llvalue with
+                Some v -> (L.build_global_stringptr (Int64.to_string v) "tmp" builder, env')
+                | None -> raise (Failure "Bug in parsing integer expression"))
+        | SCall ("string_of_float", [sexpr]) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+              (match L.float_of_const llvalue with
+                Some v -> (L.build_global_stringptr (string_of_float v) "tmp" builder, env')
+                | None -> raise (Failure "Bug in parsing float expression"))
+            (* let llvalue = Llvm.const_int (Llvm.i64_type context) 1 in
+            let value = Int64.to_int (Llvm.int64_of_const llvalue) in
+            (llvalue, env') *)
             (* Format is typ value *)
             (* TODO - Ask richard if this is gucci :) *)
-            let ocamlvalue = String.split_on_char ' ' (L.string_of_llvalue llvalue)
+            (* let ocamlvalue = String.split_on_char ' ' (L.string_of_llvalue llvalue)
             in
             let stringP = L.build_global_stringptr (List.hd (List.rev ocamlvalue)) "tmp" builder
-              in (stringP, env')
+              in (stringP, env') *)
           (* let format_string_of (acc: string) ((ty, _ : sexpr)) = *)
             (* acc ^ " " ^ (match ty with
               | Void -> ""
@@ -87,12 +98,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
           let printArgs = List.map  sexprs in *)
           (* L.build_call printf_func [| string_format_str; (expr builder sexpr) |] "printf" builder *)
         (* | SAssign varname sx -> *)
-        | _ -> raise (Failure "Implement other exprs builder")
+      | _ -> raise (Failure "Implement other exprs builder")
     and stmt ((builder: L.llbuilder), env) sstmt =
       match sstmt with
         (* TODO - Update SBlock to account for scoping rules *)
           SBlock sblock ->
-            let _ = List.fold_left stmt (builder, env) sblock in (builder, env) 
+            let _ = List.fold_left stmt (builder, env) sblock in (builder, env)
         | SExpr sexpr -> let (_, env2) = expr (builder, env) sexpr in (builder, env2)
         | SDecl (ty, var_name, sx) -> let (llvalue, env2) = expr (builder, env) sx in
                                   let alloca = L.build_alloca (match ty with

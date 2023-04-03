@@ -42,14 +42,16 @@ let check (tdecls, fdecls) =
         formals = [(formal_type, "x")];
         body = [];
         ret_type = return_type } map
-    (* 
+    (*
      * @TODO - we currently have a to_string function which takes any type. But
      * our language is statically type
      *)
     (* TODO: - Add more builtin functions *)
     in List.fold_left add_bind StringMap.empty
-       [("print", String, Void); ("string_of_int", Int, String)]
-  in 
+       [("print", String, Void);
+        ("string_of_int", Int, String);
+        ("string_of_float", Float, String)]
+  in
   let add_func map fd =
     let built_in_err = "function " ^ fd.fname ^ " may not be defined"
       and dup_err = "duplicate function " ^ fd.fname
@@ -200,11 +202,6 @@ and pattern =
       | BoolLit b -> (env, (Bool, SBoolLit b))
       | TupleLit (e1, e2) -> raise (TODO "Implement tuple literal")
       | ArrayLit xs -> raise (TODO "Implement array literal")
-      (* | Call ("print", args) ->
-          let check_call (env, sargs) e =
-            let (env', sexp) = check_expr env e in (env', sexp :: sargs)
-          in let (env', sargs) = List.fold_left check_call (env, []) args
-          in (env', (Void, SCall ("print", List.rev sargs))) *)
       | Call (fname, args) as call ->
         let fd = find_func fname in
         let param_length = List.length fd.formals in
