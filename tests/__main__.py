@@ -132,7 +132,6 @@ for step_dir in COMPILER_STEPS_DIR:
     while len(test_groups) > 0:
         test_group_path = test_groups.pop(0)
         group_name = os.path.basename(os.path.normpath(test_group_path))
-        print(group_name)
 
         # Skip test groups that aren’t in the filter
         if group_name not in TEST_GROUPS_FILTER:

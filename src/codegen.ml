@@ -33,11 +33,16 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
   let printf_func : L.llvalue =
     L.declare_function "printf" printf_t the_module in
-  (* let thread_func_t : L.lltype = 
-    L.var_arg_function_type  in 
-  let thread_func : L.llvalue = 
+  (* let thread_func_t : L.lltype =
+    L.var_arg_function_type  in
+  let thread_func : L.llvalue =
     L.declare_function "std::thread" thread_func_t the_module in *)
 
+  let add_terminal builder instr =
+    match L.block_terminator (L.insertion_block builder) with
+        Some _ -> ()
+      | None -> ignore (instr builder)
+  in
   (* TODO - Extend map with extra information? For example, message passing? *)
   let thread_decls =
     let thread_decl m tdecl =
@@ -51,9 +56,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let (the_thread, _) = StringMap.find tdecl.stname thread_decls in
     let builder = L.builder_at_end context (L.entry_block the_thread) in
     let string_format_str = L.build_global_stringptr "%s" "fmt" builder in
-
-    (* printf("Hello %s", variable) *)
-    (* printf(variableA, variableB) *)
+    let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in
     let rec expr ((builder: L.llbuilder), env) ((_, sexpr : sexpr)) =
       match sexpr with
         | SIntLit i -> (L.const_int i32_t i, env)
@@ -66,10 +69,59 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (llvalue, env') =  expr (builder, env) sexpr in
               (L.build_call printf_func [| string_format_str; llvalue |] "printf" builder, env')
         | SCall ("string_of_int", [sexpr]) ->
-            let (llvalue, env') = expr (builder, env) sexpr in
-              (match L.int64_of_const llvalue with
-                Some v -> (L.build_global_stringptr (Int64.to_string v) "tmp" builder, env')
-                | None -> raise (Failure "Bug in parsing integer expression"))
+            let (input_value, env') = expr (builder, env) sexpr in
+            (* We will build our string in this array. *)
+            (* 11 elements because a 32-bit int can be 10 characters long; the final character will hold null terminator *)
+            let array = L.build_alloca (L.array_type i8_t 11) "array" builder in
+            (* Step 1: find the length of the number in question *)
+            let input_value_copy = L.build_alloca i32_t "input_value_copy" builder in
+            (* Copy the value; we’ll perform repeated division on this copy to measure the length *)
+            let _ = L.build_store (L.build_load input_value "input_load_copy" builder) input_value_copy builder in
+            (* Create a variable that we’ll use to count the length of the printed string *)
+            let printed_length = L.build_alloca i8_t "length" builder in
+            let _ = L.build_store (L.const_int i8_t 0) printed_length builder in
+            (* The increment block adds one to the length of the printed string *)
+            let increment_block = L.append_block context "increment" the_thread in
+            let after_increment_block = L.append_block context "continue" the_thread in
+            (* Go to the increment block - we want to definitely enter the increment block at least once, because a zero has length 1 *)
+            let _ = L.build_br increment_block builder in
+            (* Time to start filling out the increment block *)
+            let _ = L.position_at_end increment_block builder in
+            (* divide our temp value (input_value_copy) by 10 *)
+            let divided = (L.build_sdiv (L.build_load input_value_copy "input_value_copy" builder) (L.const_int i32_t 10) "divided" builder) in
+            let _ = L.build_store divided input_value_copy builder in
+            (* increment printed_length *)
+            let incremented = (L.build_add (L.build_load printed_length "printed_length" builder) (L.const_int i8_t 1) "increment_length" builder) in
+            let _ = L.build_store incremented printed_length builder in
+            (* after each increment step, if the value is greater than zero, go back to the start of the increment block; otherwise go to continue block *)
+            let _ = L.build_cond_br (L.build_icmp L.Icmp.Sgt (L.build_load input_value_copy "input_value_copy" builder) (L.const_int i32_t 0) "tmp" builder) increment_block after_increment_block builder in
+            (* Time to start filling out the continue block *)
+            let _ = L.position_at_end after_increment_block builder in
+            (* debug: print the length we computed *)
+            let _ = L.build_call printf_func [| int_format_str; (L.build_load printed_length "printed_length" builder) |] "printf" builder
+            in (array, env)
+
+
+            (* This value stores the position we’ll write to *)
+            (* let position_value = L.build_alloca (L.i8_type context) "tmp" builder in
+            let _ = L.build_store (L.const_int i8_t 0) position_value builder in
+            let tmp = L.build_load position_value "tmp" builder in
+            let pointer = L.build_gep array [| (L.const_int i8_t 0); (L.const_int i8_t 0) |] "pointer" builder in
+            let _ = L.build_store (L.const_int i8_t 97) pointer builder in
+            let _ = L.build_store (L.const_int i8_t 1) position_value builder in
+            let tmp = L.build_load position_value "tmp" builder in
+            let pointer = L.build_gep array [| (L.const_int i8_t 0); (L.const_int i8_t 1) |] "pointer" builder in
+            let _ = L.build_store (L.const_int i8_t 0) pointer builder in *)
+            (* let loop_bb = L.append_block context "string_of_int_loop" in  *)
+            (* let _ = L.build_store (L.const_int i32_t 0) lastp builder in *)
+            (* let tmp = L.build_struct_gep array 0 "tmp" builder in
+            let _ = L.build_store (L.const_int i8_t 97) tmp builder in
+            let tmp2 = L.build_struct_gep array 1 "tmp" builder in
+            let _ = L.build_store (L.const_int i8_t 0) tmp2 builder in *)
+            (* (array, env') *)
+            (* (match L.int64_of_const llvalue with
+              Some v -> (L.build_global_stringptr (Int64.to_string v) "tmp" builder, env')
+              | None -> raise (Failure "Bug in parsing integer expression")) *)
         | SCall ("string_of_float", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
               (match L.float_of_const llvalue with
@@ -79,11 +131,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (t1, _) = e1 in
             let (e1', env') = expr (builder, env) e1 in
             let (e2', env'') = expr (builder, env') e2 in
-            if t1 = A.Float then (match op with 
+            if t1 = A.Float then (match op with
               A.Add              -> L.build_fadd
             | A.Sub              -> L.build_fsub
             | A.Mult             -> L.build_fmul
-            | A.Div              -> L.build_fdiv 
+            | A.Div              -> L.build_fdiv
             | A.Equality         -> L.build_fcmp L.Fcmp.Oeq
             | A.Pow              -> raise (Failure "Implement power on float")
             | A.Neq              -> L.build_fcmp L.Fcmp.One
