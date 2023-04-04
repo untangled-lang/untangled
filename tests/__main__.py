@@ -152,14 +152,20 @@ for step_dir in COMPILER_STEPS_DIR:
             ground_truth_path = os.path.join(test_group_path, f"{test_name}.gt")
 
             print(f"Running test {Format.bold}{full_test_name}{Format.reset}...")
-
             if compiler_step != "e2e":
                 # Run the test
                 os.system(f"./{BINARY} {compiler_options} < {input_file_path} > {output_path} 2>&1")
             else:
                 exe_path = os.path.join(test_group_path, test_name)
                 # Build the executable
-                os.system(f"./{BINARY} {compiler_options} < {input_file_path} -o {exe_path}")
+                if os.system(f"./{BINARY} {compiler_options} < {input_file_path} -o {exe_path}") != 0:
+                    print(
+                        f"{Format.red}{Format.bold}\u2717{Format.reset} "
+                        f"Test {Format.bold}{test_name}{Format.reset} "
+                        f"{Format.red}failed to compile{Format.reset}"
+                        "\n"
+                    )
+                    continue
                 # Run the generated program
                 os.system(f"{exe_path} > {output_path}")
 
