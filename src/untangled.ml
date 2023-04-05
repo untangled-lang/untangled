@@ -34,4 +34,4 @@ let () =
           Printf.fprintf ll_file "%s" (Llvm.string_of_llmodule (Codegen.translate sast));
           close_out ll_file;
           ignore (Sys.command ("llc " ^ ll_path ^ " -o " ^ s_path));
-          ignore (Sys.command ("clang " ^ s_path ^ " -o " ^ exe_path));
+          ignore (Sys.command ("clang -O0 " ^ s_path ^ " -o " ^ exe_path));
