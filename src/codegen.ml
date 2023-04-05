@@ -73,42 +73,46 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               (match L.float_of_const llvalue with
                 Some v -> (L.build_global_stringptr (string_of_float v) "tmp" builder, env')
                 | None -> raise (Failure "Bug in parsing float expression"))
-        (* | SBinop (e1, op, e2) ->
+        | SBinop (e1, op, e2) ->
             let (t1, _) = e1 in
             let (e1', env') = expr (builder, env) e1 in
             let (e2', env'') = expr (builder, env') e2 in
-            if t1 = A.Float then (match op with
-              A.Add              -> L.build_fadd
-            | A.Sub              -> L.build_fsub
-            | A.Mult             -> L.build_fmul
-            | A.Div              -> L.build_fdiv
-            | A.Equality         -> L.build_fcmp L.Fcmp.Oeq
-            | A.Pow              -> raise (Failure "Implement power on float")
-            | A.Neq              -> L.build_fcmp L.Fcmp.One
-            | A.Less             -> L.build_fcmp L.Fcmp.Olt
-            | A.Leq              -> L.build_fcmp L.Fcmp.Ole
-            | A.Greater          -> L.build_fcmp L.Fcmp.Ogt
-            | A.Geq              -> L.build_fcmp L.Fcmp.Oge
-            | A.And | A.Or | Mod ->
-                raise (Failure "internal error: semant should have rejected
-                                and/or/mod on float")
-            ) (e1' e2' "tmp" builder, env'')
-            else (match op with
-            | A.Add       -> L.build_add
-            | A.Sub       -> L.build_sub
-            | A.Mult      -> L.build_mul
-            | A.Div       -> L.build_sdiv
-            | A.And       -> L.build_and
-            | A.Mod       -> L.build_srem
-            | A.Or        -> L.build_or
-            | A.Equality  -> L.build_icmp L.Icmp.Eq
-            | A.Neq       -> L.build_icmp L.Icmp.Ne
-            | A.Less      -> L.build_icmp L.Icmp.Slt
-            | A.Leq       -> L.build_icmp L.Icmp.Sle
-            | A.Greater   -> L.build_icmp L.Icmp.Sgt
-            | A.Geq       -> L.build_icmp L.Icmp.Sge
-            | A.Pow       -> raise (Failure "Implement power on int")
-            ) ((e1' e2' "tmp" builder), env'') *)
+            let op =
+              (match t1 with
+                A.Float ->
+                  (match op with
+                      A.Add              -> L.build_fadd
+                    | A.Sub              -> L.build_fsub
+                    | A.Mult             -> L.build_fmul
+                    | A.Div              -> L.build_fdiv
+                    | A.Equality         -> L.build_fcmp L.Fcmp.Oeq
+                    | A.Pow              -> raise (Failure "Implement power on float")
+                    | A.Neq              -> L.build_fcmp L.Fcmp.One
+                    | A.Less             -> L.build_fcmp L.Fcmp.Olt
+                    | A.Leq              -> L.build_fcmp L.Fcmp.Ole
+                    | A.Greater          -> L.build_fcmp L.Fcmp.Ogt
+                    | A.Geq              -> L.build_fcmp L.Fcmp.Oge
+                    | A.And | A.Or | Mod ->
+                        raise (Failure "internal error: semant should have rejected
+                                        and/or/mod on float"))
+                | A.Int ->
+                  (match op with
+                    | A.Add       -> L.build_add
+                    | A.Sub       -> L.build_sub
+                    | A.Mult      -> L.build_mul
+                    | A.Div       -> L.build_sdiv
+                    | A.And       -> L.build_and
+                    | A.Mod       -> L.build_srem
+                    | A.Or        -> L.build_or
+                    | A.Equality  -> L.build_icmp L.Icmp.Eq
+                    | A.Neq       -> L.build_icmp L.Icmp.Ne
+                    | A.Less      -> L.build_icmp L.Icmp.Slt
+                    | A.Leq       -> L.build_icmp L.Icmp.Sle
+                    | A.Greater   -> L.build_icmp L.Icmp.Sgt
+                    | A.Geq       -> L.build_icmp L.Icmp.Sge
+                    | A.Pow       -> raise (Failure "Implement power on int"))
+                | _ -> raise (Failure "Implement other")) in
+            (op e1' e2' "binop_result" builder, env'')
         (* | SSpawn s ->  *)
             (* let llvalue = Llvm.const_int (Llvm.i64_type context) 1 in
             let value = Int64.to_int (Llvm.int64_of_const llvalue) in
