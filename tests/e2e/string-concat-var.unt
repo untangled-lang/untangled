@@ -1,0 +1,6 @@
+thread_def Main {
+  string a = "Hello ";
+  string b = "again ";
+  string c = "world!";
+  print(a + b + c);
+}
