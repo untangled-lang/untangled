@@ -37,6 +37,32 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     L.var_arg_function_type  in
   let thread_func : L.llvalue =
     L.declare_function "std::thread" thread_func_t the_module in *)
+  let strlen_t : L.lltype =
+    L.function_type i32_t [| L.pointer_type i8_t |] in
+  let strlen_func : L.llvalue =
+    L.declare_function "strlen" strlen_t the_module in
+
+  let strcat_t : L.lltype =
+    L.function_type (L.pointer_type i8_t) [| L.pointer_type i8_t; L.pointer_type i8_t |] in
+  let strcat_func : L.llvalue =
+    L.declare_function "strcat" strcat_t the_module in
+
+  (* Build instructions to concatenate two strings. Matches call signature of functions like L.build_add *)
+  let build_strcat x y name builder =
+    let xlength = L.build_call strlen_func [| x |] "strlen_x" builder and
+        ylength = L.build_call strlen_func [| y |] "strlen_y" builder in
+    (* let _ = L.build_call printf_func [| L.build_global_stringptr "%d\n" "fmt" builder ; xlength |] "print x length" builder *)
+    let combined_length = L.build_add xlength ylength "new_length" builder in
+    let combined_length_with_null = L.build_add combined_length (L.const_int i32_t 1) "new_length" builder in
+    (* Allocate space for our concatenated string *)
+    let new_string = L.build_array_alloca i8_t combined_length_with_null "allocated_combined_string" builder in
+    (* Set the first place in our new string to the null characters *)
+    let first_element = L.build_gep new_string [| (L.const_int i8_t 0) |] "first_element" builder in
+    let _ = L.build_store (L.const_int i8_t 0) first_element builder in
+    (* Call strcat for x *)
+    let _ = L.build_call strcat_func [| new_string; x |] "strcat_x" builder in
+    (* Call strcat for y *)
+    L.build_call strcat_func [| new_string; y |] name builder in
 
   let add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
@@ -111,6 +137,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                     | A.Greater   -> L.build_icmp L.Icmp.Sgt
                     | A.Geq       -> L.build_icmp L.Icmp.Sge
                     | A.Pow       -> raise (Failure "Implement power on int"))
+                | A.String ->
+                  (match op with
+                    | A.Add -> build_strcat
+                    | _ -> raise (Failure "Operation not supported on string arguments"))
                 | _ -> raise (Failure "Implement other")) in
             (op e1' e2' "binop_result" builder, env'')
         (* | SSpawn s ->  *)

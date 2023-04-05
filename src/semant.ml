@@ -212,7 +212,7 @@ and pattern =
           let (env', (et, e')) = check_expr env e in (env', (check_assign ft et e, e') :: sargs)
         in let (env', sargs) = List.fold_left2 check_call (env, []) fd.formals args
         in (env', (fd.ret_type, SCall (fname, List.rev sargs)))
-      | Binop(e1, op, e2) as e -> 
+      | Binop(e1, op, e2) as e ->
           let (env', (t1, e1')) = check_expr env e1 in
           let (env'', (t2, e2')) = check_expr env' e2 in
           (* All binary operators require operands of the same type *)
@@ -225,6 +225,7 @@ and pattern =
           | Less | Leq | Greater | Geq
                                                when same && (t1 = Int || t1 = Float) -> Bool
           | And | Or                           when same && t1 = Bool -> Bool
+          | Add                                when same && t1 = String -> String
           | _ -> raise (Failure ("illegal binary operator " ^
                           string_of_typ t1 ^ string_of_op op ^
                           string_of_typ t2 ^ " in " ^ string_of_expr e))
