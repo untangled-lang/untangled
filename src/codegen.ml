@@ -24,7 +24,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   and i8_t       = L.i8_type     context
   and i1_t       = L.i1_type     context
   and float_t    = L.double_type context
-  and void_t     = L.void_type context in
+  and void_t     = L.void_type context
+  and pointer_t = L.pointer_type (L.i8_type context) in
   let the_module = L.create_module context "Untangled" in
 
   (* TODO - Add type *)
@@ -33,10 +34,17 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
   let printf_func : L.llvalue =
     L.declare_function "printf" printf_t the_module in
-  (* let thread_func_t : L.lltype =
-    L.var_arg_function_type  in
-  let thread_func : L.llvalue =
-    L.declare_function "std::thread" thread_func_t the_module in *)
+
+  let pthread_create_t : L.lltype =
+    L.function_type i32_t [| pointer_t; pointer_t; pointer_t; pointer_t |] in
+  let pthread_create_func : L.llvalue =
+    L.declare_function "pthread_create" pthread_create_t the_module in
+
+  let pthread_join_t : L.lltype =
+    L.function_type i32_t [| i8_t; pointer_t |] in
+  let pthread_join_func : L.llvalue =
+    L.declare_function "pthread_join" pthread_join_t the_module in
+
   let strlen_t : L.lltype =
     L.function_type i32_t [| L.pointer_type i8_t |] in
   let strlen_func : L.llvalue =
@@ -73,7 +81,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let thread_decls =
     let thread_decl m tdecl =
       let stname = tdecl.stname and
-          ttype = L.function_type void_t [||] in
+          ttype = L.function_type (L.pointer_type i8_t) [| L.pointer_type i8_t |] in
       (* Add paramaters for threads *)
       StringMap.add stname (L.define_function (if tdecl.stname = "Main" then "main" else tdecl.stname) ttype the_module, tdecl) m in
     List.fold_left thread_decl StringMap.empty tdecls in
@@ -143,6 +151,17 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                     | _ -> raise (Failure "Operation not supported on string arguments"))
                 | _ -> raise (Failure "Implement other")) in
             (op e1' e2' "binop_result" builder, env'')
+          | SSpawn tn ->
+              let (thread, _) = StringMap.find tn thread_decls in
+              (* Allocate &pthread_t *)
+              let id = L.build_alloca (L.pointer_type i8_t) "id" builder in
+              let _ = L.set_alignment 8 id in
+              let _ = L.build_call pthread_create_func [| id; (L.const_null i8_t); thread; (L.const_null i8_t)|] "create" builder in
+              (* Load the value of *pthread_t *)
+              let id_value = L.build_load id "pthread_t value" builder in
+              (* Wait for the thread to complete *)
+              (L.build_call pthread_join_func [| id_value; (L.const_null i8_t)|] "join" builder, env)
+              (* (L.build_call pthread_create_func [| id; (L.const_null i8_t); thread; (L.const_null i8_t)|] "create" builder, env) *)
         (* | SSpawn s ->  *)
             (* let llvalue = Llvm.const_int (Llvm.i64_type context) 1 in
             let value = Int64.to_int (Llvm.int64_of_const llvalue) in
@@ -195,6 +214,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | _ -> (builder, env)
     in
     let (builder, _) = stmt (builder, StringMap.empty) (SBlock tdecl.sbody) in
-                        L.build_ret_void builder
+                        (L.build_ret (L.const_null (L.pointer_type i8_t)) builder)
 
   in let _ = List.map build_thread_body tdecls in the_module

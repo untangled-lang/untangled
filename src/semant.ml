@@ -231,7 +231,7 @@ and pattern =
                           string_of_typ t2 ^ " in " ^ string_of_expr e))
           in (env'', (ty, SBinop((t1, e1'), op, (t2, e2'))))
       | Id s -> let t = (lookup s env) in (env, (t, SId s))
-      (* | Spawn t -> let _ = find_thread_def t in (env, SSpawn t) *)
+      | Spawn t -> let _ = find_thread_def t in (env, (Thread, SSpawn t))
       | _ -> raise (TODO "Implement expr")
 
   (* TODO - Add check binds *)

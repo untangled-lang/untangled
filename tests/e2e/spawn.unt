@@ -1,0 +1,7 @@
+thread_def Child {
+  print("hi");
+}
+
+thread_def Main {
+  spawn Child;
+}
