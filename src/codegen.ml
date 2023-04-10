@@ -35,6 +35,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let printf_func : L.llvalue =
     L.declare_function "printf" printf_t the_module in
 
+  (* pthread_t is an opaque struct which is a pointer *)
   let pthread_create_t : L.lltype =
     L.function_type i32_t [| pointer_t; pointer_t; pointer_t; pointer_t |] in
   let pthread_create_func : L.llvalue =
@@ -161,7 +162,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               let id_value = L.build_load id "pthread_t value" builder in
               (* Wait for the thread to complete *)
               (L.build_call pthread_join_func [| id_value; (L.const_null i8_t)|] "join" builder, env)
-              (* (L.build_call pthread_create_func [| id; (L.const_null i8_t); thread; (L.const_null i8_t)|] "create" builder, env) *)
+
         (* | SSpawn s ->  *)
             (* let llvalue = Llvm.const_int (Llvm.i64_type context) 1 in
             let value = Int64.to_int (Llvm.int64_of_const llvalue) in
@@ -213,6 +214,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                                   (builder, StringMap.add var_name alloca env2)
         | _ -> (builder, env)
     in
+    (* thread function follows pthread function type and returns a NULL pointer *)
     let (builder, _) = stmt (builder, StringMap.empty) (SBlock tdecl.sbody) in
                         (L.build_ret (L.const_null (L.pointer_type i8_t)) builder)
 
