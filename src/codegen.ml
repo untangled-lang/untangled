@@ -234,9 +234,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let end_builder = L.builder_at_end context end_bb in
             let _ = L.build_cond_br pred body_bb end_bb pred_builder in
             let body_builder = L.builder_at_end context body_bb in
-            let (_, env2) = stmt (body_builder, env) body in
-            let _ = L.build_br pred_bb body_builder in
-            (end_builder, env2)
+            let (final_builder, _) = stmt (body_builder, env) body in
+            let _ = L.build_br pred_bb final_builder in
+            (end_builder, env)
         | SIf (pred_expr, t_block, f_block) ->
             let t_bb = L.append_block context "if_t" the_thread in
             let t_builder = L.builder_at_end context t_bb in
