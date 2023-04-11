@@ -176,30 +176,44 @@ and pattern =
   in let rec check_stmt (envs: 'a StringMap.t list) (stmt: stmt) =
     match stmt with
       Block stmts ->
-        let check_stmt_list (envs, sstmt_list) stmt =
-          (* TODO - Semantic checks for RETURN *)
-          match stmt with
-            (* TODO - Should blocks be flattened? *)
-            Block _ as b ->
-              let (_, sstmt) = check_stmt (StringMap.empty :: envs) b in (envs, sstmt :: sstmt_list)
-            | s -> let (envs', sstmt) = check_stmt envs s in (envs', sstmt :: sstmt_list)
-        in let (envs', sstmt_list) = List.fold_left check_stmt_list (envs, []) stmts
-        in (envs', SBlock (List.rev sstmt_list))
-      | Expr expr -> let (envs', sexpr) = check_expr envs expr in (envs', SExpr sexpr)
-      | Decl (rt, id, expr) ->
+        (*
+         * When going over the list of statements, a new block potentially create a new scoping,
+         * so we need to add a new environment. The new environment is discarded after the block.
+         *
+         * @TODO - Implement RETURN checking?
+         *)
+        let rec check_stmt_list envs stmts = match stmts with
+              Block _ as block :: stmts ->
+                let (_, sstmt) = check_stmt (StringMap.empty :: envs) block and
+                    sstmts = check_stmt_list envs stmts in (sstmt :: sstmts)
+            | stmt :: stmts ->
+                let (envs', sstmt) = check_stmt envs stmt in
+                let sstmts = check_stmt_list envs' stmts in (sstmt :: sstmts)
+            | [] -> []
+        in (envs, SBlock (check_stmt_list envs stmts))
+      | Expr expr -> let sexpr = check_expr envs expr in (envs, SExpr sexpr)
+      | If (expr, stmt1, stmt2) ->
+          let (typ, _) as sexpr = check_expr envs expr in
+          let _ = check_assign typ Bool expr in
+          let (_, sstmt1) = check_stmt envs stmt1 in
+          let (_, sstmt2) = check_stmt envs stmt2 in
+          (envs, SIf (sexpr, sstmt1, sstmt2))
+      | Decl (lt, id, expr) ->
           (match envs with
             env :: _ ->
               if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
-              else let (envs', (lt, e')) = check_expr envs expr
-                    in (bind id lt envs', SDecl (check_assign lt rt expr, id, (lt, e')))
+              else let (rt, e') as sexpr = check_expr envs expr in
+              (match e' with
+                | SNoexpr -> (bind id lt envs, SDecl (lt, id, sexpr))
+                | _ -> (bind id lt envs, SDecl (check_assign lt rt expr, id, (lt, e'))))
             | [] -> raise (Failure "Implementation bug: empty environments"))
       | _ -> raise (TODO "Implement other stmt")
-  and check_expr (env: 'a StringMap.t list) (expr: expr) =
+  and check_expr (envs: 'a StringMap.t list) (expr: expr) =
     match expr with
-      IntLit n -> (env, (Int, SIntLit n))
-      | StringLit s -> (env, (String, SStringLit s))
-      | FloatLit n -> (env, (Float, SFloatLit n))
-      | BoolLit b -> (env, (Bool, SBoolLit b))
+      IntLit n -> (Int, SIntLit n)
+      | StringLit s -> (String, SStringLit s)
+      | FloatLit n -> (Float, SFloatLit n)
+      | BoolLit b -> (Bool, SBoolLit b)
       | TupleLit (e1, e2) -> raise (TODO "Implement tuple literal")
       | ArrayLit xs -> raise (TODO "Implement array literal")
       | Call (fname, args) as call ->
@@ -208,13 +222,13 @@ and pattern =
         if List.length args != param_length then
           raise (Failure ("expecting " ^ string_of_int param_length ^
                           " arguments in " ^ string_of_expr call))
-        else let check_call (env, sargs) (ft, _) e =
-          let (env', (et, e')) = check_expr env e in (env', (check_assign ft et e, e') :: sargs)
-        in let (env', sargs) = List.fold_left2 check_call (env, []) fd.formals args
-        in (env', (fd.ret_type, SCall (fname, List.rev sargs)))
+        else let check_call sargs (ft, _) e =
+          let (et, e') = check_expr envs e in (check_assign ft et e, e') :: sargs
+        in let sargs = List.fold_left2 check_call [] fd.formals args
+        in (fd.ret_type, SCall (fname, List.rev sargs))
       | Binop(e1, op, e2) as e ->
-          let (env', (t1, e1')) = check_expr env e1 in
-          let (env'', (t2, e2')) = check_expr env' e2 in
+          let (t1, e1') = check_expr envs e1 in
+          let (t2, e2') = check_expr envs e2 in
           (* All binary operators require operands of the same type *)
           let same = t1 = t2 in
           (* Determine expression type based on operator and operand types *)
@@ -229,9 +243,14 @@ and pattern =
           | _ -> raise (Failure ("illegal binary operator " ^
                           string_of_typ t1 ^ string_of_op op ^
                           string_of_typ t2 ^ " in " ^ string_of_expr e))
-          in (env'', (ty, SBinop((t1, e1'), op, (t2, e2'))))
-      | Id s -> let t = (lookup s env) in (env, (t, SId s))
-      | Spawn t -> let _ = find_thread_def t in (env, (Thread, SSpawn t))
+          in (ty, SBinop((t1, e1'), op, (t2, e2')))
+      | Id s -> let t = (lookup s envs) in (t, SId s)
+      | Spawn t -> let _ = find_thread_def t in (Thread, SSpawn t)
+      | Assign (id, expr) ->
+          let rt = lookup id envs
+          and (lt, sexpr) = check_expr envs expr
+          in (check_assign lt rt expr, SAssign (id, (lt, sexpr)))
+      | Noexpr -> (Void, SNoexpr)
       | _ -> raise (TODO "Implement expr")
 
   (* TODO - Add check binds *)

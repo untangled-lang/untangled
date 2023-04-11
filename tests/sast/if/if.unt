@@ -1,0 +1,6 @@
+thread_def Main {
+  bool x;
+  if (x) int i = 0;
+  else {}
+  i;
+}
