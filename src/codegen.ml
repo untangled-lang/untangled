@@ -207,25 +207,28 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
       match sstmt with
         (* TODO - Update SBlock to account for scoping rules *)
           SBlock sblock ->
-            let _ = List.fold_left stmt (builder, env) sblock in (builder, env)
+            let (builder_final, _) = List.fold_left stmt (builder, env) sblock in
+            (builder_final, env)
         | SExpr sexpr -> let (_, env2) = expr (builder, env) sexpr in (builder, env2)
-        | SDecl (ty, var_name, sx) -> let (llvalue, env2) = expr (builder, env) sx in
-                                  let alloca = L.build_alloca (match ty with
-                                    | Void -> void_t
-                                    | Bool -> i1_t
-                                    | Int -> i32_t
-                                    | Float -> float_t
-                                    | String -> L.pointer_type i8_t
-                                    | Thread -> void_t
-                                    | Semaphore -> void_t
-                                    | Tuple (t1, t2) -> void_t
-                                    | Array (arrayType, count) -> void_t) var_name builder in
-                                  let _ = L.build_store llvalue alloca builder in
-                                  (builder, StringMap.add var_name alloca env2)
-        | _ -> (builder, env)
+        | SDecl (ty, var_name, sx) ->
+            let (llvalue, env2) = expr (builder, env) sx in
+            let alloca = L.build_alloca (match ty with
+              | Void -> void_t
+              | Bool -> i1_t
+              | Int -> i32_t
+              | Float -> float_t
+              | String -> L.pointer_type i8_t
+              | Thread -> void_t
+              | Semaphore -> void_t
+              | Tuple (t1, t2) -> void_t
+              | Array (arrayType, count) -> void_t) var_name builder in
+            let _ = L.build_store llvalue alloca builder in
+            (builder, StringMap.add var_name alloca env2)
+        | _ -> builder, env
+
     in
     (* thread function follows pthread function type and returns a NULL pointer *)
-    let (builder, _) = stmt (builder, StringMap.empty) (SBlock tdecl.sbody) in
-                        (L.build_ret (L.const_null (L.pointer_type i8_t)) builder)
+    let (final_builder, _) = stmt (builder, StringMap.empty) (SBlock tdecl.sbody) in
+    (L.build_ret (L.const_null (L.pointer_type i8_t)) final_builder)
 
   in let _ = List.map build_thread_body tdecls in the_module
