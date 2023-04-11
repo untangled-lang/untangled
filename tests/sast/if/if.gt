@@ -1,6 +1,6 @@
 thread_def Main {
   bool x;
-  if (x) {
-  } else {
+  if ((bool : x)) {
+
   }
 }

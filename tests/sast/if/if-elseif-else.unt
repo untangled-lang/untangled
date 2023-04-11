@@ -1,0 +1,7 @@
+thread_def Main {
+  if (true) {
+
+  } else if (false) {
+
+  }
+}

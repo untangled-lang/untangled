@@ -1,0 +1,4 @@
+thread_def Main {
+  if (true) int x = 0;
+  x;
+}

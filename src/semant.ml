@@ -18,7 +18,6 @@ exception TODO of string
 module StringMap = Map.Make(String)
 
 let check (tdecls, fdecls) =
-  (* Note, the kind argument is just to provide better error messages *)
   let check_binds (kind : string) (to_check : bind list) =
     let name_compare (_, n1) (_, n2) = compare n1 n2 in
     let check_it checked binding =
@@ -194,7 +193,7 @@ and pattern =
       | Expr expr -> let sexpr = check_expr envs expr in (envs, SExpr sexpr)
       | If (expr, stmt1, stmt2) ->
           let (typ, _) as sexpr = check_expr envs expr in
-          let _ = check_assign typ Bool expr in
+          let _ = check_assign Bool typ expr in
           let (_, sstmt1) = check_stmt envs stmt1 in
           let (_, sstmt2) = check_stmt envs stmt2 in
           (envs, SIf (sexpr, sstmt1, sstmt2))
