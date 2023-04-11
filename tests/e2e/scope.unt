@@ -1,0 +1,21 @@
+thread_def Main {
+  string x = "abc "; // Initial declaration
+  print(x);
+  {
+    string x = "def "; // this declaration should shadow the first one
+    print(x); // “def”
+    {
+      string x = "ghi "; // This declaration should shadow both of the above
+      print(x); // “ghi”
+    }
+    print(x); // still “def”
+  }
+  print(x); // this should still be “abc”
+  // This block has no redeclaration, so it should reassign the original x
+  {
+    x = "jkl";
+  }
+  print(x); // jkl
+}
+
+// overall: abc def ghi def abc jkl
