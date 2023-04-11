@@ -29,6 +29,13 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let the_module = L.create_module context "Untangled" in
 
   (* TODO - Add type *)
+  (*
+   * https://man7.org/linux/man-pages/man3/pthread_create.3.html
+   *
+   * A thread function is function which takes a void pointer and returns a void pointer.
+   *)
+  let routine_t : L.lltype =
+    L.function_type pointer_t [| pointer_t |] in
 
   let printf_t : L.lltype =
     L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
@@ -37,12 +44,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
   (* pthread_t is an opaque struct which is a pointer *)
   let pthread_create_t : L.lltype =
-    L.function_type i32_t [| pointer_t; pointer_t; pointer_t; pointer_t |] in
+    L.function_type i32_t [| L.pointer_type pointer_t; i8_t; L.pointer_type routine_t; i8_t |] in
   let pthread_create_func : L.llvalue =
     L.declare_function "pthread_create" pthread_create_t the_module in
 
   let pthread_join_t : L.lltype =
-    L.function_type i32_t [| i8_t; pointer_t |] in
+    L.function_type i32_t [| L.pointer_type i8_t; i8_t |] in
   let pthread_join_func : L.llvalue =
     L.declare_function "pthread_join" pthread_join_t the_module in
 
