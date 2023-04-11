@@ -224,6 +224,19 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               | Array (arrayType, count) -> void_t) var_name builder in
             let _ = L.build_store llvalue alloca builder in
             (builder, StringMap.add var_name alloca env2)
+        | SWhile (pred_expr, body) ->
+            let pred_bb = L.append_block context "while_pred" the_thread in
+            let body_bb = L.append_block context "while_body" the_thread in
+            let _ = L.build_br pred_bb builder in
+            let pred_builder = L.builder_at_end context pred_bb in
+            let (pred, _) = expr (pred_builder, env) pred_expr in
+            let end_bb = (L.append_block context "while_end" the_thread) in
+            let end_builder = L.builder_at_end context end_bb in
+            let _ = L.build_cond_br pred body_bb end_bb pred_builder in
+            let body_builder = L.builder_at_end context body_bb in
+            let (_, env2) = stmt (body_builder, env) body in
+            let _ = L.build_br pred_bb body_builder in
+            (end_builder, env2)
         | _ -> builder, env
 
     in
