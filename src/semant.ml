@@ -198,6 +198,7 @@ and pattern =
           let (_, sstmt2) = check_stmt envs stmt2 in
           (envs, SIf (sexpr, sstmt1, sstmt2))
       | Decl (lt, id, expr) ->
+        let _ = check_binds "local" [(lt, id)] in
           (match envs with
             env :: _ ->
               if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
@@ -217,6 +218,7 @@ and pattern =
       | ArrayLit xs -> raise (TODO "Implement array literal")
       | Call (fname, args) as call ->
         let fd = find_func fname in
+        let _ = check_binds "formals" fd.formals in
         let param_length = List.length fd.formals in
         if List.length args != param_length then
           raise (Failure ("expecting " ^ string_of_int param_length ^
