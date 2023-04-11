@@ -17,4 +17,5 @@
     "kind": "opam",
     "switch": "default"
   },
+  "files.insertFinalNewline": true,
 }
