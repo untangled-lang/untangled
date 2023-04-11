@@ -214,8 +214,26 @@ and pattern =
       | StringLit s -> (String, SStringLit s)
       | FloatLit n -> (Float, SFloatLit n)
       | BoolLit b -> (Bool, SBoolLit b)
-      | TupleLit (e1, e2) -> raise (TODO "Implement tuple literal")
+      | TupleLit (e1, e2) ->
+          let (t1, sexpr1) = check_expr envs e1 and
+              (t2, sexpr2) = check_expr envs e2
+          in (Tuple (t1, t2), STupleLit ((t1, sexpr1), (t2, sexpr2)))
+      (*
+       * @TODO - How do we deal with an empty array declaration?
+       *)
       | ArrayLit xs -> raise (TODO "Implement array literal")
+          (* let sexprs = List.map (check_expr envs) xs in
+          match sexprs with
+            | [] -> (Array (Void, 0), SArrayLit []) *)
+          (* (match (List.map (fun x -> check_expr envs x) xs) with
+            [] -> (Array (Void, 0), SArrayLit [])
+            | (sexpr :: sexprs) as list_sexprs ->
+                let (lt, _) = sexpr in
+                let _ = List.iter (fun (rt, _) -> check_assign )
+                if List.for_all (fun (rt, _) -> check_assign ) sexprs then
+                (Array (lt, List.length list_sexprs), SArrayLit list_sexprs)
+                else raise (Failure ()) *)
+
       | Call (fname, args) as call ->
         let fd = find_func fname in
         let _ = check_binds "formals" fd.formals in
