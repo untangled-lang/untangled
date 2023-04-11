@@ -198,7 +198,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
           (* let printFormatString = build_format_string printFormatString in
           let printArgs = List.map  sexprs in *)
           (* L.build_call printf_func [| string_format_str; (expr builder sexpr) |] "printf" builder *)
-        (* | SAssign varname sx -> *)
+        | SAssign (var_name, v) -> let (value_to_assign, env') = expr (builder, env) v in
+            let storage = StringMap.find var_name env' in
+            let _ = L.build_store value_to_assign storage builder in
+            (value_to_assign, env')
       | _ -> raise (Failure "Implement other exprs builder")
     and stmt ((builder: L.llbuilder), env) sstmt =
       match sstmt with
