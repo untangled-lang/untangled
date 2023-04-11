@@ -1,0 +1,9 @@
+thread_def Main {
+  string my_string = "";
+  int i = 0;
+  while (i < 5) {
+    my_string += "X";
+    i += 1;
+  }
+  print(my_string);
+}
