@@ -237,6 +237,20 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (_, env2) = stmt (body_builder, env) body in
             let _ = L.build_br pred_bb body_builder in
             (end_builder, env2)
+        | SIf (pred_expr, t_block, f_block) ->
+            let t_bb = L.append_block context "if_t" the_thread in
+            let t_builder = L.builder_at_end context t_bb in
+            let f_bb = L.append_block context "if_f" the_thread in
+            let f_builder = L.builder_at_end context f_bb in
+            let end_bb = L.append_block context "if_end" the_thread in
+            let end_builder = L.builder_at_end context end_bb in
+            let (pred, _) = expr (builder, env) pred_expr in
+            let _ = L.build_cond_br pred t_bb f_bb builder in
+            let (t_builder, _) = stmt (t_builder, env) t_block in
+            let _ = L.build_br end_bb t_builder in
+            let (f_builder, _) = stmt (f_builder, env) f_block in
+            let _ = L.build_br end_bb f_builder in
+            (end_builder, env)
         | _ -> builder, env
 
     in

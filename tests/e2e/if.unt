@@ -1,0 +1,14 @@
+thread_def Main {
+  if (true) {
+    print("yay");
+  } else {
+    print("nay");
+  }
+  print(" ");
+
+  if (false) {
+    print("yay");
+  } else {
+    print("nay");
+  }
+}
