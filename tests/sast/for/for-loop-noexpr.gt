@@ -1,0 +1,5 @@
+thread_def Main {
+  for ((void : ); (bool : ((int : 1) < (int : 10))); (void : )) {
+
+  }
+}

@@ -197,6 +197,17 @@ and pattern =
           let (_, sstmt1) = check_stmt envs stmt1 in
           let (_, sstmt2) = check_stmt envs stmt2 in
           (envs, SIf (sexpr, sstmt1, sstmt2))
+      | For (pre_loop_stmt, pre_loop_expr, post_loop_expr, body) ->
+          let (envs', pre_loop_sstmt) = check_stmt envs pre_loop_stmt in
+          let (typ, _) as pre_loop_sexpr = check_expr envs' pre_loop_expr and
+              post_loop_expr = check_expr envs' post_loop_expr and
+              (_, body_sexpr) = check_stmt envs' body in
+          let _ = check_assign Bool typ pre_loop_expr in
+            (envs, SFor (pre_loop_sstmt, pre_loop_sexpr, post_loop_expr, body_sexpr))
+      | While (expr, body) ->
+          let (typ, _) as sexpr = check_expr envs expr and
+              (_, sbody) = check_stmt envs body in
+          let _ = check_assign Bool typ expr in (envs, SWhile (sexpr, sbody))
       | Decl (lt, id, expr) ->
         let _ = check_binds "local" [(lt, id)] in
           (match envs with
@@ -272,7 +283,6 @@ and pattern =
       | Noexpr -> (Void, SNoexpr)
       | _ -> raise (TODO "Implement expr")
 
-  (* TODO - Add check binds *)
   in let check_function (fdecl: func_decl) =
     { sfname = fdecl.fname; sformals = fdecl.formals; sbody = []; sret_type = fdecl.ret_type }
 
