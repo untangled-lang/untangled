@@ -1,0 +1,15 @@
+thread_def Main {
+  receive {
+    int x -> x = x + 1;
+
+    bool y -> {
+      y = false;
+    }
+
+    (string a, int b) -> {
+      print("Hello");
+    }
+
+    _ -> {}
+  }
+}

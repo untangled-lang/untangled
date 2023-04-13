@@ -1,0 +1,4 @@
+thread_def Main {
+  while (true) int i = 0;
+  continue;
+}

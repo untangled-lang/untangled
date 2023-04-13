@@ -1,0 +1,5 @@
+thread_def Main {
+  receive {
+    int x -> x = x + 1;
+  }
+}

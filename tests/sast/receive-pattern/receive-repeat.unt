@@ -1,0 +1,11 @@
+thread_def Main {
+  receive {
+    (int a, bool a) -> {
+
+    }
+
+    _ -> {
+
+    }
+  }
+}

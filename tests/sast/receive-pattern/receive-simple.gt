@@ -1,0 +1,14 @@
+thread_def Main {
+  receive {
+    int x -> (int : (x = (int : ((int : x) + (int : 1)))));
+    bool y -> {
+      (bool : (y = (bool : false)));
+    }
+    (string a, int b) -> {
+      (void : print((string : "Hello")));
+    }
+    _ -> {
+
+    }
+  }
+}

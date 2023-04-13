@@ -1,0 +1,5 @@
+thread_def Main {
+  for (int i = (int : 0); (bool : ((int : i) < (int : 10))); (int : (i = (int : ((int : i) + (int : 1)))))) {
+    break;
+  }
+}

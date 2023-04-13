@@ -218,6 +218,36 @@ and pattern =
                 | SNoexpr -> (bind id lt envs, SDecl (lt, id, sexpr))
                 | _ -> (bind id lt envs, SDecl (check_assign lt rt expr, id, (lt, e'))))
             | [] -> raise (Failure "Implementation bug: empty environments"))
+      | Break -> (envs, SBreak)
+      | Continue -> (envs, SContinue)
+      | Receive receive_cases ->
+          (*
+           * @TODO - Check that all patterns are unique
+           *)
+          (* Extend the environment with pattern *)
+          let rec extend_env env = function
+              WildcardPattern -> env
+            | BasePattern (typ, id) ->
+                let _ = check_binds "patterns" [(typ, id)] in
+                if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
+                else StringMap.add id typ env
+            | TuplePattern (pattern1, pattern2) ->
+                let env' = extend_env env pattern1 in extend_env env' pattern2
+          (* Convert AST pattern to SAST pattern *)
+          in let rec get_sast_pattern = function
+              BasePattern (typ, id) -> SBasePattern (typ, id)
+            | WildcardPattern -> SWildcardPattern
+            | TuplePattern (p1, p2) -> STuplePattern (get_sast_pattern p1, get_sast_pattern p2)
+          (* For each case block, extends the environment and perform semantic check *)
+          in let check_receive_case (pattern, stmt) =
+            let env' = extend_env StringMap.empty pattern in
+            let (_, sstmt) = check_stmt (env' :: envs) stmt in (get_sast_pattern pattern, sstmt)
+
+          (* Check if a wilcard pattern exists *)
+          in if (List.exists (fun (p, _) -> p = WildcardPattern) receive_cases) then
+            (* Semantically check each pattern *)
+            (envs, SReceive (List.map check_receive_case receive_cases))
+          else raise (Failure "Pattern does not contain wildcard")
       | _ -> raise (TODO "Implement other stmt")
   and check_expr (envs: 'a StringMap.t list) (expr: expr) =
     match expr with
@@ -283,13 +313,22 @@ and pattern =
       | Noexpr -> (Void, SNoexpr)
       | _ -> raise (TODO "Implement expr")
 
+  in let rec loop_check = function
+    | SBlock sl -> List.iter loop_check sl
+    | SFor _ -> ()
+    | SWhile _ -> ()
+    | SBreak -> raise (Failure ("break statement must be inside a for/while loop"))
+    | SContinue -> raise (Failure ("continue statement must be inside a for/while loop"))
+    | _ -> ()
+
   in let check_function (fdecl: func_decl) =
     { sfname = fdecl.fname; sformals = fdecl.formals; sbody = []; sret_type = fdecl.ret_type }
 
   in let check_thread (tdecl: thread_decl) =
     let (_, stmts) = check_stmt [StringMap.empty] (Block tdecl.body)
     in match stmts with
-      SBlock (sl) -> { stname = tdecl.tname; sbody = sl }
+      SBlock (sl) ->
+        let _ = List.iter loop_check sl in { stname = tdecl.tname; sbody = sl }
       | _ -> raise (Failure "Failed to parsed thread")
 
   in (List.map check_thread tdecls, List.map check_function fdecls)
