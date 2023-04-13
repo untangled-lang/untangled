@@ -25,33 +25,84 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   and i1_t       = L.i1_type     context
   and float_t    = L.double_type context
   and void_t     = L.void_type context
-  and pointer_t = L.pointer_type (L.i8_type context) in
+  and pointer_t = L.pointer_type (L.i8_type context)
+  and double_ptr = L.pointer_type (L.pointer_type (L.i8_type context)) in
   let the_module = L.create_module context "Untangled" in
 
-  (* TODO - Add type *)
   (*
    * https://man7.org/linux/man-pages/man3/pthread_create.3.html
    *
-   * A thread function is function which takes a void pointer and returns a void pointer.
+   * pthread_create: C routine to start a thread
+   * 1st argument: Address of opaque struct pthread_t
+   * 2nd argument: Attribute of the thread (for example, automatic garbage collection)
+   * 3rd argument: Address of the function to run
+   * 4th argument: Argument to the function
+   *
+   * The argument passed to the function is a struct containing 2 arrays, for the parents and for
+   * the child.
    *)
   let routine_t : L.lltype =
     L.function_type pointer_t [| pointer_t |] in
-
-  let printf_t : L.lltype =
-    L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
-  let printf_func : L.llvalue =
-    L.declare_function "printf" printf_t the_module in
-
   (* pthread_t is an opaque struct which is a pointer *)
   let pthread_create_t : L.lltype =
-    L.function_type i32_t [| L.pointer_type pointer_t; i8_t; L.pointer_type routine_t; i8_t |] in
+    L.function_type i32_t [| double_ptr; i8_t; L.pointer_type routine_t; i8_t |] in
   let pthread_create_func : L.llvalue =
     L.declare_function "pthread_create" pthread_create_t the_module in
 
+  (*
+   * https://man7.org/linux/man-pages/man3/pthread_join.3.html
+   *
+   * pthread_join: C routine to wait for a thread to finish execution
+   * 1st argument: Opaque struct pthread_t
+   * 2nd argment: A pointer to store the return value. In Untangled, a thread implicitly returns a
+   * NULL value
+   *)
   let pthread_join_t : L.lltype =
     L.function_type i32_t [| L.pointer_type i8_t; i8_t |] in
   let pthread_join_func : L.llvalue =
     L.declare_function "pthread_join" pthread_join_t the_module in
+
+  (*
+   * https://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread_mutex_init.html
+   *
+   * pthread_mutex_init: C routine to initialize a mutex
+   * 1st argument: Address of opaque struct pthread_mutex_t
+   * 2nd argument: A pointer to specifiy the mutex attributes
+   *)
+  let pthread_mutex_init_t : L.lltype =
+    L.function_type i32_t [| double_ptr; double_ptr |] in
+  let pthread_mutex_init_func : L.llvalue =
+    L.declare_function "pthread_mutex_init" pthread_mutex_init_t the_module in
+
+  (*
+   * https://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread_mutex_lock.html
+   *
+   * pthread_mutex_lock: C routine to lock a mutex
+   * 1st argument: Address of opaque struct pthread_mutex_t
+   *)
+  let pthread_mutex_lock_t : L.lltype =
+    L.function_type i32_t [| double_ptr |] in
+  let pthread_mutex_lock_func : L.llvalue =
+    L.declare_function "pthread_mutex_lock" pthread_mutex_lock_t the_module in
+
+  (*
+   * https://linux.die.net/man/3/pthread_mutex_unlock
+   *
+   * pthread_mutex_unlock: C routine to unlock a mutex
+   * 1st argument: Address of opaque struct pthread_mutex_t
+   *)
+  let pthread_mutex_unlock_t : L.lltype =
+    L.function_type i32_t [| double_ptr |] in
+  let pthread_mutex_unlock_func : L.llvalue =
+    L.declare_function "pthread_mutex_unlock" pthread_mutex_unlock_t the_module in
+
+  (*
+   * C util functions
+   *)
+  let printf_t : L.lltype =
+    L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
+  let printf_func : L.llvalue =
+    L.declare_function "printf" printf_t the_module in
 
   let strlen_t : L.lltype =
     L.function_type i32_t [| L.pointer_type i8_t |] in

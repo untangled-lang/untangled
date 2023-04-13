@@ -208,6 +208,11 @@ and pattern =
           let (typ, _) as sexpr = check_expr envs expr and
               (_, sbody) = check_stmt envs body in
           let _ = check_assign Bool typ expr in (envs, SWhile (sexpr, sbody))
+      | Send (id, expr) ->
+          let typ = lookup id envs in
+          let _ = check_assign Thread typ expr in
+          let sexpr = check_expr envs expr in
+          (envs, SSend (id, sexpr))
       | Decl (lt, id, expr) ->
         let _ = check_binds "local" [(lt, id)] in
           (match envs with

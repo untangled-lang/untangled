@@ -1,0 +1,4 @@
+thread_def Main {
+  int x;
+  x << "123";
+}
