@@ -178,11 +178,11 @@ and pattern =
         (*
          * When going over the list of statements, a new block potentially create a new scoping,
          * so we need to add a new environment. The new environment is discarded after the block.
-         *
-         * @TODO - Implement RETURN checking?
          *)
         let rec check_stmt_list envs stmts = match stmts with
-              Block _ as block :: stmts ->
+              [Return _ as return] -> let (_, sstmt) = check_stmt envs return in [sstmt]
+            | Return _ :: _ -> raise (Failure("Nothing may following a return"))
+            | Block _ as block :: stmts ->
                 let (_, sstmt) = check_stmt (StringMap.empty :: envs) block and
                     sstmts = check_stmt_list envs stmts in (sstmt :: sstmts)
             | stmt :: stmts ->
@@ -213,6 +213,7 @@ and pattern =
           let _ = check_assign Thread typ expr in
           let sexpr = check_expr envs expr in
           (envs, SSend (id, sexpr))
+      | SendParent expr -> (envs, SSendParent (check_expr envs expr))
       | Decl (lt, id, expr) ->
         let _ = check_binds "local" [(lt, id)] in
           (match envs with
@@ -253,7 +254,7 @@ and pattern =
             (* Semantically check each pattern *)
             (envs, SReceive (List.map check_receive_case receive_cases))
           else raise (Failure "Pattern does not contain wildcard")
-      | _ -> raise (TODO "Implement other stmt")
+      | Return expr -> (envs, SReturn (check_expr envs expr))
   and check_expr (envs: 'a StringMap.t list) (expr: expr) =
     match expr with
       IntLit n -> (Int, SIntLit n)
@@ -318,6 +319,9 @@ and pattern =
       | Noexpr -> (Void, SNoexpr)
       | _ -> raise (TODO "Implement expr")
 
+  (*
+   * Check that break and continue statements are inside for and while loop
+   *)
   in let rec loop_check = function
     | SBlock sl -> List.iter loop_check sl
     | SFor _ -> ()
@@ -325,6 +329,20 @@ and pattern =
     | SBreak -> raise (Failure ("break statement must be inside a for/while loop"))
     | SContinue -> raise (Failure ("continue statement must be inside a for/while loop"))
     | _ -> ()
+  (*
+   * Check that thread do not have return statements and function return type is equivalent
+   * to function return type
+   *)
+  in let return_check is_thread name =
+    let rec checker = function
+      | SBlock sl -> List.iter checker sl
+      | SReturn (typ, _) ->
+          if is_thread then raise (Failure ("return statement found in thread " ^ name)) else
+          let fdecl = StringMap.find name function_decls in
+          if typ = fdecl.ret_type then () else
+          raise (Failure ("return has" ^ string_of_typ typ ^ " but expected " ^ string_of_typ fdecl.ret_type))
+      | _ -> ()
+    in checker
 
   in let check_function (fdecl: func_decl) =
     { sfname = fdecl.fname; sformals = fdecl.formals; sbody = []; sret_type = fdecl.ret_type }
@@ -333,7 +351,9 @@ and pattern =
     let (_, stmts) = check_stmt [StringMap.empty] (Block tdecl.body)
     in match stmts with
       SBlock (sl) ->
-        let _ = List.iter loop_check sl in { stname = tdecl.tname; sbody = sl }
+        let _ = List.iter loop_check sl in
+        let _ = List.iter (fun sstmt -> return_check true tdecl.tname sstmt) sl in
+        { stname = tdecl.tname; sbody = sl }
       | _ -> raise (Failure "Failed to parsed thread")
 
   in (List.map check_thread tdecls, List.map check_function fdecls)
