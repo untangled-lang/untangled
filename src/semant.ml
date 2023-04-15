@@ -317,7 +317,10 @@ and pattern =
           and (lt, sexpr) = check_expr envs expr
           in (check_assign lt rt expr, SAssign (id, (lt, sexpr)))
       | Noexpr -> (Void, SNoexpr)
-      | _ -> raise (TODO "Implement expr")
+      | Unit -> raise (Failure "semantic unit")
+      | Unop (op, expr) -> raise (Failure "semantic unop")
+      | AssignIndex (_, _, _) -> raise (Failure "semantic assignIndex")
+      | Index (_, _) -> raise (Failure "semantic index")
 
   (*
    * Check that break and continue statements are inside for and while loop

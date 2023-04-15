@@ -156,6 +156,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | SStringLit s -> (L.build_global_stringptr s "tmp" builder, env)
         | SBoolLit b -> (L.const_int i1_t (if b then 1 else 0), env)
         | SFloatLit l -> (L.const_float_of_string float_t l, env)
+        | STupleLit (sexpr1, sexpr2) -> raise (Failure "tuple not implemented")
+        | SArrayLit sexpr_list -> raise (Failure "array not implemented")
         | SNoexpr -> (L.const_int i32_t 0, env)
         | SId s -> (L.build_load (StringMap.find s env) s builder, env)
         | SCall ("print", [sexpr]) ->
@@ -166,6 +168,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               (match L.float_of_const llvalue with
                 Some v -> (L.build_global_stringptr (string_of_float v) "tmp" builder, env')
                 | None -> raise (Failure "Bug in parsing float expression"))
+        | SCall (func_name, arg_list) -> raise (Failure "implement user defined functions")
         | SBinop (e1, op, e2) ->
             let (t1, _) = e1 in
             let (e1', env') = expr (builder, env) e1 in
@@ -210,50 +213,53 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                     | _ -> raise (Failure "Operation not supported on string arguments"))
                 | _ -> raise (Failure "Implement other")) in
             (op e1' e2' "binop_result" builder, env'')
-          | SSpawn tn ->
-              let (thread, _) = StringMap.find tn thread_decls in
-              (* Allocate &pthread_t *)
-              let id = L.build_alloca (L.pointer_type i8_t) "id" builder in
-              let _ = L.set_alignment 8 id in
-              let _ = L.build_call pthread_create_func [| id; (L.const_null i8_t); thread; (L.const_null i8_t)|] "create" builder in
-              (* Load the value of *pthread_t *)
-              let id_value = L.build_load id "pthread_t value" builder in
-              (* Wait for the thread to complete *)
-              (L.build_call pthread_join_func [| id_value; (L.const_null i8_t)|] "join" builder, env)
+        | SUnop (unop, expr) -> raise (Failure "unop not implemented")
+        | SIndex (arr_name, index) -> raise (Failure "index not implemented")
+        | SUnit -> raise (Failure "sunit not implemented")
+        | SSpawn tn ->
+            let (thread, _) = StringMap.find tn thread_decls in
+            (* Allocate &pthread_t *)
+            let id = L.build_alloca (L.pointer_type i8_t) "id" builder in
+            let _ = L.set_alignment 8 id in
+            let _ = L.build_call pthread_create_func [| id; (L.const_null i8_t); thread; (L.const_null i8_t)|] "create" builder in
+            (* Load the value of *pthread_t *)
+            let id_value = L.build_load id "pthread_t value" builder in
+            (* Wait for the thread to complete *)
+            (L.build_call pthread_join_func [| id_value; (L.const_null i8_t)|] "join" builder, env)
 
-        (* | SSpawn s ->  *)
-            (* let llvalue = Llvm.const_int (Llvm.i64_type context) 1 in
-            let value = Int64.to_int (Llvm.int64_of_const llvalue) in
-            (llvalue, env') *)
-            (* Format is typ value *)
-            (* TODO - Ask richard if this is gucci :) *)
-            (* let ocamlvalue = String.split_on_char ' ' (L.string_of_llvalue llvalue)
-            in
-            let stringP = L.build_global_stringptr (List.hd (List.rev ocamlvalue)) "tmp" builder
-              in (stringP, env') *)
-          (* let format_string_of (acc: string) ((ty, _ : sexpr)) = *)
-            (* acc ^ " " ^ (match ty with
-              | Void -> ""
-              | Bool ->  raise (Failure "Unimplemented")
-              | Int ->  "%d"
-              | Float ->  raise (Failure "Unimplemented")
-              | String ->  "%s"
-              | Thread ->  raise (Failure "Unimplemented")
-              | Semaphore ->  raise (Failure "Unimplemented")
-              | Tuple (t1, t2) ->  raise (Failure "Unimplemented")
-              | Array (arrayType, count) ->  raise (Failure "Unimplemented"))
-          in let format_string = List.fold_left format_string_of "" printArgs and
-                 llvalues = List.map (fun arg -> expr builder arg) printArgs in
-          let printf_arg_arr = Array.append [| L.build_global_stringptr format_string "fmt" builder |] (Array.of_list llvalues)
-          in L.build_call printf_func printf_arg_arr "printf" builder *)
-          (* let printFormatString = build_format_string printFormatString in
-          let printArgs = List.map  sexprs in *)
-          (* L.build_call printf_func [| string_format_str; (expr builder sexpr) |] "printf" builder *)
+      (* | SSpawn s ->  *)
+          (* let llvalue = Llvm.const_int (Llvm.i64_type context) 1 in
+          let value = Int64.to_int (Llvm.int64_of_const llvalue) in
+          (llvalue, env') *)
+          (* Format is typ value *)
+          (* TODO - Ask richard if this is gucci :) *)
+          (* let ocamlvalue = String.split_on_char ' ' (L.string_of_llvalue llvalue)
+          in
+          let stringP = L.build_global_stringptr (List.hd (List.rev ocamlvalue)) "tmp" builder
+            in (stringP, env') *)
+        (* let format_string_of (acc: string) ((ty, _ : sexpr)) = *)
+          (* acc ^ " " ^ (match ty with
+            | Void -> ""
+            | Bool ->  raise (Failure "Unimplemented")
+            | Int ->  "%d"
+            | Float ->  raise (Failure "Unimplemented")
+            | String ->  "%s"
+            | Thread ->  raise (Failure "Unimplemented")
+            | Semaphore ->  raise (Failure "Unimplemented")
+            | Tuple (t1, t2) ->  raise (Failure "Unimplemented")
+            | Array (arrayType, count) ->  raise (Failure "Unimplemented"))
+        in let format_string = List.fold_left format_string_of "" printArgs and
+                llvalues = List.map (fun arg -> expr builder arg) printArgs in
+        let printf_arg_arr = Array.append [| L.build_global_stringptr format_string "fmt" builder |] (Array.of_list llvalues)
+        in L.build_call printf_func printf_arg_arr "printf" builder *)
+        (* let printFormatString = build_format_string printFormatString in
+        let printArgs = List.map  sexprs in *)
+        (* L.build_call printf_func [| string_format_str; (expr builder sexpr) |] "printf" builder *)
         | SAssign (var_name, v) -> let (value_to_assign, env') = expr (builder, env) v in
             let storage = StringMap.find var_name env' in
             let _ = L.build_store value_to_assign storage builder in
             (value_to_assign, env')
-      | _ -> raise (Failure "Implement other exprs builder")
+        | SAssignIndex (var_name, index, value) -> raise (Failure "Implement SAssignIndex")
     and stmt ((builder: L.llbuilder), env) sstmt =
       match sstmt with
         (* TODO - Update SBlock to account for scoping rules *)
@@ -261,6 +267,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (builder_final, _) = List.fold_left stmt (builder, env) sblock in
             (builder_final, env)
         | SExpr sexpr -> let (_, env2) = expr (builder, env) sexpr in (builder, env2)
+        | SReturn sexpr -> raise (Failure "implement return")
+          (* let (value, _) = expr (builder, env) sexpr in
+            let _ = L.build_ret value builder in
+            (builder, env) *)
+        | SBreak -> raise (Failure "implement break")
+        | SContinue -> raise (Failure "implement continue")
         | SDecl (ty, var_name, sx) ->
             let (llvalue, env2) = expr (builder, env) sx in
             let alloca = L.build_alloca (match ty with
@@ -275,6 +287,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               | Array (arrayType, count) -> void_t) var_name builder in
             let _ = L.build_store llvalue alloca builder in
             (builder, StringMap.add var_name alloca env2)
+        | SFor (init_stmt, pred_expr, iter_expr, body_stmt) -> raise (Failure "implement sfor")
         | SWhile (pred_expr, body) ->
             let pred_bb = L.append_block context "while_pred" the_thread in
             let body_bb = L.append_block context "while_body" the_thread in
@@ -302,7 +315,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (f_builder, _) = stmt (f_builder, env) f_block in
             let _ = L.build_br end_bb f_builder in
             (end_builder, env)
-        | _ -> builder, env
+        | SSend (receiver_name, message_expr)-> raise (Failure "implement send")
+        | SSendParent (message_expr) -> raise (Failure "implement send parent")
+        | SReceive receive_cases -> raise (Failure "implement receive")
 
     in
     (* thread function follows pthread function type and returns a NULL pointer *)
