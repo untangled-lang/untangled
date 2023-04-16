@@ -343,16 +343,27 @@ and pattern =
           if is_thread then raise (Failure ("return statement found in thread " ^ name)) else
           let fdecl = StringMap.find name function_decls in
           if typ = fdecl.ret_type then () else
-          raise (Failure ("return has" ^ string_of_typ typ ^ " but expected " ^ string_of_typ fdecl.ret_type))
+          raise (Failure ("return has " ^ string_of_typ typ ^ " but expected " ^ string_of_typ fdecl.ret_type))
       | _ -> ()
     in checker
 
   in let check_function (fdecl: func_decl) =
-    { sfname = fdecl.fname; sformals = fdecl.formals; sbody = []; sret_type = fdecl.ret_type }
+    let (_, sstmt) = check_stmt [StringMap.empty] (Block fdecl.body)
+    in match sstmt with
+      SBlock (sl) ->
+        (*
+         * @TODO - Talk about thread spawning for functions because it requires
+         * functions to implicitly accepts 2 message pools
+         *)
+        let _ = List.iter loop_check sl in
+        let _ = List.iter (fun sstmt -> return_check false fdecl.fname sstmt) sl in
+        { sfname = fdecl.fname; sformals = fdecl.formals; sbody = sl; sret_type = fdecl.ret_type }
+      | _ -> raise (Failure "Failed to parsed function")
+
 
   in let check_thread (tdecl: thread_decl) =
-    let (_, stmts) = check_stmt [StringMap.empty] (Block tdecl.body)
-    in match stmts with
+    let (_, sstmt) = check_stmt [StringMap.empty] (Block tdecl.body)
+    in match sstmt with
       SBlock (sl) ->
         let _ = List.iter loop_check sl in
         let _ = List.iter (fun sstmt -> return_check true tdecl.tname sstmt) sl in

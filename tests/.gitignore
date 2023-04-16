@@ -3,6 +3,7 @@
 /*/*
 !/*/*/
 /*/*/*
+!/*/*/*/
 # *Don't* ignore ground truths and untangled source files
 !**/*.gt
 !**/*.unt
