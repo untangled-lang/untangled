@@ -1,0 +1,12 @@
+int foo() {
+  print("hello");
+  return 1;
+}
+
+thread_def Main {
+  foo();
+  int x = foo();
+  if (x == 1) {
+    print("x is 1");
+  }
+}
