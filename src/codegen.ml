@@ -29,14 +29,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let double_ptr = L.pointer_type pointer_t in
   let the_module = L.create_module context "Untangled" in
 
-  let ltype_of_typ = function
-      A.Int   -> i32_t
-    | A.Bool  -> i1_t
-    | A.Float -> float_t
-    | A.Void  -> void_t
-    | _ -> raise (Failure "hello")
-  in
-
   let data_t = L.struct_type context [| i32_t; pointer_t; pointer_t |] in
   let data_ptr = L.pointer_type data_t in
   let data_double_ptr = L.pointer_type data_ptr in
@@ -52,6 +44,27 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let arg_ptr = L.pointer_type arg_t in
   (* Utility to build index of gep *)
   let gep_index i = L.const_int i32_t i in
+
+  (* Given a AST type, return a tag code *)
+  let tag_of_type = function
+          A.Int -> (L.const_int i32_t 0)
+        | A.Float -> (L.const_int i32_t 1)
+        | A.String -> (L.const_int i32_t 2)
+        | A.Bool -> (L.const_int i32_t 3)
+        | _ -> raise (Failure "Implement composite tag")
+  and ltype_of_typ = function
+          A.Int   -> i32_t
+        | A.Bool  -> i1_t
+        | A.Float -> float_t
+        | A.Void  -> void_t
+        | _ -> raise (Failure "hello")
+  and cast_llvalue_to_ptr typ llvalue builder = match typ with 
+      A.Int -> L.build_inttoptr llvalue pointer_t "int_to_ptr" builder
+    | A.Float -> L.build_bitcast llvalue pointer_t "float_to_ptr" builder 
+    | A.String -> L.build_bitcast llvalue pointer_t "string_to_ptr" builder
+    | A.Bool -> L.build_inttoptr llvalue pointer_t "bool_to_ptr" builder 
+    | _ -> raise (Failure "Implement composite tag")
+  in
 
   (*
    * https://man7.org/linux/man-pages/man3/pthread_create.3.html
@@ -348,16 +361,16 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
       (* StringMap.add stname (L.define_function (if tdecl.stname = "Main" then "main" else tdecl.stname) ttype the_module, tdecl) m in *)
     List.fold_left thread_decl StringMap.empty tdecls in
 
+  (* TODO - What is this for? *)
   let (the_thread, _) = StringMap.find "Main" thread_decls in
   let builder = L.builder_at_end context (L.entry_block the_thread) in
-
   let string_format_str = L.build_global_stringptr "%s" "fmt" builder in
   let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in
+
   let build_body ?(current_thread_pool : L.llvalue option)
                  ?(parent_pool : L.llvalue option)
                  ((builder: L.llbuilder), env) sstmt =
-    let rec expr ((builder: L.llbuilder), env)
-      ((_, sexpr : sexpr)) =
+    let rec expr ((builder: L.llbuilder), env) ((_, sexpr : sexpr)) =
       match sexpr with
         | SIntLit i -> (L.const_int i32_t i, env)
         | SStringLit s -> (L.build_global_stringptr s "tmp" builder, env)
@@ -430,27 +443,41 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | SIndex (arr_name, index) -> raise (Failure "index not implemented")
         | SUnit -> raise (Failure "sunit not implemented")
         | SSpawn tn ->
+          (*
+           * Generate child queue
+           * Store parent, child into routine_t
+           * Call pthread_create
+           * Expression return child queue
+           *)
           let current_thread_pool = (match current_thread_pool with
+            (* Come back to this later *)
             None -> raise (Failure "Spawn not allowed inside function")
             | Some current_thread_pool -> current_thread_pool) in
           let (thread, _) = StringMap.find tn thread_decls in
           (* Allocate &pthread_t *)
           let id = L.build_alloca pointer_t "id" builder in
-
           let arg_malloc = L.build_malloc arg_t "arg_malloc" builder and
-              arg_alloca = L.build_alloca arg_ptr "arg_alloca" builder in
-          let _ = L.build_store arg_malloc arg_alloca builder in
-          let arg = L.build_load arg_alloca "arg_load" builder in
-          let parent_pool_ptr = L.build_in_bounds_gep arg [| gep_index 0; gep_index 2 |] "gep_parent_pool" builder in
-          let _ = L.build_store current_thread_pool parent_pool_ptr builder in
-          let arg = L.build_bitcast arg pointer_t "cast_arg" builder in
-          (L.build_call pthread_create_func [| id; (L.const_null i8_t); thread; arg|] "create" builder, env)
+              arg_alloca = L.build_alloca arg_ptr "arg_alloca" builder and
+              child_queue_alloca = L.build_alloca queue_ptr "child_queue_alloc" builder and
+              child_queue = L.build_call queue_init_func [| |] "child_queue_init" builder in
+          
+          let _ = L.build_store arg_malloc arg_alloca builder and
+              _ = L.build_store child_queue child_queue_alloca builder in
+          
+          let arg = L.build_load arg_alloca "arg_load" builder and
+              child_queue = L.build_load child_queue_alloca "child_queue_load" builder in
 
-          (* Load the value of *pthread_t *)
-          (* let id_value = L.build_load id "pthread_t value" builder in *)
-          (* Wait for the thread to complete *)
-          (* (L.build_call pthread_join_func [| id_value; (L.const_null i8_t)|] "join" builder, env) *)
-        | SAssign (var_name, v) -> let (value_to_assign, env') = expr (builder, env) v in
+          let parent_pool_ptr = L.build_in_bounds_gep arg [| gep_index 0; gep_index 2 |] "gep_parent_queue" builder and
+              child_pool_ptr = L.build_in_bounds_gep arg [| gep_index 0; gep_index 3 |] "gep_child_queue" builder in
+          
+          let _ = L.build_store current_thread_pool parent_pool_ptr builder and
+              _ =  L.build_store child_queue child_pool_ptr builder in
+
+          let arg = L.build_bitcast arg pointer_t "cast_arg" builder in
+          let _ = L.build_call pthread_create_func [| id; (L.const_null i8_t); thread; arg|] "create" builder in
+          (child_pool_ptr, env)
+        | SAssign (var_name, v) ->
+            let (value_to_assign, env') = expr (builder, env) v in
             let storage = StringMap.find var_name env' in
             let _ = L.build_store value_to_assign storage builder in
             (value_to_assign, env')
@@ -474,7 +501,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               | Int -> i32_t
               | Float -> float_t
               | String -> L.pointer_type i8_t
-              | Thread -> void_t
+              | Thread -> queue_ptr 
               | Semaphore -> void_t
               | Tuple (t1, t2) -> void_t
               | Array (arrayType, count) -> void_t) var_name builder in
@@ -508,7 +535,28 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (f_builder, _) = stmt (f_builder, env) f_block in
             let _ = L.build_br end_bb f_builder in
             (end_builder, env)
-        | SSend (receiver_name, message_expr)-> raise (Failure "implement send")
+
+        | SSend (receiver_name, sexpr) -> 
+            let (typ, _) = sexpr in
+            let receiver_queue_ptr = StringMap.find receiver_name env in 
+            let receiver_queue = L.build_load receiver_queue_ptr "receiver_queue_load" builder in
+            let (llvalue, env') = expr (builder, env) sexpr in
+            let data_alloca = L.build_alloca data_ptr "data_alloca" builder and 
+                data_malloc = L.build_malloc data_t "data_malloc" builder in
+            let _ = L.build_store data_malloc data_alloca builder in
+            let data = L.build_load data_alloca "data_load" builder in
+            let typ_ptr = L.build_in_bounds_gep data [| gep_index 0; gep_index 0 |] "gep_type" builder and
+                head_ptr = L.build_in_bounds_gep data [| gep_index 0; gep_index 1 |] "gep_head" builder and
+                tail_ptr = L.build_in_bounds_gep data [| gep_index 0; gep_index 2 |] "gep_tail" builder in
+
+            let tag_value = tag_of_type typ in
+            let _ = L.build_store tag_value typ_ptr builder in
+            let cast = cast_llvalue_to_ptr typ llvalue builder in
+            let _ = L.build_store cast head_ptr builder in
+            let _ = L.build_store (L.const_null pointer_t) tail_ptr builder in
+            let _ = L.build_call queue_push_func [| receiver_queue; data |] "" builder in
+            (builder, env')
+
         | SSendParent (message_expr) ->
           let parent_pool = (match parent_pool with
            | None -> raise (Failure "Cannot send message to parent thread pool from inside a function")
