@@ -54,21 +54,25 @@ struct Routine_t {
 
 Queue_t *Queue_init() {
   Queue_t *queue = malloc(sizeof(Queue_t));
-  Data_t *data = calloc(2, sizeof(Data_t));
+  Data_t **data = calloc(2, sizeof(Data_t *));
   queue->size = 0;
   queue->capacity = 2;
   queue->data = data;
   return queue;
 }
 
-void *Queue_push(Queue_t *queue, Data_t *data) {
+void Queue_push(Queue_t *queue, Data_t *data) {
   if (queue->size == queue->capacity) {
-    queue->data = realloc(queue->data, sizeof(struct Data_t) * queue->capacity * 2);
+    // queue->data = realloc(queue->data, sizeof(struct Data_t *) * queue->capacity * 2);
+    Data_t **expanded = calloc(queue->capacity * 2, sizeof(Data_t *));
+    for (int i = 0; i < queue->size; i++) {
+      expanded[i] = queue->data[i];
+    }
+    queue->data = expanded;
     queue->capacity *= 2;
   }
   queue->data[queue->size] = data;
   queue->size += 1;
-  return queue;
 }
 
 bool Queue_empty(Queue_t *queue) {

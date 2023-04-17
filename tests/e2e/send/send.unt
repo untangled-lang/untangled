@@ -1,0 +1,10 @@
+thread_def child {
+  parent << "hi";
+}
+
+thread_def Main {
+  spawn child;
+  receive {
+    _ -> {}
+  }
+}
