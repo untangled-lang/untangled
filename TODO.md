@@ -14,4 +14,3 @@
   - [ ] Semaphores (we have those in C++)
     - [ ] Restrict access so that its atomic
 
-
