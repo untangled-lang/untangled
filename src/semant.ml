@@ -49,7 +49,8 @@ let check (tdecls, fdecls) =
     in List.fold_left add_bind StringMap.empty
        [("print", String, Void);
         ("string_of_int", Int, String);
-        ("string_of_float", Float, String)]
+        ("string_of_float", Float, String)
+        ("string_of_bool", Bool, String)]
   in
   let add_func map fd =
     let built_in_err = "function " ^ fd.fname ^ " may not be defined"
@@ -270,8 +271,11 @@ and pattern =
        *)
       | ArrayLit xs -> raise (TODO "Implement array literal")
           (* let sexprs = List.map (check_expr envs) xs in
-          match sexprs with
-            | [] -> (Array (Void, 0), SArrayLit []) *)
+          (* let ty_check (t1, _) =  *)
+          let ty_check sexprs = match sexprs with
+            | [] -> true
+            | ((t1, _) :: rest) -> List.iter check_assign  *)
+
           (* (match (List.map (fun x -> check_expr envs x) xs) with
             [] -> (Array (Void, 0), SArrayLit [])
             | (sexpr :: sexprs) as list_sexprs ->
@@ -280,7 +284,6 @@ and pattern =
                 if List.for_all (fun (rt, _) -> check_assign ) sexprs then
                 (Array (lt, List.length list_sexprs), SArrayLit list_sexprs)
                 else raise (Failure ()) *)
-
       | Call (fname, args) as call ->
         let fd = find_func fname in
         let _ = check_binds "formals" fd.formals in

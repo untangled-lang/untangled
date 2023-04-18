@@ -1,23 +1,29 @@
 thread_def child {
-  receive {
-    int x -> {}
-    _ -> {}
-  }
+//  receive {
+//    int x -> {}
+//    _ -> {}
+//  }
+//
+//  receive {
+//    int x -> {}
+//    _ -> {}
+//  }
+//
+//  receive {
+//    int x -> {if (x == 3000) {print("This is 3000");}}
+//    _ -> {}
+//  }
 
   receive {
-    int x -> {}
-    _ -> {}
-  }
-
-  receive {
-    int x -> {}
+    float x -> {print(x);}
     _ -> {}
   }
 }
 
 thread_def Main {
   thread t = spawn child;
-  t << 1000;
-  t << 2000;
-  t << 3000;
+  // t << 1000;
+  // t << 2000;
+  // t << 3000;
+  t << 3.42;
 }
