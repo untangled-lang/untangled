@@ -13,6 +13,12 @@ open Sast
 
 module StringMap = Map.Make(String)
 
+type queue_gep = {
+  size : L.llvalue;
+  cap : L.llvalue;
+  array : L.llvalue;
+}
+
 let deep_copy_stringmap map =
   let new_map = StringMap.empty in
   let new_map = StringMap.fold (fun k v acc -> StringMap.add k v acc) map new_map in
@@ -58,12 +64,17 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | A.Float -> float_t
         | A.Void  -> void_t
         | _ -> raise (Failure "hello")
-  and cast_llvalue_to_ptr typ llvalue builder = match typ with 
+  and cast_llvalue_to_ptr typ llvalue builder = match typ with
       A.Int -> L.build_inttoptr llvalue pointer_t "int_to_ptr" builder
-    | A.Float -> L.build_bitcast llvalue pointer_t "float_to_ptr" builder 
+    | A.Float -> L.build_bitcast llvalue pointer_t "float_to_ptr" builder
     | A.String -> L.build_bitcast llvalue pointer_t "string_to_ptr" builder
-    | A.Bool -> L.build_inttoptr llvalue pointer_t "bool_to_ptr" builder 
+    | A.Bool -> L.build_inttoptr llvalue pointer_t "bool_to_ptr" builder
     | _ -> raise (Failure "Implement composite tag")
+  and build_queue_gep queue builder =
+    let size = L.build_in_bounds_gep queue [| gep_index 0; gep_index 0 |] "gep_size" builder and
+        cap =  L.build_in_bounds_gep queue [| gep_index 0; gep_index 1 |] "gep_cap" builder and
+        array = L.build_in_bounds_gep queue [| gep_index 0; gep_index 2 |] "gep_array" builder
+    in { size = size; cap = cap; array = array }
   in
 
   (*
@@ -157,43 +168,109 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
       | None -> ignore (instr builder)
 
   (* Message queue implementation *)
+
+  (*
+   * Initialize a queue on the heap and return a pointer to it
+   *
+   * @param None
+   * @return queue_ptr
+   *)
   in let queue_init_func =
     let queue_init_t = L.function_type queue_ptr [| |] in
     let queue_init_func = L.define_function "Queue_init" queue_init_t the_module in
-    let builder = L.builder_at_end context (L.entry_block queue_init_func) in
-    let queue_alloca = L.build_alloca queue_ptr "queue" builder in
-    let data_array_alloca = L.build_alloca data_double_ptr "data_array" builder in
-    let data_array = L.build_load data_array_alloca "data_array_load" builder in
-    let queue_malloc = L.build_malloc queue_t "queue_malloc" builder in
-    let data_array_malloc = L.build_array_malloc data_ptr (L.const_int i32_t 2) "data_array_malloc" builder in
-    let _ = L.build_store queue_malloc queue_alloca builder in
-    let _ = L.build_store data_array_malloc data_array_alloca builder in
-    let queue = L.build_load queue_alloca "queue_load" builder in
-    let size_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 0 |] "gep_size" builder in
-    let _ = L.build_store (L.const_int i32_t 0) size_ptr builder in
-    let queue = L.build_load queue_alloca "queue_load" builder in
-    let capacity_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 1|] "gep_capacity" builder in
-    let _ = L.build_store (L.const_int i32_t 2) capacity_ptr builder in
-    let queue = L.build_load queue_alloca "queue_load" builder in
-    let data_array_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 2|] "gep_data_array" builder in
-    let _ = L.build_store data_array data_array_ptr builder in
-    let queue = L.build_load queue_alloca "queue_load" builder in
-    let _ = add_terminal builder (L.build_ret queue) in queue_init_func
 
+    let builder = L.builder_at_end context (L.entry_block queue_init_func) in
+    let capacity = L.const_int i32_t 2 in
+    let queue_alloca = L.build_alloca queue_ptr "queue_alloca" builder and
+        queue_malloc = L.build_malloc queue_t "queue_malloc" builder and
+        array_alloca = L.build_alloca data_double_ptr "data_alloca" builder and
+        array_malloc = L.build_array_malloc data_ptr capacity "data_malloc" builder in
+
+    let _ = L.build_store queue_malloc queue_alloca builder and
+        _ = L.build_store array_malloc array_alloca builder in
+
+    let queue = L.build_load queue_alloca "queue_load" builder and
+        array = L.build_load array_alloca "array_load" builder in
+
+    let { size = size_ptr; cap = cap_ptr; array = array_ptr } = build_queue_gep queue builder in
+    let _ = L.build_store (L.const_int i32_t 0) size_ptr builder and
+        _ = L.build_store capacity cap_ptr builder and
+        _ = L.build_store array array_ptr builder and
+        _ = add_terminal builder (L.build_ret queue) in queue_init_func
+
+  (*
+   * Returns true if queue is empty and otherwise false
+   *
+   * @param queue_ptr
+   * @return bool_t
+   *)
   in let queue_empty_func =
     let queue_empty_t = L.function_type i1_t [| queue_ptr |] in
     let queue_empty_func = L.define_function "Queue_empty" queue_empty_t the_module in
-    let builder = L.builder_at_end context (L.entry_block queue_empty_func) in
-    let queue_arg = L.param queue_empty_func 0 in
-    let queue_alloca = L.build_alloca queue_ptr "struct_queue" builder in
-    let _ = L.build_store queue_arg queue_alloca builder in
-    let queue = L.build_load queue_alloca "queue_load" builder in
-    let size_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 0|] "gep_size" builder in
-    let size = L.build_load size_ptr "size_load" builder in
-    let isempty = L.build_icmp L.Icmp.Eq size (L.const_int i32_t 0) "is_queue_empty" builder in
-    let _ = add_terminal builder (L.build_ret isempty) in queue_empty_func
 
-  in let queue_push_func =
+    let builder = L.builder_at_end context (L.entry_block queue_empty_func) in
+    (* Extract queue_ptr *)
+    let argument = L.param queue_empty_func 0 in
+    let queue_alloca = L.build_alloca queue_ptr "queue_alloca" builder in
+    let _ = L.build_store argument queue_alloca builder in
+
+    let queue = L.build_load queue_alloca "queue_load" builder in
+    let { size = size_ptr; _ } = build_queue_gep queue builder in
+    let size = L.build_load size_ptr "size_load" builder in
+    let empty = L.build_icmp L.Icmp.Eq size (L.const_int i32_t 0) "queue_empty" builder in
+    let _ = add_terminal builder (L.build_ret empty) in queue_empty_func in
+
+  (* let queue_push_func =
+    let queue_push_t = L.function_type void_t [| queue_ptr; data_ptr |] in
+    let queue_push_func = L.define_function "Queue_push" queue_push_t the_module in
+
+    let resize_bb = L.append_block context "queue_resize" queue_push_func and
+        copy_bb = L.append_block context "queue_copy" queue_push_func and
+        push_bb = L.append_block context "queue_push" queue_push_func in
+
+    let builder = L.builder_at_end context (L.entry_block queue_push_func) and
+        resize_builder = L.builder_at_end context resize_bb and
+        copy_builder = L.builder_at_end context copy_bb and
+        push_builder = L.builder_at_end context push_bb in
+
+    let queue_alloca = L.build_alloca queue_ptr "queue_alloca" builder and
+        array_alloca = L.build_alloca data_double_ptr "array_alloca" builder and
+        data_alloca = L.build_alloca data_ptr "data_alloca" builder and
+        index_alloca = L.build_alloca i32_t "index_alloca" builder in
+
+
+    (* Store input arguments into local variables *)
+    let _ = L.build_store (L.param queue_push_func 0) queue_alloca builder and
+        _ = L.build_store (L.param queue_push_func 1) data_alloca builder and
+        _ = L.build_store (L.const_int i32_t 0) index_alloca builder in
+
+    (* Load local variables *)
+    let queue = L.build_load queue_alloca "queue_load" builder and
+        data = L.build_load data_alloca "data_load" builder in
+
+    (* Get pointers to queue *)
+    let { size = size_ptr; cap = cap_ptr; array = array_ptr } = build_queue_gep queue builder in
+    (* Extract size and capacity *)
+    let size = L.build_load size_ptr "size_load" builder and
+        capacity = L.build_load cap_ptr "capacity_load" builder in
+    (* Check if size == capacity *)
+    let full = L.build_icmp L.Icmp.Eq size capacity "queue_full" builder in
+    let _ = L.build_cond_br full resize_bb push_bb builder in
+
+    (* Make a new array *)
+    let new_capacity = L.build_mul capacity (L.const_int i32_t 2) "double_capacity" resize_builder in
+    let new_array_malloc = L.build_array_malloc data_ptr new_capacity "new_array_malloc" resize_builder in
+    let _ = L.build_store new_array_malloc array_alloca resize_builder in
+    let _ = L.build_br copy_bb resize_builder in
+
+    (* Copy data from old array to new array *)
+    let index = L.build_load index_alloca "index_load" copy_builder in
+    let old_array = L.build_load array_ptr "old_array_load" copy_builder in
+    let new_array = L.build_load array_alloca "new_array_load" copy_builder in
+    let old_data_ptr = L.build_in_bounds_gep old_array [| index |] "gep_old_data" copy_builder in
+    let new_data_ptr = L.build_in_bounds_gep new_array [| index |] "gep_new_data" copy_builder in
+    let old_data = L.build_load old_data_ptr "old_data_load" *)
+  let queue_push_func =
     let queue_push_t = L.function_type void_t [| queue_ptr; data_ptr |] in
     let queue_push_func = L.define_function "Queue_push" queue_push_t the_module in
 
@@ -255,7 +332,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let queue = L.build_load queue_alloca "queue_load" terminate_builder in
     let new_data_array = L.build_load data_array_alloca "new_data_array_load" terminate_builder in
     let old_data_array_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 2|] "gep_old_data_array" terminate_builder in
-    let _ = L.build_store new_data_array old_data_array_ptr in
+    let _ = L.build_store new_data_array old_data_array_ptr terminate_builder in
     let new_capacity = L.build_mul capacity (L.const_int i32_t 2) "double_capacity" terminate_builder in
     let _ = L.build_store new_capacity capacity_ptr terminate_builder in
     let _ = L.build_br push_bb terminate_builder in
@@ -460,16 +537,16 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               arg_alloca = L.build_alloca arg_ptr "arg_alloca" builder and
               child_queue_alloca = L.build_alloca queue_ptr "child_queue_alloc" builder and
               child_queue = L.build_call queue_init_func [| |] "child_queue_init" builder in
-          
+
           let _ = L.build_store arg_malloc arg_alloca builder and
               _ = L.build_store child_queue child_queue_alloca builder in
-          
+
           let arg = L.build_load arg_alloca "arg_load" builder and
               child_queue = L.build_load child_queue_alloca "child_queue_load" builder in
 
           let parent_pool_ptr = L.build_in_bounds_gep arg [| gep_index 0; gep_index 2 |] "gep_parent_queue" builder and
               child_pool_ptr = L.build_in_bounds_gep arg [| gep_index 0; gep_index 3 |] "gep_child_queue" builder in
-          
+
           let _ = L.build_store current_thread_pool parent_pool_ptr builder and
               _ =  L.build_store child_queue child_pool_ptr builder in
 
@@ -501,7 +578,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               | Int -> i32_t
               | Float -> float_t
               | String -> L.pointer_type i8_t
-              | Thread -> queue_ptr 
+              | Thread -> queue_ptr
               | Semaphore -> void_t
               | Tuple (t1, t2) -> void_t
               | Array (arrayType, count) -> void_t) var_name builder in
@@ -536,12 +613,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let _ = L.build_br end_bb f_builder in
             (end_builder, env)
 
-        | SSend (receiver_name, sexpr) -> 
+        | SSend (receiver_name, sexpr) ->
             let (typ, _) = sexpr in
-            let receiver_queue_ptr = StringMap.find receiver_name env in 
+            let receiver_queue_ptr = StringMap.find receiver_name env in
             let receiver_queue = L.build_load receiver_queue_ptr "receiver_queue_load" builder in
             let (llvalue, env') = expr (builder, env) sexpr in
-            let data_alloca = L.build_alloca data_ptr "data_alloca" builder and 
+            let data_alloca = L.build_alloca data_ptr "data_alloca" builder and
                 data_malloc = L.build_malloc data_t "data_malloc" builder in
             let _ = L.build_store data_malloc data_alloca builder in
             let data = L.build_load data_alloca "data_load" builder in
