@@ -475,10 +475,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let string_format_str = L.build_global_stringptr "%s" "fmt" builder in
   let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in *)
 
-  let build_body ?(current_thread_pool : L.llvalue option)
-                 ?(parent_pool : L.llvalue option)
-                 ((builder: L.llbuilder), env) sstmt
-                 the_thread =
+  let build_body ?(arg_gep : arg_gep option) (builder, env) sstmt the_thread =
     let string_format_str = L.build_global_stringptr "%s" "fmt" builder in
     let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in
     let pthread_ts = ref [] in
@@ -562,10 +559,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
            * Call pthread_create
            * Expression return child queue
            *)
-          let current_thread_pool = (match current_thread_pool with
-            (* Come back to this later *)
-            None -> raise (Failure "Spawn not allowed inside function")
-            | Some current_thread_pool -> current_thread_pool) in
+          let { child_queue = self_queue_ptr; _ } = (match arg_gep with
+            (* @TODO - Come back later *)
+              None -> raise (Failure "Spawn not allowed inside function")
+            | Some arg_gep -> arg_gep) in
+
           let (thread, _) = StringMap.find tn thread_decls in
           (* Allocate &pthread_t *)
           let id = L.build_alloca pointer_t "id" builder in
@@ -582,7 +580,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
           let { parent_queue = parent_queue_ptr; child_queue = child_queue_ptr; _ }
             = build_arg_gep arg builder in
 
-          let _ = L.build_store current_thread_pool parent_queue_ptr builder and
+          let current_queue = L.build_load self_queue_ptr "self_queue_load" builder in
+          let _ = L.build_store current_queue parent_queue_ptr builder and
               _ =  L.build_store child_queue child_queue_ptr builder in
 
           let arg = L.build_bitcast arg pointer_t "cast_arg" builder in
@@ -616,8 +615,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               | String -> L.pointer_type i8_t
               | Thread -> queue_ptr
               | Semaphore -> void_t
-              | Tuple (t1, t2) -> void_t
-              | Array (arrayType, count) -> void_t) var_name builder in
+              | Tuple (t1, t2) -> raise (Failure "TODO tuple")
+              | Array (arrayType, count) -> raise (Failure "TODO array")) var_name builder in
             let _ = L.build_store llvalue alloca builder in
             (builder, StringMap.add var_name alloca env2)
         | SFor (init_stmt, pred_expr, iter_expr, body_stmt) -> raise (Failure "implement sfor")
@@ -657,10 +656,15 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             (* @TODO - Change this code after we implement tuple *)
             let data_alloca = L.build_alloca data_ptr "data_alloca" builder and
                 data_malloc = L.build_malloc data_t "data_malloc" builder and
+                head_alloca = L.build_alloca (L.pointer_type (lltype_of_typ typ)) "head_alloca" builder and
+                (* head_alloca = L.build_alloca (lltype_of_typ typ) "head_alloca" builder and *)
                 head_malloc = L.build_malloc (lltype_of_typ typ) "head_malloc" builder and
+                tail_alloca = L.build_alloca (L.pointer_type (lltype_of_typ typ)) "tail_alloca" builder and
                 tail_malloc = L.build_malloc (lltype_of_typ typ) "tail_malloc" builder in
 
-            let _ = L.build_store data_malloc data_alloca builder in
+            let _ = L.build_store data_malloc data_alloca builder and
+                _ = L.build_store head_malloc head_alloca builder and
+                _ = L.build_store tail_malloc tail_alloca builder in
                 (* _ = L.build_store head_malloc head_alloca builder and
                 _ = L.build_store tail_malloc tail_alloca builder in *)
 
@@ -668,20 +672,30 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let { tag = tag_ptr; head = head_ptr; tail = tail_ptr } =
               build_data_gep data builder in
 
-            let head_cast = cast_llvalue_to_ptr typ head_malloc builder in
+            let tag_value = tag_of_type typ in
+            let _ = L.build_store llvalue head_malloc builder in
+            let _ = L.build_store (L.const_null (L.pointer_type (lltype_of_typ typ))) tail_alloca builder in
+
+            let _ = L.build_store tag_value tag_ptr builder in
+            let head_load = L.build_load head_alloca "head_load" builder in
+            let head_cast = cast_llvalue_to_ptr typ head_load builder in
+            let tail_load = L.build_load tail_alloca "tail_load" builder in
+            let tail_cast = cast_llvalue_to_ptr typ tail_load builder in
+            let _ = L.build_store head_cast head_ptr builder in
+            let _ = L.build_store tail_cast tail_ptr builder in
+            (* let head_cast = cast_llvalue_to_ptr typ head_malloc builder in
             let tail_cast = cast_llvalue_to_ptr typ tail_malloc builder in
             let tag_value = tag_of_type typ in
             let _ = L.build_store tag_value tag_ptr builder in
             let _ = L.build_store llvalue head_malloc builder in
             let _ = L.build_store head_cast head_ptr builder in
-            (* let _ = L.build_store (L.const_null ) head_ builder in *)
-            let _ = L.build_store tail_cast tail_ptr builder in
+            let _ = L.build_store tail_cast tail_ptr builder in *)
 
             let _ = L.build_call queue_push_func [| receiver_queue; data |] "" builder in
             (builder, env')
 
-        | SSendParent (message_expr) ->
-          let parent_pool = (match parent_pool with
+        | SSendParent (message_expr) -> raise (Failure "todo")
+          (* let parent_pool = (match parent_pool with
            | None -> raise (Failure "Cannot send message to parent thread pool from inside a function")
            | Some thread_pool -> thread_pool) in
           let data_alloca = L.build_alloca data_ptr "data_alloca" builder and
@@ -694,7 +708,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
           let value = L.build_load value_alloca "value_load" builder in
           let cast = L.build_inttoptr value pointer_t "value_cast" builder in
           let _ = L.build_store cast head_ptr builder in
-          let _ = L.build_call queue_push_func [| parent_pool; data |] "" builder in
+          let _ = L.build_call queue_push_func [| parent_pool; data |] "" builder in *)
           (* let data_malloc = L.build_malloc data_t "data_malloc" builder and
               data_alloca = L.build_alloca data_ptr "data_alloca" builder and
               value_alloca = L.build_alloca i32_t "value_alloca" builder in
@@ -712,7 +726,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
           let value = L.build_ptrtoint value i32_t "value" builder in
           let _ = L.build_call printf_func [| int_format_str; value |] "print_test" builder in *)
 
-          (builder, env)
+          (* (builder, env) *)
         | SReceive receive_cases ->
           (*
            * Access receive queue
@@ -721,10 +735,17 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
            * Extract tag
            * Build switch statement based on tag
            *)
-          let current_thread_pool = (match current_thread_pool with
+          let { child_queue = self_queue_ptr; _ } = (match arg_gep with
+            | None -> raise (Failure "Cannot receive message inside a function")
+            | Some arg_gep -> arg_gep ) in
+          (* let current_thread_pool = (match current_thread_pool with
            | None -> raise (Failure "Cannot receive message from inside a function")
-           | Some thread_pool -> thread_pool) in
+           | Some thread_pool -> thread_pool) in *)
 
+          let self_queue_alloca = L.build_alloca queue_ptr "self_queue_alloca" builder in
+          let self_queue = L.build_load self_queue_ptr "self_queue_load" builder in
+          let _ = L.build_store self_queue self_queue_alloca builder in
+          let self_queue = L.build_load self_queue_alloca "self_queue_load" builder in
 
           let pred_bb = L.append_block context "pred" the_thread and
               receive_bb = L.append_block context "receive" the_thread and
@@ -736,7 +757,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
           (* Move the current builder to pred_bb *)
           let _ = L.build_br pred_bb builder in
-          let empty = L.build_call queue_empty_func [| current_thread_pool |] "queue_empty" pred_builder in
+          let empty = L.build_call queue_empty_func [| self_queue |] "queue_empty" pred_builder in
           let _ = L.build_cond_br empty pred_bb receive_bb pred_builder in
 
           (* Pop data from the queue and pattern match *)
@@ -744,7 +765,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               tag_alloca = L.build_alloca i32_t "tag_alloca" receive_builder and
               head_alloca = L.build_alloca pointer_t "head_alloca" receive_builder and
               tail_alloca = L.build_alloca pointer_t "tail_alloca" receive_builder in
-          let data_pop = L.build_call queue_pop_func [| current_thread_pool |] "queue_pop" receive_builder in
+          let data_pop = L.build_call queue_pop_func [| self_queue |] "queue_pop" receive_builder in
           let _ = L.build_store data_pop data_alloca receive_builder in
 
           let data = L.build_load data_alloca "data_load" receive_builder in
@@ -775,7 +796,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                 let _ = L.add_case switch tag_num case_bb in
                 (* @TODO - Ask about width of floats + pointers / potentially overflow *)
                 let value_alloca = L.build_alloca (lltype_of_typ typ) "value_alloca" case_builder in
-                let value_ptr = cast_ptr_to_llvalue typ head_ptr case_builder in
+                (* let value_ptr = cast_ptr_to_llvalue typ head_ptr case_builder in *)
+                let value_ptr = L.build_load head_ptr "value_ptr_load" case_builder in
+                let value_ptr = L.build_bitcast value_ptr (L.pointer_type i32_t) "value_ptr_cast" case_builder in
                 let value = L.build_load value_ptr "value_load" case_builder in
                 let _ = L.build_call printf_func [| int_format_str; value |] "printf_value" case_builder in
                 let _ = L.build_store value value_alloca case_builder in
@@ -820,13 +843,16 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let join pthread =
       let id = L.build_load pthread "pthread_t" builder in
       ignore (L.build_call pthread_join_func [| id; (L.const_null i8_t) |] "join" builder) in
-    let _ = List.iter join !pthread_ts in (builder, env')
+    let _ = List.iter join !pthread_ts in (builder, env') in
 
-  in let build_thread_body tdecl =
+  let build_thread_body tdecl =
     let (the_thread, _) = StringMap.find tdecl.stname thread_decls in
     let builder = L.builder_at_end context (L.entry_block the_thread) in
-
-    let thread_arg = L.build_bitcast (L.param the_thread 0) arg_ptr "cast_void" builder in
+    let argument = L.build_bitcast (L.param the_thread 0) arg_ptr "cast_void" builder in
+    let arg_gep = build_arg_gep argument builder in
+    let (final_builder, _) =
+      build_body ~arg_gep:arg_gep (builder, StringMap.empty) (SBlock tdecl.sbody) the_thread
+    (* let thread_arg = L.build_bitcast (L.param the_thread 0) arg_ptr "cast_void" builder in
     let arg_alloca = L.build_alloca  arg_ptr "arg_alloca" builder and
       parent_pool_alloca = L.build_alloca queue_ptr "parent_pool_alloca" builder and
       current_thread_pool_alloca = L.build_alloca queue_ptr "current_thread_pool_alloca" builder and
@@ -848,7 +874,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                                   ~parent_pool:parent_pool
                                   (builder, StringMap.empty)
                                   (SBlock tdecl.sbody)
-                                  the_thread
+                                  the_thread *)
     (* thread function follows pthread function type and returns a NULL pointer *)
     in add_terminal final_builder (L.build_ret (L.const_null pointer_t))
   and build_func_body fdecl =
