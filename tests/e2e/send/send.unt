@@ -14,7 +14,13 @@ thread_def child {
 //    _ -> {}
 //  }
 
+  print("
+about to receive an int
+
+");
+
   receive {
+    (string x, (int z, int y)) -> {print("This is a string and an integer, and an integer");}
     ((string x, int z), int y) -> {print("This is a string and an integer, and an integer");}
     float x -> {print("This is a float");}
     int x -> {print("This is an integer");}
@@ -22,7 +28,14 @@ thread_def child {
         print("This is not matched");
       }
   }
+
+  print("
+about to receive a float
+
+");
+
   receive {
+    (string x, (int z, int y)) -> {print("This is a string and an integer, and an integer");}
     ((string x, int z), int y) -> {print("This is a string and an integer, and an integer");}
     float x -> {print("This is a float");}
     int x -> {print("This is an integer");}
@@ -30,7 +43,14 @@ thread_def child {
         print("This is not matched");
       }
   }
+
+  print("
+about to receive a tuple
+
+");
+
   receive {
+    (string x, (int z, int y)) -> {print("This is a string and an integer, and an integer");}
     ((string x, int z), int y) -> {print("This is a string and an integer, and an integer");}
     float x -> {print("This is a float");}
     int x -> {print("This is an integer");}
@@ -38,12 +58,30 @@ thread_def child {
         print("This is not matched");
       }
   }
+
+  print("
+about to receive a string
+
+");
+
+  receive {
+    (string x, (int z, int y)) -> {print("This is a string and an integer, and an integer");}
+    ((string x, int z), int y) -> {print("This is a string and an integer, and an integer");}
+    float x -> {print("This is a float");}
+    int x -> {print("This is an integer");}
+    _ -> { print("This is not matched"); }
+  }
+
+  print("
+done
+
+");
 }
 
 thread_def Main {
   thread t = spawn child;
-  t << 1000;
-  t << (("2000", 5), 2);
+  t << 10;
   t << 30.12;
-  // t << "asgd";
+  t << (("2000", 5), 2);
+  t << "asgd";
 }

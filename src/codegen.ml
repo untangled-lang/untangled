@@ -568,18 +568,22 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let data_t_ptr = L.param tag_compare_func 3 in
     let builder = L.builder_at_end context (L.entry_block tag_compare_func) in
     let index_loaded = L.build_load index_ptr "index_load" builder in
+    let _ = L.build_call printf_func [| L.build_global_stringptr "  checking tag index %d\n" "fmt" builder; index_loaded |] "print_test" builder in
     let { tag = data_tag_ptr; head = head_ptr; tail = tail_ptr } = build_data_gep data_t_ptr builder in
     (* Get the integer tag of the first item in the “data” we’re examining *)
     let data_tag_val = L.build_load data_tag_ptr "data_tag_val" builder in
+    let _ = L.build_call printf_func [| L.build_global_stringptr "    data has tag: %d\n" "fmt" builder; data_tag_val |] "print_test" builder in
 
     (* Returns false. We jump here whenever we find out that a tag definitely *doesn’t* match. *)
     let false_bb = L.append_block context "false_bb" tag_compare_func in
     let false_builder = L.builder_at_end context false_bb in
+    let _ = L.build_call printf_func [| L.build_global_stringptr "    returning false\n" "fmt" builder; (L.const_int i32_t 0) |] "print_test" false_builder in
     let _ = L.build_ret (L.const_int i1_t 0) false_builder in
 
     (* Returns true. We jump here whenever we find out that a tag definitely *does* match. *)
     let true_bb = L.append_block context "true_bb" tag_compare_func in
     let true_builder = L.builder_at_end context true_bb in
+    let _ = L.build_call printf_func [| L.build_global_stringptr "    returning true\n" "fmt" builder; (L.const_int i32_t 0) |] "print_test" true_builder in
     let _ = L.build_ret (L.const_int i1_t 1) true_builder in
 
     (* Other blocks we will fill and use below *)
@@ -596,6 +600,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
     (* 1. Check that the index is in bounds. If it’s not, return false. *)
     let oob = L.build_icmp L.Icmp.Eq index_loaded length "index_comparison" builder in
+    let _ = L.build_call printf_func [| L.build_global_stringptr "    oob? %d\n" "fmt" builder; oob |] "print_test" builder in
     let _ = L.build_cond_br oob false_bb wcard_bb builder in
     (*
      * Once we know the index is in bounds, it’s safe to unpack the value from the tag.
@@ -603,8 +608,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
      * next recursive step, if any, will want to examine the next value of the tag). *)
     let array_tag_ptr = L.build_in_bounds_gep tag_ptr [| index_loaded |] "gep_array_tag" wcard_builder in
     let tag_val = L.build_load array_tag_ptr "array_tag_load" wcard_builder in
-    let _ = L.build_add (L.const_int i32_t 1) index_loaded "increment_index" wcard_builder in
-    let _ = L.build_store index_loaded index_ptr wcard_builder in
+    let _ = L.build_call printf_func [| L.build_global_stringptr "    pattern wants tag: %d\n" "fmt" wcard_builder; tag_val |] "print_test" wcard_builder in
+    let incremented_index = L.build_add (L.const_int i32_t 1) index_loaded "increment_index" wcard_builder in
+    let _ = L.build_store incremented_index index_ptr wcard_builder in
 
     (* 2. Check if the tag contains a wildcard at this position. If it does, return true. *)
     let wcard_pred = L.build_icmp L.Icmp.Eq tag_val (L.const_int i32_t 6) "wildcard_pred" wcard_builder in
@@ -989,10 +995,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
              * need to jump to *)
             let receive_bb = L.append_block context "receive_bb" the_thread in
             let receive_builder = L.builder_at_end context receive_bb in
-
+            (* “Find case” block finds the right index to switch on *)
+            let find_case_bb = L.append_block context "find_case_bb" the_thread in
+            let find_case_builder = L.builder_at_end context find_case_bb in
             (* Switch block does the switching to direct the program to the right case *)
-            (* let switch_bb = L.append_block context "switch_bb" the_thread in
-            let switch_builder = L.builder_at_end context switch_bb in *)
+            let switch_bb = L.append_block context "switch_bb" the_thread in
+            let switch_builder = L.builder_at_end context switch_bb in
             (* End block directs to code after the receive block *)
             (* let end_bb = L.append_block context "end" the_thread in
             let end_builder = L.builder_at_end context end_bb in *)
@@ -1017,59 +1025,65 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             (* Convert OCaml tag to its LLVM representation *)
             (* For each tag in our list of receieve cases... *)
             let _ = List.iteri (fun i ptag ->
+              let _ = L.build_call printf_func [| L.build_global_stringptr "pattern #%d:\n  " "fmt" receive_builder; (L.const_int i32_t i) |] "print_test" receive_builder in
               (* Store the length of the ptag *)
               let length_ptr = L.build_in_bounds_gep lengths_alloca [| L.const_int i32_t i |] "lengths_gep" receive_builder in
               let _ = L.build_store (L.const_int i32_t (List.length ptag)) length_ptr receive_builder in
-              let _ = L.build_call printf_func [| int_format_str; (L.build_load length_ptr "a" receive_builder) |] "print_test" receive_builder in
               (* Pointer to this slot in our array of tags, which will hold an array of integers *)
               let ptag_ptr = L.build_in_bounds_gep ptags_alloca [| L.const_int i32_t i |] "ptags_gep" receive_builder in
               (* Create the array of integers to be the tag *)
               let ptag_alloca = L.build_array_alloca i32_t (L.const_int i32_t (List.length ptag)) "ptag_alloca" receive_builder in
               let _ = L.build_store ptag_alloca ptag_ptr receive_builder in
               let _ = List.iteri (fun j elem ->
-                let ptr = L.build_in_bounds_gep ptag_alloca [| L.const_int i32_t j |] "ptr_gep" receive_builder in
-                let _ = L.build_store (L.const_int i32_t elem) ptr receive_builder in
+                let tag_elem_ptr = L.build_in_bounds_gep ptag_alloca [| L.const_int i32_t j |] "ptr_gep" receive_builder in
+                let _ = L.build_store (L.const_int i32_t elem) tag_elem_ptr receive_builder in
                 (* Uncomment below to see printed tags *)
-                let _ = L.build_call printf_func [| int_format_str; (L.build_load ptr "ptr" receive_builder) |] "print_test" receive_builder in
+                let _ = L.build_call printf_func [| L.build_global_stringptr "%d " "fmt" receive_builder; (L.build_load tag_elem_ptr "tag_elem_load" receive_builder) |] "print_test" receive_builder in
                 ())
                 ptag
-              in ()) ocaml_ptags
-            in (receive_builder, env)
+              in let _ = L.build_call printf_func [| L.build_global_stringptr "\n" "fmt" receive_builder; (L.const_int i32_t 0) |] "newline" receive_builder in ()) ocaml_ptags in
+
 
             (* Pop the message off the queue *)
-            (* let _ = L.build_call pthread_mutex_lock_func [| self_mutex |] "mutex_lock" receive_builder in
-            let data_ptr = L.build_call queue_pop_func [| receive_queue |] "queue_pop" receive_builder in
-            let _ = L.build_call pthread_mutex_unlock_func [| self_mutex |] "mutex_unlock" receive_builder in
+            (* let _ = L.build_call pthread_mutex_lock_func [| self_mutex |] "mutex_lock" receive_builder in *)
+            let message_data_ptr = L.build_call queue_pop_func [| receive_queue |] "queue_pop" receive_builder in
+            (* let _ = L.build_call pthread_mutex_unlock_func [| self_mutex |] "mutex_unlock" receive_builder in *)
 
             (* Find the case to jump to *)
 
             (* Stores the index of the first case case that matched *)
             let case_index = L.build_alloca i32_t "index" receive_builder in
             let _ = L.build_store (L.const_int i32_t (-1)) case_index receive_builder in
+
             (* “Find case” block finds the right index to switch on *)
-            let find_case_bb = L.append_block context "find_case_bb" the_thread in
-            let find_case_builder = L.builder_at_end context find_case_bb in
             (* Increment the index to start examining the next case *)
             let old_index_loaded = L.build_load case_index "index_load" find_case_builder in
             let case_index_increment = L.build_add old_index_loaded (L.const_int i32_t 1) "index_increment" find_case_builder in
             let _ = L.build_store case_index_increment case_index find_case_builder in
             let index_loaded = L.build_load case_index "index_load" find_case_builder in
+            (* [debug] Print the index of the receive case we’re examining *)
+            let _ = L.build_call printf_func [| L.build_global_stringptr "trying pattern #%d\n" "fmt" builder; index_loaded |] "print_test" find_case_builder in
             (* Set up everything we need to pass to tag_compare_func *)
-            let tag_ptr = L.build_in_bounds_gep data_ptr [| index_loaded |] "tag_ptr" find_case_builder in
-            let tag_index_ptr = L.build_alloca i32_t "tag_index_ptr" find_case_builder in
-            let _ = L.build_store (L.const_int i32_t 0) tag_index_ptr find_case_builder in
-            let length_ptr = L.build_in_bounds_gep lengths_alloca [| index_loaded |] "length" find_case_builder in
-            let length = L.build_load length_ptr "length_load" find_case_builder in
-            let tag_cast = L.build_bitcast tag_ptr (L.pointer_type i32_t) "tag_cast" find_case_builder in
+            let case_tag_ptr = L.build_in_bounds_gep ptags_alloca [| index_loaded |] "tag_ptr" find_case_builder in
+            let case_tag = L.build_load case_tag_ptr "tag_load" find_case_builder in
+            let case_tag_index_alloca = L.build_alloca i32_t "tag_index_ptr" find_case_builder in
+            let _ = L.build_store (L.const_int i32_t 0) case_tag_index_alloca find_case_builder in
+            let case_tag_length_ptr = L.build_in_bounds_gep lengths_alloca [| index_loaded |] "length" find_case_builder in
+            let case_tag_length = L.build_load case_tag_length_ptr "length_load" find_case_builder in
+            (* let tag_cast = L.build_bitcast tag_ptr (L.pointer_type i32_t) "tag_cast" find_case_builder in *)
             (* Did this case match? *)
-            let case_matched = L.build_call tag_compare_func [| tag_cast; tag_index_ptr; length; data_ptr |] "tag_comparison" find_case_builder in
+            let case_matched = L.build_call tag_compare_func [| case_tag; case_tag_index_alloca; case_tag_length; message_data_ptr |] "tag_comparison" find_case_builder in
+            let _ = L.build_call printf_func [| L.build_global_stringptr "did the pattern match? %d\n" "fmt" builder; case_matched |] "print_test" find_case_builder in
             (* If it did, jump to the switch_bb. If not, we go back to find_case_bb to check the next case. *)
             let _ = L.build_cond_br case_matched switch_bb find_case_bb find_case_builder in
             (* go into the find_case_bb *)
             let _ = L.build_br find_case_bb receive_builder in
 
+            let _ = L.build_call printf_func [| L.build_global_stringptr "made it out of pattern matching; selected pattern %d\n" "fmt" switch_builder; L.build_load case_index "index_load" switch_builder |] "print_test" switch_builder in
+            (switch_builder, env)
+
             (* Switch block directs the program to the proper case once the matching case_index has been identified *)
-            let index_loaded = L.build_load case_index "index_load" switch_builder in
+            (*let index_loaded = L.build_load case_index "index_load" switch_builder in
             let default_bb = L.append_block context "default" the_thread in
             let default_builder  = L.builder_at_end context default_bb in
             let _ = L.build_call printf_func [| int_format_str; (L.const_int i32_t (-1)) |] "print_test" default_builder in
