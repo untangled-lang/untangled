@@ -15,17 +15,35 @@ thread_def child {
 //  }
 
   receive {
-    float x -> {print(string_of_float(x));}
+    ((string x, int z), int y) -> {print("This is a string and an integer, and an integer");}
+    float x -> {print("This is a float");}
+    int x -> {print("This is an integer");}
     _ -> {
-      print("This is not a float");
-    }
+        print("This is not matched");
+      }
+  }
+  receive {
+    ((string x, int z), int y) -> {print("This is a string and an integer, and an integer");}
+    float x -> {print("This is a float");}
+    int x -> {print("This is an integer");}
+    _ -> {
+        print("This is not matched");
+      }
+  }
+  receive {
+    ((string x, int z), int y) -> {print("This is a string and an integer, and an integer");}
+    float x -> {print("This is a float");}
+    int x -> {print("This is an integer");}
+    _ -> {
+        print("This is not matched");
+      }
   }
 }
 
 thread_def Main {
   thread t = spawn child;
-  // t << 1000;
-  // t << 2000;
-  // t << 3000;
-  t << 3;
+  t << 1000;
+  t << (("2000", 5), 2);
+  t << 30.12;
+  // t << "asgd";
 }
