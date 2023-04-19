@@ -478,8 +478,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   in let string_equiv_func =
     let string_equiv_func = L.function_type i1_t [| pointer_t; pointer_t |] in
     let string_equiv_func = L.define_function "string_equiv" string_equiv_func the_module in
-    let x = L.param string_equiv_func 0 and
-        y = L.param string_equiv_func 1 in
+    (* let x = L.param string_equiv_func 0 and
+        y = L.param string_equiv_func 1 in *)
+    let [| x; y |] = L.params string_equiv_func in
     let builder = L.builder_at_end context (L.entry_block string_equiv_func) in
     let counter = L.build_alloca i32_t "counter" builder in
     let _ = L.build_store (L.const_int i32_t 0) counter builder in
@@ -516,8 +517,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let _ = L.build_ret (L.const_int i1_t 1) true_builder in
     string_equiv_func
 
-
-
   (* Build instructions to concatenate two strings. Matches call signature of functions like L.build_add *)
   in let build_strcat x y name builder =
     let xlength = L.build_call strlen_func [| x |] "strlen_x" builder and
@@ -535,6 +534,24 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     (* Call strcat for y *)
     L.build_call strcat_func [| new_string; y |] name builder in
 
+  let tag_compare_func =
+    let tag_compare_t = L.function_type i1_t [| L.pointer_type i32_t; L.pointer_type i32_t; data_ptr |] in
+    let tag_compare_func = L.define_function "tag_compare" tag_compare_t the_module in
+
+    let [| tag_ptr; index_ptr; data_t_ptr |] = L.params tag_compare_func in
+    let builder = L.builder_at_end context (L.entry_block tag_compare_func) in
+    let index_load = L.build_load index_ptr "index_load" builder in
+    let tag_val = L.build_in_bounds_gep tag_ptr [| index_load |] "tag_val" builder in
+
+    let { tag = data_tag_ptr; head = head_ptr; tail = tail_ptr } = build_data_gep data_t_ptr builder in
+    let data_tag_val = L.build_load data_tag_ptr "data_tag_val" builder in
+
+    let _ = L.build_cond_br 
+
+    let _ = L.build_ret (L.const_int i1_t 0) builder in
+    () 
+  in
+  
   let function_decls : (L.llvalue * sfunc_decl) StringMap.t =
     let function_decl m fdecl =
       let name = fdecl.sfname
@@ -864,8 +881,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
           let value = L.build_load value_alloca "value_load" builder in
           let cast = L.build_inttoptr value pointer_t "value_cast" builder in
           let _ = L.build_store cast head_ptr builder in
-          let _ = L.build_call queue_push_func [| parent_pool; data |] "" builder in *)
-          (* let data_malloc = L.build_malloc data_t "data_malloc" builder and
+          let _ = L.build_call queue_push_func [| parent_pool; data |] "" builder in
+          let data_malloc = L.build_malloc data_t "data_malloc" builder and
               data_alloca = L.build_alloca data_ptr "data_alloca" builder and
               value_alloca = L.build_alloca i32_t "value_alloca" builder in
           let _ = L.build_store data_malloc data_alloca builder in
@@ -876,14 +893,14 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
           let value = L.build_inttoptr value pointer_t "cast" builder in
           let data_ptr = L.build_in_bounds_gep data [| gep_index 0; gep_index 1 |] "gep_data" builder in
           let _ = L.build_store value data_ptr builder in
-          let _ = L.build_call queue_push_func [| parent_pool; data |] "" builder in *)
+          let _ = L.build_call queue_push_func [| parent_pool; data |] "" builder in
 
-          (* let value = L.build_load data_ptr "data_load" builder in
+          let value = L.build_load data_ptr "data_load" builder in
           let value = L.build_ptrtoint value i32_t "value" builder in
-          let _ = L.build_call printf_func [| int_format_str; value |] "print_test" builder in *)
+          let _ = L.build_call printf_func [| int_format_str; value |] "print_test" builder in
 
-          (* (builder, env) *)
-        | SReceive receive_cases ->
+          (builder, env) *)
+        | SReceive receive_cases -> raise (Failure "chill")
           (*
            * Build basic blocks for each pattern statement
            * For each pattern, besides the wcard, create an array of tag values
@@ -891,9 +908,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
            * Loop through each array, compare data_t with the array pattern
            * If match, jump to that array basic block
            * Otherwise, jump to the wildcard basic block
-           *)
-
-          let { child_queue = self_queue_ptr; _ } = (match arg_gep with
+          (* Start uncomment here *)
+          (* let { child_queue = self_queue_ptr; _ } = (match arg_gep with
               Some queue -> queue
             | None -> raise (Failure "Cannot receive message inside a function")) in
           (* let self_queue_alloca = L.build_alloca queue_ptr "self_queue_alloca" builder in *)
@@ -940,7 +956,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let tags_alloca = L.build_array_alloca i32_t (L.const_int i32_t (List.length ocaml_tags)) "tags_alloca" builder in
             let _ = List.iteri (fun index value ->
               let index = L.const_int i32_t index in
-              let lltag = L.const_int 32_t value in
+              let lltag = L.const_int i32_t value in
               let tags_index_ptr = L.build_in_bounds_gep tags_alloca [| index |] "gep_tag_index" builder
               in ignore (L.build_store lltag tags_index_ptr builder)) ocaml_tags in
             let arr_tags_ptr = L.build_in_bounds_gep tags_alloca [| L.const_int i32_t index |] "gep_tag_index" builder in
@@ -969,7 +985,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                 let default_bb = L.append_block context "wildcard" the_thread in
                 let default_builder = L.builder_at_end context default_bb in
                 let (new_builder, _) = stmt (default_builder, env) sstmt in
-                let _ = L.build_br post_receive_bb new_builder in default_bb
+                let _ = L.build_br post_receive_bb new_builder in default_bb *) *)
+                (* end uncomment here *)
           (* let wildcard = List.find (fun (pattern, _) -> pattern = WildcardPattern) receive_cases in *)
 
 
