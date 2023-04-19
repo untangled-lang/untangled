@@ -49,7 +49,7 @@ let check (tdecls, fdecls) =
     in List.fold_left add_bind StringMap.empty
        [("print", String, Void);
         ("string_of_int", Int, String);
-        ("string_of_float", Float, String)
+        ("string_of_float", Float, String);
         ("string_of_bool", Bool, String)]
   in
   let add_func map fd =

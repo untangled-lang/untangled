@@ -1,0 +1,10 @@
+thread_def Main {
+  int x = 6872;
+  float y = 152.18273;
+  bool z = true;
+  print(string_of_bool(z));
+  z = false;
+  print(string_of_bool(z));
+  print(string_of_float(y));
+  print(string_of_int(x));
+}

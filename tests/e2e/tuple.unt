@@ -1,0 +1,10 @@
+thread_def Child {
+  receive {
+    _ -> {print("received a message");}
+  }
+}
+
+thread_def Main {
+  thread t = spawn Child;
+  t << (1, "hello");
+}

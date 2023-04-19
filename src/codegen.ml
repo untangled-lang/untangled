@@ -70,7 +70,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | A.Float -> (L.const_int i32_t 1)
         | A.String -> (L.const_int i32_t 2)
         | A.Bool -> (L.const_int i32_t 3)
-        | _ -> raise (Failure "Implement composite tag")
+        | A.Tuple _ -> L.const_int i32_t 4
+        | _ -> raise (Failure " site tag")
   and lltype_of_typ = function
           A.Int   -> i32_t
         | A.Bool  -> i1_t
@@ -83,7 +84,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     | A.Float -> L.build_bitcast llvalue pointer_t "float_to_ptr" builder
     | A.String -> L.build_bitcast llvalue pointer_t "string_to_ptr" builder
     | A.Bool -> L.build_bitcast llvalue pointer_t "bool_to_ptr" builder
-    | _ -> raise (Failure "Implement composite tag")
+    | A.Tuple _ -> L.build_bitcast llvalue pointer_t "tuple_to_ptr" builder
+    | _ -> raise (Failure "implement array")
   and cast_ptr_to_llvalue typ ptr builder = match typ with
       A.Int -> L.build_bitcast ptr (L.pointer_type i32_t) "int_to_ptr" builder
     | _ -> raise (Failure "Implement other conversion")
@@ -184,7 +186,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     L.declare_function "printf" printf_t the_module in
 
   let sprintf_t : L.lltype =
-    L.var_arg_function_type i32_t [| L.pointer_type i8_t, L.pointer_type i8_t |] in
+    L.var_arg_function_type i32_t [| pointer_t; pointer_t |] in
   let sprintf_func : L.llvalue =
     L.declare_function "sprintf" sprintf_t the_module in
 
@@ -205,7 +207,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
       | None -> ignore (instr builder)
 
   (* Message queue implementation *)
-
   (*
    * Initialize a queue on the heap and return a pointer to it
    *
@@ -440,6 +441,22 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let _ = L.build_store new_size size_ptr pop_builder in
     let _ = add_terminal pop_builder (L.build_ret data) in queue_pop_func
 
+  in let string_of_bool_func =
+    let string_of_bool_t = L.function_type pointer_t [| i1_t |] in
+    let string_of_bool_func = L.define_function "string_of_bool" string_of_bool_t the_module in
+    let argument = L.param string_of_bool_func 0 in
+    let true_bb = L.append_block context "true_bb" string_of_bool_func and
+        false_bb = L.append_block context "false_bb" string_of_bool_func in
+    let builder = L.builder_at_end context (L.entry_block string_of_bool_func) and
+        true_builder = L.builder_at_end context true_bb and
+        false_builder = L.builder_at_end context false_bb in
+    let true_value = L.build_global_stringptr "true" "#t" builder and
+        false_value = L.build_global_stringptr "false" "#f" builder in
+    let _ = L.build_cond_br argument true_bb false_bb builder in
+    let _ = add_terminal true_builder (L.build_ret true_value) and
+        _ =  add_terminal false_builder (L.build_ret false_value) in string_of_bool_func
+
+
   (* Build instructions to concatenate two strings. Matches call signature of functions like L.build_add *)
   in let build_strcat x y name builder =
     let xlength = L.build_call strlen_func [| x |] "strlen_x" builder and
@@ -484,54 +501,91 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
   let build_body ?(arg_gep : arg_gep option) (builder, env) sstmt the_thread =
     let string_format_str = L.build_global_stringptr "%s" "fmt" builder in
-    let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in
-    let float_format_str = L.build_global_stringptr "%f\n" "fmt" builder in
+    let int_format_str = L.build_global_stringptr "%d" "fmt" builder in
+    let float_format_str = L.build_global_stringptr "%f" "fmt" builder in
     let pthread_ts = ref [] in
 
-    let rec expr ((builder: L.llbuilder), env) ((_, sexpr : sexpr)) =
+    let rec expr ((builder: L.llbuilder), env) ((typ, sexpr : sexpr)) =
       match sexpr with
         | SIntLit i -> (L.const_int i32_t i, env)
         | SStringLit s -> (L.build_global_stringptr s "tmp" builder, env)
         | SBoolLit b -> (L.const_int i1_t (if b then 1 else 0), env)
         | SFloatLit l -> (L.const_float_of_string float_t l, env)
-        | STupleLit (sexpr1, sexpr2) -> raise (Failure "tuple not implemented")
+        | (STupleLit _) as sexpr  ->
+            let rec build_tuple ptr builder (sexpr : sexpr) =
+              let { tag = tag_ptr; head = head_ptr; tail = tail_ptr } = build_data_gep ptr builder in
+                match sexpr with
+                  (ty, STupleLit (fst, snd)) ->
+                    let tag_value = tag_of_type ty in
+                    let head_malloc = L.build_malloc data_t "head_malloc" builder and
+                        head_alloca = L.build_alloca data_ptr "head_alloca" builder and
+                        tail_malloc = L.build_malloc data_t "head_malloc" builder and
+                        tail_alloca = L.build_alloca data_ptr "head_alloca" builder in
+
+                    let _ = L.build_store head_malloc head_alloca builder and
+                        _ = L.build_store tail_malloc tail_alloca builder and
+                        _ = L.build_store tag_value tag_ptr builder in
+
+                    let head_load = L.build_load head_alloca "head_load" builder in
+                    let tail_load = L.build_load tail_alloca "tail_load" builder in
+                    let head_cast = cast_llvalue_to_ptr ty head_load builder in
+                    let tail_cast = cast_llvalue_to_ptr ty tail_load builder in
+                    let _ = L.build_store head_cast head_ptr builder in
+                    let _ = L.build_store tail_cast tail_ptr builder in
+                    let _ = build_tuple head_load builder fst in
+                    let _ = build_tuple tail_load builder snd in
+                    ()
+                | (ty, _) ->
+                  let tag_value = tag_of_type ty in
+                  let head_malloc = L.build_malloc (lltype_of_typ ty) "head_malloc" builder and
+                      head_alloca = L.build_alloca (L.pointer_type (lltype_of_typ ty)) "head_alloca" builder in
+                  let (llvalue, _) = expr (builder, env) sexpr in
+                  let _ = L.build_store tag_value tag_ptr builder in
+                  let _ = L.build_store llvalue head_malloc builder in
+                  let _ = L.build_store head_malloc head_alloca builder in
+                  let head_load = L.build_load head_alloca "head_load" builder in
+                  let head_cast = cast_llvalue_to_ptr ty head_load builder in
+                  let _ = L.build_store head_cast head_ptr builder in ()
+            in
+            let data_malloc = L.build_malloc data_t "data_malloc" builder in
+            let data_alloca = L.build_alloca data_ptr "data_alloca" builder in
+            let _ = L.build_store data_malloc data_alloca builder in
+            let data = L.build_load data_alloca "data_load" builder in
+            let _ = build_tuple data builder (typ, sexpr) in (data, env)
         | SArrayLit sexpr_list -> raise (Failure "array not implemented")
         | SNoexpr -> (L.const_int i32_t 0, env)
         | SId s -> (L.build_load (StringMap.find s env) s builder, env)
         | SCall ("print", [sexpr]) ->
-            let (typ, _) = sexpr in
             let (llvalue, env') =  expr (builder, env) sexpr in
-            in (L.build_call printf_func [| string_format_str; llvalue |] "printf" builder, env')
+            (L.build_call printf_func [| string_format_str; llvalue |] "printf" builder, env')
         | SCall ("string_of_bool", [sexpr]) ->
-            let true_bb = L.append_block context "true_bb" the_thread and
-                false_bb = L.append_block context "false_bb" the_thread in
-            let true_builder = L.builder_at_end context true_bb and
-                false_builder = L.builder_at_end context false_bb in
-          
             let (llvalue, env') = expr (builder, env) sexpr in
-            let true_value = L.build_global_stringptr "#t" "#t" builder and
-                false_value = L.build_global_stringptr "#f" "#f" builder in
-            let _ = L.build_cond_br llvalue true_builder false_builder
-
-            let _ = L.build_
-        | SCall ("string_of_int", [sexpr]) -> 
-            let (typ, _) = sexpr in
-            let (llvalue, env') =  expr (builder, env) sexpr in
-            in (L.build_call printf_func [| string_format_str; llvalue |] "printf" builder, env')
+            (L.build_call string_of_bool_func [| llvalue |] "string_of_bool" builder, env')
+        | SCall ("string_of_int", [sexpr]) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+            let buf_malloc = L.build_array_malloc i8_t (L.const_int i32_t 10) "buf_malloc" builder in
+            let buf_alloca = L.build_alloca (L.pointer_type i8_t) "buf_alloca" builder in
+            let _ = L.build_store buf_malloc buf_alloca builder in
+            let buf = L.build_load buf_alloca "buf_load" builder in
+            let _ = (L.build_call sprintf_func [| buf ; int_format_str; llvalue |]
+                                                "string_of_int" builder)
+            in (buf, env')
         | SCall ("string_of_float", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
-              (match L.float_of_const llvalue with
-                Some v -> (L.build_global_stringptr (string_of_float v) "tmp" builder, env')
-                | None -> 
-                  let buf = 
-                   L.build_call sprintf_func [| ; float_format_str;  |]
+            let buf_malloc = L.build_array_malloc i8_t (L.const_int i32_t 10) "buf_malloc" builder in
+            let buf_alloca = L.build_alloca (L.pointer_type i8_t) "buf_alloca" builder in
+            let _ = L.build_store buf_malloc buf_alloca builder in
+            let buf = L.build_load buf_alloca "buf_load" builder in
+            let _ = (L.build_call sprintf_func [| buf ; float_format_str; llvalue |]
+                                                "string_of_float" builder)
+            in (buf, env')
         | SCall (func_name, arg_list) ->
-          let (fdef, fdecl) = StringMap.find func_name function_decls in
-          let llargs = List.map (fun e -> let (llvalue, _) = expr (builder, env) e in llvalue) arg_list in
-          let result = (match fdecl.sret_type with
-            A.Void -> ""
-            | _ -> func_name ^ "_result") in
-          (L.build_call fdef (Array.of_list llargs) result builder, env)
+            let (fdef, fdecl) = StringMap.find func_name function_decls in
+            let llargs = List.map (fun e -> let (llvalue, _) = expr (builder, env) e in llvalue) arg_list in
+            let result = (match fdecl.sret_type with
+              A.Void -> ""
+              | _ -> func_name ^ "_result") in
+            (L.build_call fdef (Array.of_list llargs) result builder, env)
         | SBinop (e1, op, e2) ->
             let (t1, _) = e1 in
             let (e1', env') = expr (builder, env) e1 in
@@ -621,6 +675,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let _ = L.build_store value_to_assign storage builder in
             (value_to_assign, env')
         | SAssignIndex (var_name, index, value) -> raise (Failure "Implement SAssignIndex")
+        | _ -> raise (Failure "TODO")
     and stmt ((builder: L.llbuilder), env) sstmt =
       match sstmt with
           SBlock sblock ->
@@ -639,10 +694,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               | Bool -> i1_t
               | Int -> i32_t
               | Float -> float_t
-              | String -> L.pointer_type i8_t
+              | String -> pointer_t
               | Thread -> queue_ptr
               | Semaphore -> void_t
-              | Tuple (t1, t2) -> raise (Failure "TODO tuple")
+              | Tuple (t1, t2) -> data_ptr
               | Array (arrayType, count) -> raise (Failure "TODO array")) var_name builder in
             let _ = L.build_store llvalue alloca builder in
             (builder, StringMap.add var_name alloca env2)
@@ -681,46 +736,52 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let receiver_queue = L.build_load receiver_queue_ptr "receiver_queue_load" builder in
             let (llvalue, env') = expr (builder, env) sexpr in
             (* @TODO - Change this code after we implement tuple *)
-            let data_alloca = L.build_alloca data_ptr "data_alloca" builder and
-                data_malloc = L.build_malloc data_t "data_malloc" builder and
-                head_alloca = L.build_alloca (L.pointer_type (lltype_of_typ typ)) "head_alloca" builder and
-                (* head_alloca = L.build_alloca (lltype_of_typ typ) "head_alloca" builder and *)
-                head_malloc = L.build_malloc (lltype_of_typ typ) "head_malloc" builder and
-                tail_alloca = L.build_alloca (L.pointer_type (lltype_of_typ typ)) "tail_alloca" builder and
-                tail_malloc = L.build_malloc (lltype_of_typ typ) "tail_malloc" builder in
+            (match typ with
+                A.Tuple _ ->
+                  (* let llvalue_cast = cast_llvalue_to_ptr typ llvalue builder in *)
+                  let _ = L.build_call queue_push_func [| receiver_queue; llvalue |] "" builder in
+                  (builder, env')
+              | A.Array _ -> raise (Failure "TODO Array send")
+              | _ ->
+                let data_alloca = L.build_alloca data_ptr "data_alloca" builder and
+                    data_malloc = L.build_malloc data_t "data_malloc" builder and
+                    head_alloca = L.build_alloca (L.pointer_type (lltype_of_typ typ)) "head_alloca" builder and
+                    (* head_alloca = L.build_alloca (lltype_of_typ typ) "head_alloca" builder and *)
+                    head_malloc = L.build_malloc (lltype_of_typ typ) "head_malloc" builder and
+                    tail_alloca = L.build_alloca (L.pointer_type (lltype_of_typ typ)) "tail_alloca" builder and
+                    tail_malloc = L.build_malloc (lltype_of_typ typ) "tail_malloc" builder in
 
-            let _ = L.build_store data_malloc data_alloca builder and
-                _ = L.build_store head_malloc head_alloca builder and
-                _ = L.build_store tail_malloc tail_alloca builder in
-                (* _ = L.build_store head_malloc head_alloca builder and
-                _ = L.build_store tail_malloc tail_alloca builder in *)
+                let _ = L.build_store data_malloc data_alloca builder and
+                    _ = L.build_store head_malloc head_alloca builder and
+                    _ = L.build_store tail_malloc tail_alloca builder in
+                    (* _ = L.build_store head_malloc head_alloca builder and
+                    _ = L.build_store tail_malloc tail_alloca builder in *)
 
-            let data = L.build_load data_alloca "data_load" builder in
-            let { tag = tag_ptr; head = head_ptr; tail = tail_ptr } =
-              build_data_gep data builder in
+                let data = L.build_load data_alloca "data_load" builder in
+                let { tag = tag_ptr; head = head_ptr; tail = tail_ptr } =
+                  build_data_gep data builder in
 
-            let tag_value = tag_of_type typ in
-            let _ = L.build_store llvalue head_malloc builder in
-            let _ = L.build_store (L.const_null (L.pointer_type (lltype_of_typ typ))) tail_alloca builder in
+                let tag_value = tag_of_type typ in
+                let _ = L.build_store llvalue head_malloc builder in
+                let _ = L.build_store (L.const_null (L.pointer_type (lltype_of_typ typ))) tail_alloca builder in
 
-            let _ = L.build_store tag_value tag_ptr builder in
-            let head_load = L.build_load head_alloca "head_load" builder in
-            let head_cast = cast_llvalue_to_ptr typ head_load builder in
-            let tail_load = L.build_load tail_alloca "tail_load" builder in
-            let tail_cast = cast_llvalue_to_ptr typ tail_load builder in
-            let _ = L.build_store head_cast head_ptr builder in
-            let _ = L.build_store tail_cast tail_ptr builder in
-            (* let head_cast = cast_llvalue_to_ptr typ head_malloc builder in
-            let tail_cast = cast_llvalue_to_ptr typ tail_malloc builder in
-            let tag_value = tag_of_type typ in
-            let _ = L.build_store tag_value tag_ptr builder in
-            let _ = L.build_store llvalue head_malloc builder in
-            let _ = L.build_store head_cast head_ptr builder in
-            let _ = L.build_store tail_cast tail_ptr builder in *)
+                let _ = L.build_store tag_value tag_ptr builder in
+                let head_load = L.build_load head_alloca "head_load" builder in
+                let head_cast = cast_llvalue_to_ptr typ head_load builder in
+                let tail_load = L.build_load tail_alloca "tail_load" builder in
+                let tail_cast = cast_llvalue_to_ptr typ tail_load builder in
+                let _ = L.build_store head_cast head_ptr builder in
+                let _ = L.build_store tail_cast tail_ptr builder in
+                (* let head_cast = cast_llvalue_to_ptr typ head_malloc builder in
+                let tail_cast = cast_llvalue_to_ptr typ tail_malloc builder in
+                let tag_value = tag_of_type typ in
+                let _ = L.build_store tag_value tag_ptr builder in
+                let _ = L.build_store llvalue head_malloc builder in
+                let _ = L.build_store head_cast head_ptr builder in
+                let _ = L.build_store tail_cast tail_ptr builder in *)
 
-            let _ = L.build_call queue_push_func [| receiver_queue; data |] "" builder in
-            (builder, env')
-
+                let _ = L.build_call queue_push_func [| receiver_queue; data |] "" builder in
+                (builder, env'))
         | SSendParent (message_expr) -> raise (Failure "todo")
           (* let parent_pool = (match parent_pool with
            | None -> raise (Failure "Cannot send message to parent thread pool from inside a function")
@@ -776,11 +837,13 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
           let pred_bb = L.append_block context "pred" the_thread and
               receive_bb = L.append_block context "receive" the_thread and
-              else_bb = L.append_block context "switch_end" the_thread in
+              post_bb = L.append_block context "post_receive" the_thread and
+              default_bb = L.append_block context "switch_end" the_thread in
 
           let pred_builder = L.builder_at_end context pred_bb and
               receive_builder = L.builder_at_end context receive_bb and
-              else_builder = L.builder_at_end context else_bb in
+              post_builder = L.builder_at_end context post_bb and
+              default_builder = L.builder_at_end context default_bb in
 
           (* Move the current builder to pred_bb *)
           let _ = L.build_br pred_bb builder in
@@ -807,40 +870,34 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
           (* let string_v = L.build_global_stringptr "debug" "test" builder in
           let _ = L.build_call printf_func [| string_format_str; string_v |] "printf" builder in *)
-          let switch = L.build_switch tag_value else_bb (List.length receive_cases) receive_builder in
-          (*
-           * Receive cases on primitives
-           *
-           * For each pattern, map type to case value
-           * Extract variable from data
-           * Build statement
-           *)
-          let build_case (pattern, sstmt) = match pattern with
-            SBasePattern (typ, id) ->
-              let tag_num = tag_of_type typ in
-              let case_bb = L.append_block context (A.string_of_typ typ) the_thread in
-              let case_builder = L.builder_at_end context case_bb in
-              let _ = L.add_case switch tag_num case_bb in
-              (* @TODO - Ask about width of floats + pointers / potentially overflow *)
-              let value_alloca = L.build_alloca (lltype_of_typ typ) "value_alloca" case_builder in
-              (* let value_ptr = cast_ptr_to_llvalue typ head_ptr case_builder in *)
-              let value_ptr = L.build_load head_ptr "value_ptr_load" case_builder in
-              let value_ptr = L.build_bitcast value_ptr (L.pointer_type (lltype_of_typ typ)) "value_ptr_cast" case_builder in
-              let value = L.build_load value_ptr "value_load" case_builder in
-              let _ = L.build_call printf_func [| float_format_str; value |] "printf_value" case_builder in
-              let _ = L.build_store value value_alloca case_builder in
-              let env' = StringMap.add id value_alloca env in
-              let (new_builder, _) = stmt (case_builder, env') sstmt in
-              let _ = L.build_br else_bb new_builder in ()
-            (* TODO - Add WildCard *)
-              | SWildcardPattern ->
-                  let case_bb = L.append_block context "wildcard" the_thread in
-                  let case_builder = L.builder_at_end context case_bb in 
-                  let (new_builder, _) = stmt (case_builder, env) sstmt in
-                  let _ = L.build_br else_bb new_builder in ()
-              | _ -> raise (Failure "Implement composite case") in
+          let switch = L.build_switch tag_value default_bb (List.length receive_cases) receive_builder in
 
-          let _ = List.iter build_case receive_cases in (else_builder, env)
+          let build_case (pattern, sstmt) = match pattern with
+              SBasePattern (typ, id) ->
+                let tag_num = tag_of_type typ in
+                let case_bb = L.append_block context (A.string_of_typ typ) the_thread in
+                let case_builder = L.builder_at_end context case_bb in
+                let _ = L.add_case switch tag_num case_bb in
+                (* @TODO - Ask about width of floats + pointers / potentially overflow *)
+                let value_alloca = L.build_alloca (lltype_of_typ typ) "value_alloca" case_builder in
+                let value_ptr = L.build_load head_ptr "value_ptr_load" case_builder in
+                let value_ptr = L.build_bitcast value_ptr (L.pointer_type (lltype_of_typ typ)) "value_ptr_cast" case_builder in
+                let value = L.build_load value_ptr "value_load" case_builder in
+                let _ = L.build_store value value_alloca case_builder in
+                let env' = StringMap.add id value_alloca env in
+                let (new_builder, _) = stmt (case_builder, env') sstmt in
+                let _ = L.build_br post_bb new_builder in ()
+            | SWildcardPattern ->
+              (* TODO, the fst is a data_t *)
+                let fst_ptr = L.build_load head_ptr "fst_ptr_load" default_builder in
+                let fst_ptr = L.build_bitcast fst_ptr (L.pointer_type i32_t) "fst_cast" default_builder in
+                let fst = L.build_load fst_ptr "fst_load" default_builder in
+                let _ = L.build_call printf_func [| int_format_str; fst |] "printf_value" default_builder in
+                let (new_builder, _) = stmt (default_builder, env) sstmt in
+                let _ = L.build_br post_bb new_builder in ()
+            | _ -> raise (Failure "Implement composite case") in
+
+          let _ = List.iter build_case receive_cases in (post_builder, env)
     in
     let (builder, env') = stmt (builder, env) sstmt in
     let join pthread =
