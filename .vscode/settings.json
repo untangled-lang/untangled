@@ -14,8 +14,7 @@
 
   "mdx.experimentalLanguageServer": true,
   "ocaml.sandbox": {
-    "kind": "opam",
-    "switch": "default"
+    "kind": "global"
   },
   "files.insertFinalNewline": true,
 }

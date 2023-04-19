@@ -478,9 +478,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   in let string_equiv_func =
     let string_equiv_func = L.function_type i1_t [| pointer_t; pointer_t |] in
     let string_equiv_func = L.define_function "string_equiv" string_equiv_func the_module in
-    (* let x = L.param string_equiv_func 0 and
-        y = L.param string_equiv_func 1 in *)
-    let [| x; y |] = L.params string_equiv_func in
+
+    let x = L.param string_equiv_func 0 and
+        y = L.param string_equiv_func 1 in
+
     let builder = L.builder_at_end context (L.entry_block string_equiv_func) in
     let counter = L.build_alloca i32_t "counter" builder in
     let _ = L.build_store (L.const_int i32_t 0) counter builder in
@@ -534,24 +535,104 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     (* Call strcat for y *)
     L.build_call strcat_func [| new_string; y |] name builder in
 
+  (*
+   * Receive cases each get a “tag” which corresponds to a (tuple-nested) Untangled type
+     * Each primitive type has an integer code (see tag_of_type near the top of this file)
+       * 0 -> int
+       * 1 -> float
+       * 2 -> string
+       * 3 -> bool
+       * 4 -> tuple - the following two “items” in the tag refer to the fst/snd of the tuple
+       * 5 -> array - the following item in the tag refers to the element type of the array
+       * 6 -> wildcard
+     * For example, a tuple like (bool, float) would be [2, 3, 1]
+                and an array like [(int, (string, bool))] would be [5, 4, 0, 4, 2, 3]
+                and an array like [((int, string), bool)] would be [5, 4, 4, 0, 2, 3]
+     * A tag encodes the structure of a tuple-nested Untangled type in depth-first order
+   * This is a function that you can jump to using L.build_call, which takes four arguments:
+     * 1. The tag to compare against
+     * 2. An “index” specifying the index of the tag we’re examining
+     * 3. The total length of the tag (an integer)
+     * 4. The Untangled data structure that we’re inspecting against the tag
+   * This function eventually returns true if the tag matches the Untangled data structure, and false otherwise.
+  *)
   let tag_compare_func =
-    let tag_compare_t = L.function_type i1_t [| L.pointer_type i32_t; L.pointer_type i32_t; data_ptr |] in
+    (* Declare the function *)
+    let tag_compare_t = L.function_type i1_t [| L.pointer_type i32_t; L.pointer_type i32_t; i32_t; data_ptr |] in
     let tag_compare_func = L.define_function "tag_compare" tag_compare_t the_module in
 
-    let [| tag_ptr; index_ptr; data_t_ptr |] = L.params tag_compare_func in
+    (* Unpack the parameters we’re passed *)
+    let tag_ptr = L.param tag_compare_func 0 in
+    let index_ptr = L.param tag_compare_func 1 in
+    let length = L.param tag_compare_func 2 in
+    let data_t_ptr = L.param tag_compare_func 3 in
     let builder = L.builder_at_end context (L.entry_block tag_compare_func) in
-    let index_load = L.build_load index_ptr "index_load" builder in
-    let tag_val = L.build_in_bounds_gep tag_ptr [| index_load |] "tag_val" builder in
-
+    let index_loaded = L.build_load index_ptr "index_load" builder in
     let { tag = data_tag_ptr; head = head_ptr; tail = tail_ptr } = build_data_gep data_t_ptr builder in
+    (* Get the integer tag of the first item in the “data” we’re examining *)
     let data_tag_val = L.build_load data_tag_ptr "data_tag_val" builder in
 
-    let _ = L.build_cond_br 
+    (* Returns false. We jump here whenever we find out that a tag definitely *doesn’t* match. *)
+    let false_bb = L.append_block context "false_bb" tag_compare_func in
+    let false_builder = L.builder_at_end context false_bb in
+    let _ = L.build_ret (L.const_int i1_t 0) false_builder in
 
-    let _ = L.build_ret (L.const_int i1_t 0) builder in
-    () 
+    (* Returns true. We jump here whenever we find out that a tag definitely *does* match. *)
+    let true_bb = L.append_block context "true_bb" tag_compare_func in
+    let true_builder = L.builder_at_end context true_bb in
+    let _ = L.build_ret (L.const_int i1_t 1) true_builder in
+
+    (* Other blocks we will fill and use below *)
+    let wcard_bb = L.append_block context "wcard_bb" tag_compare_func in
+    let wcard_builder = L.builder_at_end context wcard_bb in
+    let equiv_bb = L.append_block context "equiv_bb" tag_compare_func in
+    let equiv_builder = L.builder_at_end context equiv_bb in
+    let recurse_bb = L.append_block context "recurse_bb" tag_compare_func in
+    let recurse_builder = L.builder_at_end context recurse_bb in
+    let base_bb = L.append_block context "base_bb" tag_compare_func in
+    let base_builder = L.builder_at_end context base_bb in
+    let check_base_bb = L.append_block context "check_base_bb" tag_compare_func in
+    let check_base_builder = L.builder_at_end context check_base_bb in
+
+    (* 1. Check that the index is in bounds. If it’s not, return false. *)
+    let oob = L.build_icmp L.Icmp.Eq index_loaded length "index_comparison" builder in
+    let _ = L.build_cond_br oob false_bb wcard_bb builder in
+    (*
+     * Once we know the index is in bounds, it’s safe to unpack the value from the tag.
+     * We won’t load the tag again, so this is a safe place to increment the index (we know that the
+     * next recursive step, if any, will want to examine the next value of the tag). *)
+    let array_tag_ptr = L.build_in_bounds_gep tag_ptr [| index_loaded |] "gep_array_tag" wcard_builder in
+    let tag_val = L.build_load array_tag_ptr "array_tag_load" wcard_builder in
+    let _ = L.build_add (L.const_int i32_t 1) index_loaded "increment_index" wcard_builder in
+    let _ = L.build_store index_loaded index_ptr wcard_builder in
+
+    (* 2. Check if the tag contains a wildcard at this position. If it does, return true. *)
+    let wcard_pred = L.build_icmp L.Icmp.Eq tag_val (L.const_int i32_t 6) "wildcard_pred" wcard_builder in
+    let _ = L.build_cond_br wcard_pred true_bb equiv_bb wcard_builder in
+
+    (* 3. Make sure this next value in the tag array—if it’s not a wildcard—matches the tag on the data. If it doesn’t, return false. *)
+    let equiv_pred = L.build_icmp L.Icmp.Eq tag_val data_tag_val "equiv_pred" equiv_builder in
+    let _ = L.build_cond_br equiv_pred check_base_bb false_bb equiv_builder in
+
+    (* 4. If the type is a tuple, recurse to check both the head and the tail *)
+    let is_tuple = L.build_icmp L.Icmp.Eq data_tag_val (L.const_int i32_t 4) "pred" check_base_builder in
+    let _ = L.build_cond_br is_tuple recurse_bb true_bb check_base_builder in
+
+    let head_load = L.build_load head_ptr "head_load" recurse_builder in
+    let head_cast = L.build_bitcast head_load data_ptr "head_cast" recurse_builder in
+    let tail_load =  L.build_load tail_ptr "tail_load" recurse_builder in
+    let tail_cast = L.build_bitcast tail_load data_ptr "tail_cast" recurse_builder in
+    let head_matches = L.build_call tag_compare_func [| tag_ptr; index_ptr; length; head_cast |] "head_compare" recurse_builder in
+    let tail_matches = L.build_call tag_compare_func [| tag_ptr; index_ptr; length; tail_cast |] "tail_compare" recurse_builder in
+    let both_match = L.build_and head_matches tail_matches "anded_compare" recurse_builder in
+    let _ = L.build_ret both_match recurse_builder in
+
+    (* 5. If all those checked passed, return true. *)
+    let _ = L.build_br true_bb base_builder in
+
+    tag_compare_func
   in
-  
+
   let function_decls : (L.llvalue * sfunc_decl) StringMap.t =
     let function_decl m fdecl =
       let name = fdecl.sfname
@@ -900,14 +981,69 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
           let _ = L.build_call printf_func [| int_format_str; value |] "print_test" builder in
 
           (builder, env) *)
-        | SReceive receive_cases -> raise (Failure "chill")
+        | SReceive receive_cases ->
+            (* Predicate block checks whether the queue is empty; used in the spin lock to wait for a message *)
+            let pred_bb = L.append_block context "pred_bb" the_thread in
+            let pred_builder = L.builder_at_end context pred_bb in
+            (* Receive block is where we match each pattern against the data, to find which case we
+             * need to jump to *)
+            let receive_bb = L.append_block context "receive_bb" the_thread in
+            let receive_builder = L.builder_at_end context receive_bb in
+            (* Switch block does the switching to direct the program to the right case *)
+            (* let switch_bb = L.append_block context "switch_bb" the_thread in
+            let switch_builder = L.builder_at_end context switch_bb in *)
+            (* End block directs to code after the receive block *)
+            (* let end_bb = L.append_block context "end" the_thread in
+            let end_builder = L.builder_at_end context end_bb in *)
+
+            let { child_queue = receive_queue; _} = (match arg_gep with
+                Some gep -> gep
+              | None -> raise (Failure "TODO"))
+            in
+
+            (* First, busy wait for queue to be non-empty *)
+            let queue = L.build_load receive_queue "queue_load" builder in
+            let _ = L.build_br pred_bb builder in
+            let pred = L.build_call queue_empty_func [| queue |] "pred" pred_builder in
+            let _ = L.build_cond_br pred pred_bb receive_bb pred_builder in
+
+            (* Generate the “tag array” for each of the cases in the receive block *)
+            let ocaml_ptags = List.map (fun (pattern, _) -> tag_pattern pattern) receive_cases in
+            let ptags_alloca = L.build_array_alloca (L.pointer_type i32_t)
+                                (L.const_int i32_t (List.length ocaml_ptags)) "ptags_alloca" receive_builder in
+            let ptags = L.build_load ptags_alloca "ptag_load" receive_builder in
+
+            (* Convert OCaml tag to its LLVM representation *)
+            (* For each tag in our list of receieve cases... *)
+            let _ = List.iteri (fun i ptag ->
+              (* Pointer to this slot in our array of tags, which will hold an array of integers *)
+              let ptag_ptr = L.build_in_bounds_gep ptags [| L.const_int i32_t i |] "ptags_gep" receive_builder in
+              (* Create the array of integers to be the tag *)
+              let ptag_alloca = L.build_array_alloca i32_t (L.const_int i32_t (List.length ptag)) "ptag_alloca" receive_builder in
+              let ptag_load = L.build_load ptag_alloca "ptag_load" receive_builder in
+              let _ = L.build_store ptag_alloca ptag_ptr receive_builder
+              (* let _ = List.iteri (fun j elem ->
+                let ptr = L.build_in_bounds_gep ptag_load [| L.const_int i32_t j |] "ptr_gep" receive_builder in
+                let _ = L.build_store (L.const_int i32_t elem) ptr receive_builder in ()
+                (* double check the arguments passed in below *)) ptag *)
+              in ()) ocaml_ptags
+            in
+
+            (* @TODO - Mutex lock *)
+            (* let data = L.build_call queue_pop_func [| receive_queue |] "queue_pop" receive_builder in *)
+            (receive_builder, env)
+
+
+
+          (* let _ = L.build_call tag_compare_func [| tag_ptr; index_ptr; length; data_t_ptr |] "tag_comparison" receive_builder in *)
+
           (*
            * Build basic blocks for each pattern statement
            * For each pattern, besides the wcard, create an array of tag values
            * Store the array of tag values in an array of size n - 1
            * Loop through each array, compare data_t with the array pattern
            * If match, jump to that array basic block
-           * Otherwise, jump to the wildcard basic block
+           * Otherwise, jump to the wildcard basic block *)
           (* Start uncomment here *)
           (* let { child_queue = self_queue_ptr; _ } = (match arg_gep with
               Some queue -> queue
@@ -927,7 +1063,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
           let empty = L.build_call queue_empty_func [| self_queue |] "queue_empty" pred_builder in
           let _ = L.build_cond_br empty pred_bb receive_bb pred_builder in
 
-          let data_alloca = L.build_alloca data_ptr "data_alloca" receive_builder and
               tag_alloca = L.build_alloca i32_t "tag_alloca" receive_builder and
               head_alloca = L.build_alloca pointer_t "head_alloca" receive_builder and
               tail_alloca = L.build_alloca pointer_t "tail_alloca" receive_builder in
@@ -985,8 +1120,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                 let default_bb = L.append_block context "wildcard" the_thread in
                 let default_builder = L.builder_at_end context default_bb in
                 let (new_builder, _) = stmt (default_builder, env) sstmt in
-                let _ = L.build_br post_receive_bb new_builder in default_bb *) *)
-                (* end uncomment here *)
+                let _ = L.build_br post_receive_bb new_builder in default_bb in *)
           (* let wildcard = List.find (fun (pattern, _) -> pattern = WildcardPattern) receive_cases in *)
 
 
@@ -1024,7 +1158,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             | SWildcardPattern ->
             | _ -> raise (Failure "Implement composite case") in
 
-          let _ = List.iter build_case receive_cases in (post_builder, env) *)
+          let _ = List.iter build_case receive_cases in (post_builder, env)*)
     in
     let (builder, env') = stmt (builder, env) sstmt in
     let join pthread =

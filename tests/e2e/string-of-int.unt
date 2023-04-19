@@ -2,20 +2,22 @@ thread_def Main {
   int i = 213;
 
   string out = "";
+
   while (i > 0) {
-    int next_digit = i % 10;
+    int digit = i % 10;
     i /= 10;
 
-    if (next_digit == 0) out = "0" + out;
-    if (next_digit == 1) out = "1" + out;
-    if (next_digit == 2) out = "2" + out;
-    if (next_digit == 3) out = "3" + out;
-    if (next_digit == 4) out = "4" + out;
-    if (next_digit == 5) out = "5" + out;
-    if (next_digit == 6) out = "6" + out;
-    if (next_digit == 7) out = "7" + out;
-    if (next_digit == 8) out = "8" + out;
-    if (next_digit == 9) out = "9" + out;
+    if (digit == 0) out = "0" + out;
+    if (digit == 1) out = "1" + out;
+    if (digit == 2) out = "2" + out;
+    if (digit == 3) out = "3" + out;
+    if (digit == 4) out = "4" + out;
+    if (digit == 5) out = "5" + out;
+    if (digit == 6) out = "6" + out;
+    if (digit == 7) out = "7" + out;
+    if (digit == 8) out = "8" + out;
+    if (digit == 9) out = "9" + out;
   }
+
   print(out);
 }
