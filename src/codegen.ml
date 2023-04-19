@@ -65,24 +65,25 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let gep_index i = L.const_int i32_t i in
 
   (* Given a AST type, return a tag code *)
-  let rec tag_of_tuple = function
-      A.Tuple (ty1, ty2) -> "4" ^ (tag_of_tuple ty1) ^ (tag_of_tuple ty2)
-    | A.Int -> "0"
-    | A.Float -> "1"
-    | A.String -> "2"
-    | A.Bool -> "3"
-    | _ -> raise (Failure "unsupported type for tuple tag")
-  in
-  let tag_of_type ?(builder : L.llbuilder option) = function
+  let ocaml_tag = function
+        A.Int -> [0]
+      | A.Float -> [1]
+      | A.String -> [2]
+      | A.Bool -> [3]
+      | _ -> raise (Failure "array tag") in
+  let rec tag_pattern = function
+      | SBasePattern (typ, _) -> ocaml_tag typ
+      | STuplePattern (pattern1, pattern2) ->
+        let tag1 = tag_pattern pattern1 in
+        let tag2 = tag_pattern pattern2 in
+        4 :: (tag1 @ tag2)
+      | SWildcardPattern -> [6] in
+  let tag_of_type = function
           A.Int -> (L.const_int i32_t 0)
         | A.Float -> (L.const_int i32_t 1)
         | A.String -> (L.const_int i32_t 2)
         | A.Bool -> (L.const_int i32_t 3)
-        | A.Tuple _ as ty ->
-          let builder = (match builder with
-                            None -> raise (Failure "builder needed for making tuple tag")
-                          | Some b -> b) in
-          (L.build_global_stringptr (tag_of_tuple ty) "#t" builder)
+        | A.Tuple _ -> (L.const_int i32_t 4)
         | _ -> raise (Failure " site tag")
   and lltype_of_typ = function
           A.Int   -> i32_t
@@ -806,7 +807,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             (* @TODO - Change this code after we implement tuple *)
             (match typ with
                 A.Tuple _ ->
-                  (* let llvalue_cast = cast_llvalue_to_ptr typ llvalue builder in *)
                   let _ = L.build_call queue_push_func [| receiver_queue; llvalue |] "" builder in
                   (builder, env')
               | A.Array _ -> raise (Failure "TODO Array send")
@@ -885,25 +885,96 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
           (* (builder, env) *)
         | SReceive receive_cases ->
           (*
-           * Access receive queue
-           * While loop while queue is empty
-           * Pop from the queue
-           * Extract tag
-           * Build switch statement based on tag
+           * Build basic blocks for each pattern statement
+           * For each pattern, besides the wcard, create an array of tag values
+           * Store the array of tag values in an array of size n - 1
+           * Loop through each array, compare data_t with the array pattern
+           * If match, jump to that array basic block
+           * Otherwise, jump to the wildcard basic block
            *)
+
           let { child_queue = self_queue_ptr; _ } = (match arg_gep with
-            | None -> raise (Failure "Cannot receive message inside a function")
-            | Some arg_gep -> arg_gep ) in
-          (* let current_thread_pool = (match current_thread_pool with
-           | None -> raise (Failure "Cannot receive message from inside a function")
-           | Some thread_pool -> thread_pool) in *)
-
-          let self_queue_alloca = L.build_alloca queue_ptr "self_queue_alloca" builder in
+              Some queue -> queue
+            | None -> raise (Failure "Cannot receive message inside a function")) in
+          (* let self_queue_alloca = L.build_alloca queue_ptr "self_queue_alloca" builder in *)
           let self_queue = L.build_load self_queue_ptr "self_queue_load" builder in
-          let _ = L.build_store self_queue self_queue_alloca builder in
-          let self_queue = L.build_load self_queue_alloca "self_queue_load" builder in
+          (* let _ = L.build_store self_queue self_queue_alloca builder in
+          let self_queue = L.build_load self_queue_alloca "self_queue_load" builder in *)
 
-          let pred_bb = L.append_block context "pred" the_thread and
+          let pred_bb = L.append_block context "pred" the_thread in
+          let receive_bb = L.append_block context "receive" the_thread in
+          let pred_builder = L.builder_at_end context pred_bb in
+          let receive_builder = L.builder_at_end context receive_bb in
+
+          (* Jump to the predicate builder *)
+          let _ = L.build_br pred_bb pred_builder in
+          let empty = L.build_call queue_empty_func [| self_queue |] "queue_empty" pred_builder in
+          let _ = L.build_cond_br empty pred_bb receive_bb pred_builder in
+
+          let data_alloca = L.build_alloca data_ptr "data_alloca" receive_builder and
+              tag_alloca = L.build_alloca i32_t "tag_alloca" receive_builder and
+              head_alloca = L.build_alloca pointer_t "head_alloca" receive_builder and
+              tail_alloca = L.build_alloca pointer_t "tail_alloca" receive_builder in
+          let data_pop = L.build_call queue_pop_func [| self_queue |] "queue_pop" receive_builder in
+          let _ = L.build_store data_pop data_alloca receive_builder in
+
+          (* and
+              post_receive_bb = L.append_block context "post_receive" the_thread in
+
+          let pred_builder = L.builder_at_end context pred_bb and
+              post_receive_builder = L.builder_at_end context post_receive_bb in
+
+            | Some arg_gep -> arg_gep ) in
+          let array_tags_alloca =
+            L.build_array_alloca
+              (L.pointer_type i32_t)
+              (L.const_int i32_t (List.length receive_cases))
+              "array_tags" builder in
+
+          let _ = L.build_br  *)
+          (*
+           * Takes a pattern, build the basic block, and return a basic block and a pattern
+           *)
+          let build_case_body index (pattern, sstmt) =
+            let ocaml_tags = tag_pattern pattern in
+            let tags_alloca = L.build_array_alloca i32_t (L.const_int i32_t (List.length ocaml_tags)) "tags_alloca" builder in
+            let _ = List.iteri (fun index value ->
+              let index = L.const_int i32_t index in
+              let lltag = L.const_int 32_t value in
+              let tags_index_ptr = L.build_in_bounds_gep tags_alloca [| index |] "gep_tag_index" builder
+              in ignore (L.build_store lltag tags_index_ptr builder)) ocaml_tags in
+            let arr_tags_ptr = L.build_in_bounds_gep tags_alloca [| L.const_int i32_t index |] "gep_tag_index" builder in
+            let tags = L.build_load tags_alloca "tags_load" builder in
+            let _ = L.build_store tags arr_tags_ptr builder in
+            match pattern with
+              SBasePattern (typ, id) ->
+                let tag_num = tag_of_type typ in
+                let case_bb = L.append_block context (A.string_of_typ typ) the_thread in
+                let case_builder = L.builder_at_end context case_bb in
+                (* @TODO - Ask about width of floats + pointers / potentially overflow *)
+                let value_alloca = L.build_alloca (lltype_of_typ typ) "value_alloca" case_builder in
+                let value_ptr = L.build_load head_ptr "value_ptr_load" case_builder in
+                let value_ptr = L.build_bitcast value_ptr (L.pointer_type (lltype_of_typ typ)) "value_ptr_cast" case_builder in
+                let value = L.build_load value_ptr "value_load" case_builder in
+                let _ = L.build_store value value_alloca case_builder in
+                let env' = StringMap.add id value_alloca env in
+                let (new_builder, _) = stmt (case_builder, env') sstmt in
+                let _ = L.build_br post_receive_bb new_builder in case_bb
+            | STuplePattern _ ->
+                let case_bb = L.append_block context "tuple_case" the_thread in
+                let case_builder = L.builder_at_end context case_bb in
+                let (new_builder, _) = stmt (case_builder, env) sstmt in
+                let _ = L.build_br post_receive_bb new_builder in case_bb
+            | SWildcardPattern ->
+                let default_bb = L.append_block context "wildcard" the_thread in
+                let default_builder = L.builder_at_end context default_bb in
+                let (new_builder, _) = stmt (default_builder, env) sstmt in
+                let _ = L.build_br post_receive_bb new_builder in default_bb
+          (* let wildcard = List.find (fun (pattern, _) -> pattern = WildcardPattern) receive_cases in *)
+
+
+
+          (*let
               receive_bb = L.append_block context "receive" the_thread and
               post_bb = L.append_block context "post_receive" the_thread and
               default_bb = L.append_block context "switch_end" the_thread in
@@ -915,16 +986,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
           (* Move the current builder to pred_bb *)
           let _ = L.build_br pred_bb builder in
-          let empty = L.build_call queue_empty_func [| self_queue |] "queue_empty" pred_builder in
-          let _ = L.build_cond_br empty pred_bb receive_bb pred_builder in
 
           (* Pop data from the queue and pattern match *)
-          let data_alloca = L.build_alloca data_ptr "data_alloca" receive_builder and
-              tag_alloca = L.build_alloca i32_t "tag_alloca" receive_builder and
-              head_alloca = L.build_alloca pointer_t "head_alloca" receive_builder and
-              tail_alloca = L.build_alloca pointer_t "tail_alloca" receive_builder in
-          let data_pop = L.build_call queue_pop_func [| self_queue |] "queue_pop" receive_builder in
-          let _ = L.build_store data_pop data_alloca receive_builder in
+
 
           let data = L.build_load data_alloca "data_load" receive_builder in
           let { tag = tag_ptr; head = head_ptr; tail = tail_ptr }
@@ -936,39 +1000,14 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               _ = L.build_store head_value head_alloca receive_builder and
               _ = L.build_store tail_value tail_alloca receive_builder in
 
-          (* let string_v = L.build_global_stringptr "debug" "test" builder in
-          let _ = L.build_call printf_func [| string_format_str; string_v |] "printf" builder in *)
           let switch = L.build_switch tag_value default_bb (List.length receive_cases) receive_builder in
 
           let build_case (pattern, sstmt) = match pattern with
               SBasePattern (typ, id) ->
-                let tag_num = tag_of_type typ in
-                let case_bb = L.append_block context (A.string_of_typ typ) the_thread in
-                let case_builder = L.builder_at_end context case_bb in
-                let _ = L.add_case switch tag_num case_bb in
-                (* @TODO - Ask about width of floats + pointers / potentially overflow *)
-                let value_alloca = L.build_alloca (lltype_of_typ typ) "value_alloca" case_builder in
-                let value_ptr = L.build_load head_ptr "value_ptr_load" case_builder in
-                let value_ptr = L.build_bitcast value_ptr (L.pointer_type (lltype_of_typ typ)) "value_ptr_cast" case_builder in
-                let value = L.build_load value_ptr "value_load" case_builder in
-                let _ = L.build_store value value_alloca case_builder in
-                let env' = StringMap.add id value_alloca env in
-                let (new_builder, _) = stmt (case_builder, env') sstmt in
-                let _ = L.build_br post_bb new_builder in ()
             | SWildcardPattern ->
-                let fst_ptr = L.build_load head_ptr "fst_ptr_load" default_builder in
-                let fst_ptr = L.build_bitcast fst_ptr data_ptr "fst_cast" default_builder in
-                let { head = head_ptr; _ } = build_data_gep fst_ptr default_builder in
-                let data_ptr = L.build_load head_ptr "data_load" default_builder in
-                let data_ptr = L.build_bitcast data_ptr (L.pointer_type i32_t) "data_cast" default_builder in
-                let data = L.build_load data_ptr "data_load" default_builder in
-                (* let data_ptr = L.build_load fst_ptr "fst_load" default_builder in *)
-                let _ = L.build_call printf_func [| int_format_str; data |] "printf_value" default_builder in
-                let (new_builder, _) = stmt (default_builder, env) sstmt in
-                let _ = L.build_br post_bb new_builder in ()
             | _ -> raise (Failure "Implement composite case") in
 
-          let _ = List.iter build_case receive_cases in (post_builder, env)
+          let _ = List.iter build_case receive_cases in (post_builder, env) *)
     in
     let (builder, env') = stmt (builder, env) sstmt in
     let join pthread =
