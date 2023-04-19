@@ -888,11 +888,14 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                 let (new_builder, _) = stmt (case_builder, env') sstmt in
                 let _ = L.build_br post_bb new_builder in ()
             | SWildcardPattern ->
-              (* TODO, the fst is a data_t *)
                 let fst_ptr = L.build_load head_ptr "fst_ptr_load" default_builder in
-                let fst_ptr = L.build_bitcast fst_ptr (L.pointer_type i32_t) "fst_cast" default_builder in
-                let fst = L.build_load fst_ptr "fst_load" default_builder in
-                let _ = L.build_call printf_func [| int_format_str; fst |] "printf_value" default_builder in
+                let fst_ptr = L.build_bitcast fst_ptr data_ptr "fst_cast" default_builder in
+                let { head = head_ptr; _ } = build_data_gep fst_ptr default_builder in
+                let data_ptr = L.build_load head_ptr "data_load" default_builder in
+                let data_ptr = L.build_bitcast data_ptr (L.pointer_type i32_t) "data_cast" default_builder in
+                let data = L.build_load data_ptr "data_load" default_builder in
+                (* let data_ptr = L.build_load fst_ptr "fst_load" default_builder in *)
+                let _ = L.build_call printf_func [| int_format_str; data |] "printf_value" default_builder in
                 let (new_builder, _) = stmt (default_builder, env) sstmt in
                 let _ = L.build_br post_bb new_builder in ()
             | _ -> raise (Failure "Implement composite case") in
