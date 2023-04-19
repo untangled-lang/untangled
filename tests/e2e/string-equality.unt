@@ -1,0 +1,8 @@
+thread_def Main {
+  if ("Hello" == "Hello") print("a");
+  if ("abcdefg" != "abcdefgh") print("b");
+  if ("`2bjdIJ9097L.;-0-9" == "`2bjdIJ9097L.;-0-9") print("c");
+
+  if ("abcdefg" == "abcdefgahsjd") print("WRONG");
+  if ("abcdefg" != "abcdefg") print("WRONG");
+}

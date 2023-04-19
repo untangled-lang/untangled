@@ -65,12 +65,24 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let gep_index i = L.const_int i32_t i in
 
   (* Given a AST type, return a tag code *)
-  let tag_of_type = function
+  let rec tag_of_tuple = function
+      A.Tuple (ty1, ty2) -> "4" ^ (tag_of_tuple ty1) ^ (tag_of_tuple ty2)
+    | A.Int -> "0"
+    | A.Float -> "1"
+    | A.String -> "2"
+    | A.Bool -> "3"
+    | _ -> raise (Failure "unsupported type for tuple tag")
+  in
+  let tag_of_type ?(builder : L.llbuilder option) = function
           A.Int -> (L.const_int i32_t 0)
         | A.Float -> (L.const_int i32_t 1)
         | A.String -> (L.const_int i32_t 2)
         | A.Bool -> (L.const_int i32_t 3)
-        | A.Tuple _ -> L.const_int i32_t 4
+        | A.Tuple _ as ty ->
+          let builder = (match builder with
+                            None -> raise (Failure "builder needed for making tuple tag")
+                          | Some b -> b) in
+          (L.build_global_stringptr (tag_of_tuple ty) "#t" builder)
         | _ -> raise (Failure " site tag")
   and lltype_of_typ = function
           A.Int   -> i32_t
@@ -462,6 +474,48 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let _ = add_terminal true_builder (L.build_ret true_value) and
         _ =  add_terminal false_builder (L.build_ret false_value) in string_of_bool_func
 
+  in let string_equiv_func =
+    let string_equiv_func = L.function_type i1_t [| pointer_t; pointer_t |] in
+    let string_equiv_func = L.define_function "string_equiv" string_equiv_func the_module in
+    let x = L.param string_equiv_func 0 and
+        y = L.param string_equiv_func 1 in
+    let builder = L.builder_at_end context (L.entry_block string_equiv_func) in
+    let counter = L.build_alloca i32_t "counter" builder in
+    let _ = L.build_store (L.const_int i32_t 0) counter builder in
+    let x_char_alloca = L.build_alloca i8_t "x_char_alloca" builder and
+        y_char_alloca = L.build_alloca i8_t "y_char_alloca" builder in
+    let pred_bb = L.append_block context "pred_bb" string_equiv_func in
+    let false_bb = L.append_block context "false_bb" string_equiv_func in
+    let true_bb = L.append_block context "true_bb" string_equiv_func in
+    let continue_bb = L.append_block context "continue_bb" string_equiv_func in
+    let _ = L.build_br pred_bb builder in
+
+    let pred_builder = L.builder_at_end context pred_bb in
+    let counter_load = L.build_load counter "counter_load" pred_builder in
+    let x_char = L.build_in_bounds_gep x [|counter_load|] "gep_x_char" pred_builder in
+    let y_char = L.build_in_bounds_gep y [|counter_load|] "gep_y_char" pred_builder in
+    let x_char_load = L.build_load x_char "x_char_load" pred_builder in
+    let y_char_load = L.build_load y_char "y_char_load" pred_builder in
+    let _ = L.build_store x_char_load x_char_alloca pred_builder in
+    let _ = L.build_store y_char_load y_char_alloca pred_builder in
+    let increment = L.build_add counter_load (L.const_int i32_t 1) "increment_index" pred_builder in
+    let _ = L.build_store increment counter pred_builder in
+    let pred = L.build_icmp L.Icmp.Eq x_char_load y_char_load "pred" pred_builder in
+    let _ = L.build_cond_br pred continue_bb false_bb pred_builder in
+
+    let false_builder = L.builder_at_end context false_bb in
+    let _ = L.build_ret (L.const_int i1_t 0) false_builder in
+
+    let continue_builder = L.builder_at_end context continue_bb in
+    let continue_pred = (L.build_icmp L.Icmp.Eq (L.build_load x_char_alloca "x_char_load" continue_builder)
+                        (L.const_int i8_t 0) "x_char_neq_null" continue_builder) in
+    let _ = L.build_cond_br continue_pred true_bb pred_bb continue_builder in
+
+    let true_builder = L.builder_at_end context true_bb in
+    let _ = L.build_ret (L.const_int i1_t 1) true_builder in
+    string_equiv_func
+
+
 
   (* Build instructions to concatenate two strings. Matches call signature of functions like L.build_add *)
   in let build_strcat x y name builder =
@@ -633,6 +687,14 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                 | A.String ->
                   (match op with
                     | A.Add -> build_strcat
+                    | A.Equality ->
+                      (fun e1' e2' var_name builder -> (L.build_call string_equiv_func [| e1'; e2' |] var_name builder))
+                    | A.Neq ->
+                      (fun e1' e2' var_name builder ->
+                        L.build_icmp L.Icmp.Eq (L.const_int i1_t 0)
+                          (L.build_call string_equiv_func [| e1'; e2' |] var_name builder)
+                          var_name
+                          builder)
                     | _ -> raise (Failure "Operation not supported on string arguments"))
                 | _ -> raise (Failure "Implement other")) in
             (op e1' e2' "binop_result" builder, env'')
