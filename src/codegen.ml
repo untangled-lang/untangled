@@ -568,22 +568,22 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let data_t_ptr = L.param tag_compare_func 3 in
     let builder = L.builder_at_end context (L.entry_block tag_compare_func) in
     let index_loaded = L.build_load index_ptr "index_load" builder in
-    let _ = L.build_call printf_func [| L.build_global_stringptr "  checking tag index %d\n" "fmt" builder; index_loaded |] "print_test" builder in
+    (* let _ = L.build_call printf_func [| L.build_global_stringptr "  checking tag index %d\n" "fmt" builder; index_loaded |] "print_test" builder in *)
     let { tag = data_tag_ptr; head = head_ptr; tail = tail_ptr } = build_data_gep data_t_ptr builder in
     (* Get the integer tag of the first item in the “data” we’re examining *)
     let data_tag_val = L.build_load data_tag_ptr "data_tag_val" builder in
-    let _ = L.build_call printf_func [| L.build_global_stringptr "    data has tag: %d\n" "fmt" builder; data_tag_val |] "print_test" builder in
+    (* let _ = L.build_call printf_func [| L.build_global_stringptr "    data has tag: %d\n" "fmt" builder; data_tag_val |] "print_test" builder in *)
 
     (* Returns false. We jump here whenever we find out that a tag definitely *doesn’t* match. *)
     let false_bb = L.append_block context "false_bb" tag_compare_func in
     let false_builder = L.builder_at_end context false_bb in
-    let _ = L.build_call printf_func [| L.build_global_stringptr "    returning false\n" "fmt" builder; (L.const_int i32_t 0) |] "print_test" false_builder in
+    (* let _ = L.build_call printf_func [| L.build_global_stringptr "    returning false\n" "fmt" builder; (L.const_int i32_t 0) |] "print_test" false_builder in *)
     let _ = L.build_ret (L.const_int i1_t 0) false_builder in
 
     (* Returns true. We jump here whenever we find out that a tag definitely *does* match. *)
     let true_bb = L.append_block context "true_bb" tag_compare_func in
     let true_builder = L.builder_at_end context true_bb in
-    let _ = L.build_call printf_func [| L.build_global_stringptr "    returning true\n" "fmt" builder; (L.const_int i32_t 0) |] "print_test" true_builder in
+    (* let _ = L.build_call printf_func [| L.build_global_stringptr "    returning true\n" "fmt" builder; (L.const_int i32_t 0) |] "print_test" true_builder in *)
     let _ = L.build_ret (L.const_int i1_t 1) true_builder in
 
     (* Other blocks we will fill and use below *)
@@ -600,7 +600,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
     (* 1. Check that the index is in bounds. If it’s not, return false. *)
     let oob = L.build_icmp L.Icmp.Eq index_loaded length "index_comparison" builder in
-    let _ = L.build_call printf_func [| L.build_global_stringptr "    oob? %d\n" "fmt" builder; oob |] "print_test" builder in
+    (* let _ = L.build_call printf_func [| L.build_global_stringptr "    oob? %d\n" "fmt" builder; oob |] "print_test" builder in *)
     let _ = L.build_cond_br oob false_bb wcard_bb builder in
     (*
      * Once we know the index is in bounds, it’s safe to unpack the value from the tag.
@@ -608,7 +608,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
      * next recursive step, if any, will want to examine the next value of the tag). *)
     let array_tag_ptr = L.build_in_bounds_gep tag_ptr [| index_loaded |] "gep_array_tag" wcard_builder in
     let tag_val = L.build_load array_tag_ptr "array_tag_load" wcard_builder in
-    let _ = L.build_call printf_func [| L.build_global_stringptr "    pattern wants tag: %d\n" "fmt" wcard_builder; tag_val |] "print_test" wcard_builder in
+    (* let _ = L.build_call printf_func [| L.build_global_stringptr "    pattern wants tag: %d\n" "fmt" wcard_builder; tag_val |] "print_test" wcard_builder in *)
     let incremented_index = L.build_add (L.const_int i32_t 1) index_loaded "increment_index" wcard_builder in
     let _ = L.build_store incremented_index index_ptr wcard_builder in
 
@@ -1025,7 +1025,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             (* Convert OCaml tag to its LLVM representation *)
             (* For each tag in our list of receieve cases... *)
             let _ = List.iteri (fun i ptag ->
-              let _ = L.build_call printf_func [| L.build_global_stringptr "pattern #%d:\n  " "fmt" receive_builder; (L.const_int i32_t i) |] "print_test" receive_builder in
+              (* let _ = L.build_call printf_func [| L.build_global_stringptr "pattern #%d:\n  " "fmt" receive_builder; (L.const_int i32_t i) |] "print_test" receive_builder in *)
               (* Store the length of the ptag *)
               let length_ptr = L.build_in_bounds_gep lengths_alloca [| L.const_int i32_t i |] "lengths_gep" receive_builder in
               let _ = L.build_store (L.const_int i32_t (List.length ptag)) length_ptr receive_builder in
@@ -1038,10 +1038,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                 let tag_elem_ptr = L.build_in_bounds_gep ptag_alloca [| L.const_int i32_t j |] "ptr_gep" receive_builder in
                 let _ = L.build_store (L.const_int i32_t elem) tag_elem_ptr receive_builder in
                 (* Uncomment below to see printed tags *)
-                let _ = L.build_call printf_func [| L.build_global_stringptr "%d " "fmt" receive_builder; (L.build_load tag_elem_ptr "tag_elem_load" receive_builder) |] "print_test" receive_builder in
+                (* let _ = L.build_call printf_func [| L.build_global_stringptr "%d " "fmt" receive_builder; (L.build_load tag_elem_ptr "tag_elem_load" receive_builder) |] "print_test" receive_builder in *)
                 ())
                 ptag
-              in let _ = L.build_call printf_func [| L.build_global_stringptr "\n" "fmt" receive_builder; (L.const_int i32_t 0) |] "newline" receive_builder in ()) ocaml_ptags in
+              (* in let _ = L.build_call printf_func [| L.build_global_stringptr "\n" "fmt" receive_builder; (L.const_int i32_t 0) |] "newline" receive_builder *)
+              in ()) ocaml_ptags in
 
 
             (* Pop the message off the queue *)
@@ -1056,13 +1057,14 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let _ = L.build_store (L.const_int i32_t (-1)) case_index receive_builder in
 
             (* “Find case” block finds the right index to switch on *)
+            (* go into the find_case_bb *)
+            let _ = L.build_br find_case_bb receive_builder in
             (* Increment the index to start examining the next case *)
             let old_index_loaded = L.build_load case_index "index_load" find_case_builder in
             let case_index_increment = L.build_add old_index_loaded (L.const_int i32_t 1) "index_increment" find_case_builder in
             let _ = L.build_store case_index_increment case_index find_case_builder in
             let index_loaded = L.build_load case_index "index_load" find_case_builder in
-            (* [debug] Print the index of the receive case we’re examining *)
-            let _ = L.build_call printf_func [| L.build_global_stringptr "trying pattern #%d\n" "fmt" builder; index_loaded |] "print_test" find_case_builder in
+            (* let _ = L.build_call printf_func [| L.build_global_stringptr "trying pattern #%d\n" "fmt" builder; index_loaded |] "print_test" find_case_builder in *)
             (* Set up everything we need to pass to tag_compare_func *)
             let case_tag_ptr = L.build_in_bounds_gep ptags_alloca [| index_loaded |] "tag_ptr" find_case_builder in
             let case_tag = L.build_load case_tag_ptr "tag_load" find_case_builder in
@@ -1073,13 +1075,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             (* let tag_cast = L.build_bitcast tag_ptr (L.pointer_type i32_t) "tag_cast" find_case_builder in *)
             (* Did this case match? *)
             let case_matched = L.build_call tag_compare_func [| case_tag; case_tag_index_alloca; case_tag_length; message_data_ptr |] "tag_comparison" find_case_builder in
-            let _ = L.build_call printf_func [| L.build_global_stringptr "did the pattern match? %d\n" "fmt" builder; case_matched |] "print_test" find_case_builder in
+            (* let _ = L.build_call printf_func [| L.build_global_stringptr "did the pattern match? %d\n" "fmt" builder; case_matched |] "print_test" find_case_builder in *)
             (* If it did, jump to the switch_bb. If not, we go back to find_case_bb to check the next case. *)
             let _ = L.build_cond_br case_matched switch_bb find_case_bb find_case_builder in
-            (* go into the find_case_bb *)
-            let _ = L.build_br find_case_bb receive_builder in
 
-            let _ = L.build_call printf_func [| L.build_global_stringptr "made it out of pattern matching; selected pattern %d\n" "fmt" switch_builder; L.build_load case_index "index_load" switch_builder |] "print_test" switch_builder in
+            let _ = L.build_call printf_func [| L.build_global_stringptr "selected pattern %d\n" "fmt" switch_builder; L.build_load case_index "index_load" switch_builder |] "print_test" switch_builder in
             (switch_builder, env)
 
             (* Switch block directs the program to the proper case once the matching case_index has been identified *)
