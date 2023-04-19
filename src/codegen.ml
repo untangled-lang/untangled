@@ -441,6 +441,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let _ = L.build_store new_size size_ptr pop_builder in
     let _ = add_terminal pop_builder (L.build_ret data) in queue_pop_func
 
+  (*
+   * Takes a boolean value and return string true or false
+   *
+   * @param bool
+   * @return string_ptr
+   *)
   in let string_of_bool_func =
     let string_of_bool_t = L.function_type pointer_t [| i1_t |] in
     let string_of_bool_func = L.define_function "string_of_bool" string_of_bool_t the_module in
