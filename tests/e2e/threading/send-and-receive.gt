@@ -1,0 +1,7 @@
+string hello
+int 1
+bool true
+float 1.000000
+tuple 1 hello 1 true
+tuple 2 hello 1 true
+wildcard
