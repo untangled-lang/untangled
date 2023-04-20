@@ -265,7 +265,9 @@ let check (tdecls, fdecls) =
     in checker
 
   in let check_function (fdecl: func_decl) =
-    let (_, sstmt) = check_stmt [StringMap.empty] (Block fdecl.body)
+    let formals = check_binds "formal" fdecl.formals in
+    let env = List.fold_left (fun map (typ, id) -> StringMap.add id typ map) StringMap.empty formals in
+    let (_, sstmt) = check_stmt [env] (Block fdecl.body)
     in match sstmt with
       SBlock (sl) ->
         (*

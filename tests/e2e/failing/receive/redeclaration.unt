@@ -1,0 +1,8 @@
+thread_def Main {
+  receive {
+    (int x, string x) -> {
+      print("hi");
+    }
+    _ -> {}
+  }
+}

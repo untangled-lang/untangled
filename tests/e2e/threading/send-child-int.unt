@@ -1,0 +1,13 @@
+thread_def Child {
+  receive {
+    int x -> {
+      print(string_of_int(x));
+    }
+    _ -> {}
+  }
+}
+
+thread_def Main {
+  thread t = spawn Child;
+  t << 100;
+}

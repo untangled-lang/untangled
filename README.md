@@ -6,8 +6,6 @@ Caleb Ledi (cledi01@tufts.edu),
 Duru Uğurlu (duru.ugurlu@tufts.edu),
 Chloe Lam (clam08@tufts.edu)
 
-
-
 ## Instructions
 
 First, install required dependencies:
@@ -61,8 +59,8 @@ further stage of compiler execution.
 - [`test/sast`](/tests/sast) - tests that check the pretty-printed *semantically-checked* ASTs of
   several Untangled programs against ground truths (these are ASTs with additional semantic
   information added in)
-- [`test/e2e`](/tests/e2e) - end-to-end tests that compile, link, and execute full Untangled
-  programs, capturing what they write to `stdout` and comparing against ground truths.
+- [`test/e2e`](/tests/e2e) - end-to-end (integration) tests that compile, link, and execute full
+  Untangled programs if there are no semantic errors, capturing what they write to `stdout` and comparing against ground truths.
 
 A given “level” of tests may optionally also be subdivided further into “test groups,” which have
 no special function other than to organize test files and to make it easier to run only a subset of
@@ -73,13 +71,78 @@ compiler behaves correctly. For the end-to-end tests, we intentionally write pro
 printed output is sufficient to assess the correctness of a given test run.
 
 
-### End-to-end tests
+### Integration tests
 
-The following end-to-end tests are currently included:
+The following integration tests are currently included:
 
-1. `tests/e2e/hello-world.unt` - a simple program which prints the string "Hello, World!" from the
-   main thread
+#### Basics
+. `tests/e2e/basics/hello-world.unt` - a simple program which prints the string "Hello, World!"
+    from the main thread
+2. `tests/e2e/basics/reassign.unt` - a simple program that reassigns the value of a variable and
+    prints the new value of the variable
+3. `tests/e2e/basics/scope.unt` - a simple program that has multiple variable declarations that
+    shadow each other. It prints the variable at difernt moments in time to verify that the
+    appropriate variable shadows.
+4. `tests/e2e/basics/variable-declaration.unt` - a simple program that declares and initializes a
+    variable and then prints it
 
+#### Binop
+1.  `tests/e2e/binop/string-concat-var.unt` - a simple program that declares and initializes
+     multiple strings, concatenates them and  prints the result.
+2.  `tests/e2e/binop/concat.unt` - a simple program that concatenates to string literals and prints
+     them.
+3.  `tests/e2e/binop/string_equality.unt` - a simple program that compares strings of multiple
+     different types against each other and prints specific output according to the result.
+
+#### Builtin
+1. `tests/e2e/builtin/string_of.unt` - a simple program that converts variables of multiple types
+   (bool, float, int) to strings and prints the result
+
+#### Control-Flow
+1. `tests/e2e/control-flow/functions.unt` - a simple program that calls a function in different
+    ways and and generates output both inside the function and based on the return value of the
+    function.
+2. `tests/e2e/control-flow/if.unt` - a simple program that has if statements with boolean literals
+    inside of them. According to the predicate passed to the if statements, different values are
+    printed out.
+3. `tests/e2e/control-flow/while.unt` - a simple program that concatenates 'X' to an empty string
+    in a loop. The final string is printed in order to test the accuracy of the number of
+    iterations.
+
+#### Failing (These are the semantically failing tests)
+##### Declaration
+1. `tests/e2e/failing/declaration/parent.unt` - a simple program that tries to declare "parent" which is a protected keyword
+2. `tests/e2e/failing/declaration/scope.unt` - a simple program that tries to redeclare a variable in the same scope
+3. `tests/e2e/failing/declaration/self.unt` - a simple program that tries to declare "self" which is a protected keyword
+
+##### Receive
+1. `tests/e2e/failing/receive/non-exhaustive.unt` - a simple program that does not pattern-match
+    exhaustively on the receive statement
+2. `tests/e2e/failing/receive/pattern-out-of-scope.unt` - a simple program that tries to access a
+    variable declared in a specific receive case is not available elsewhere
+3. `tests/e2e/failing/receive/redclaration.unt` - checks that a semantic error is raised if the
+    same identifier is used in a pattern
+
+#### Real Programs
+
+1. `tests/e2e/real-programs/string-of-int.unt` - an actual program that takes the integer 213 and
+    prints the string equivalent of said integer
+2. `tests/e2e/real-programs/factorial.unt` - a program to compute the 3! and prints 6
+
+#### Threading
+
+1. `tests/e2e/threading/basic-spawn.unt` - spawns a thread, which prints the string "HELLO"
+2. `tests/e2e/threading/send-and-receive.unt` - spawns a thread and send to child thread literals
+    primitives `string`, `int`, `boolean`, `float`, and `tuple`. The child thread that it receives
+    the message from the message queue by printing out the received value in order.
+3. `tests/e2e/threading/send-child-int.unt` - spawns a thread and send the child an integer. The
+    child receives the integer and prints it
+3. `tests/e2e/threading/send-child-float.unt` - spawns a thread and send the child a float. The
+    child receives the integer and prints it
+4. `tests/e2e/threading/send-child-tuple.unt` - spawns a thread and send the child a tuple. The
+    child receives the tuple and prints it
+5. `tests/e2e/threading/send-parent.unt` - spawns a child thread which sends a
+  message to its parent. The parent receives the message and prints it
 
 
 ## Documentation

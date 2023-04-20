@@ -838,7 +838,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (f_builder, _) = stmt (f_builder, env) f_block in
             let _ = L.build_br end_bb f_builder in
             (end_builder, env)
-
         | SSend (receiver_name, sexpr) ->
             let (typ, _) = sexpr in
             let receiver_queue_ptr = StringMap.find receiver_name env in

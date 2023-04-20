@@ -184,21 +184,13 @@ for step_dir in COMPILER_STEPS_DIR:
                 )
             else:
                 exe_path = path.join(test_group_path, test_name)
-                # Build the executable
                 if os.system(
                     f"./{BINARY} {compiler_options}"
                     f" < {input_file_path}"
-                    f" -o {exe_path}"
-                ) != 0:
-                    print(
-                        f"{Format.red}{Format.bold}\u2717{Format.reset} "
-                        f"Test {Format.bold}{test_name}{Format.reset} "
-                        f"{Format.red}failed to compile{Format.reset}"
-                        "\n"
-                    )
-                    continue
-                # Run the generated program
-                os.system(f"{exe_path} > {output_path}")
+                    f" -o {exe_path} > {output_path} 2>&1"
+                ) == 0:
+                    # Run the generated program
+                    os.system(f"{exe_path} > {output_path}")
 
             # Record a new ground truth if requested
             if REGENERATE_GTS and test_name in REGENERATE_GTS:

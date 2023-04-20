@@ -1,0 +1,11 @@
+thread_def Child {
+  receive {
+    string x -> print(x);
+    _ -> {}
+  }
+}
+
+thread_def Main {
+  thread t = spawn Child;
+  t << "hello world!";
+}
