@@ -57,7 +57,6 @@ type stmt =
 | For of stmt * expr * expr * stmt
 | While of expr * stmt
 | Send of string * expr
-| SendParent of expr
 | Decl of typ * string * expr
 | Receive of receive_case list
 and receive_case = (pattern * stmt)
@@ -180,7 +179,6 @@ let rec string_of_stmt statement =
       string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
   | Send(s, e) -> s ^ " << " ^ (string_of_expr e) ^ ";"
-  | SendParent(e) -> "parent << " ^ (string_of_expr e) ^ ";"
   | Decl(t, id, Noexpr) -> string_of_typ t ^ " " ^ id ^ ";"
   | Decl(t, id, expr) -> string_of_typ t ^ " " ^ id ^ " = " ^ (string_of_expr expr) ^ ";"
   | Receive(cases) -> "receive {\n" ^ indent (String.concat "\n" (List.map

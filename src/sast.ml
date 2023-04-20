@@ -30,7 +30,6 @@ type sstmt =
 | SFor of sstmt * sexpr * sexpr * sstmt
 | SWhile of sexpr * sstmt
 | SSend of string * sexpr
-| SSendParent of sexpr
 | SDecl of typ * string * sexpr
 | SReceive of receive_case list
 and receive_case = (pattern * sstmt)
@@ -119,7 +118,6 @@ let rec string_of_sstmt statement =
       string_of_sexpr e3  ^ ") " ^ string_of_sstmt s
   | SWhile(e, s) -> "while (" ^ string_of_sexpr e ^ ") " ^ string_of_sstmt s
   | SSend(s, e) -> s ^ " << " ^ (string_of_sexpr e) ^ ";"
-  | SSendParent(e) -> "parent << " ^ (string_of_sexpr e) ^ ";"
   | SDecl(t, id, (_, SNoexpr)) -> string_of_typ t ^ " " ^ id ^ ";"
   | SDecl(t, id, expr) -> string_of_typ t ^ " " ^ id ^ " = " ^ (string_of_sexpr expr) ^ ";"
   | SReceive(cases) -> "receive {\n" ^ indent (String.concat "\n" (List.map

@@ -20,7 +20,7 @@ open Ast
 %token RETURN
 
 // Thread-specific tokens
-%token ARROW SEND RECEIVE PARENT THREAD_DEF THREAD SEMAPHORE SPAWN
+%token ARROW SEND RECEIVE THREAD_DEF THREAD SEMAPHORE SPAWN
 
 // EOF
 %token EOF
@@ -153,7 +153,6 @@ stmt:
   | BREAK SEMI                              { Break                 }
   | CONTINUE SEMI                           { Continue              }
   | ID SEND expr SEMI                       { Send($1, $3)          }
-  | PARENT SEND expr SEMI                   { SendParent($3)        }
   | receive                                 { $1                    }
 
 stmt_list:

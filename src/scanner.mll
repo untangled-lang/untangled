@@ -52,7 +52,6 @@ rule token = parse
   | "->"         { ARROW }
   | "<<"         { SEND }
   | "receive"    { RECEIVE }
-  | "parent"     { PARENT }
   | "thread_def" { THREAD_DEF }
   | "thread"     { THREAD }
   | "spawn"      { SPAWN }

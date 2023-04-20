@@ -1,12 +1,3 @@
-(*
- * TODO:
- *    Creating the string type
- *    Declare the print function
- *    Define the print function
- *    Fill in the body of the print function
- *    Construct the code for a function call expression
- *)
-
 module L = Llvm
 module A = Ast
 open Sast
@@ -65,6 +56,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let gep_index i = L.const_int i32_t i in
 
   (* Given a AST type, return a tag code *)
+  (* TODO: support threads and semaphores and arrays here *)
   let ocaml_tag = function
         A.Int -> [0]
       | A.Float -> [1]
@@ -847,8 +839,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let storage = StringMap.find var_name env' in
             let _ = L.build_store value_to_assign storage builder in
             (value_to_assign, env')
-        | SAssignIndex (var_name, index, value) -> raise (Failure "Implement SAssignIndex")
-        | _ -> raise (Failure "TODO")
+        | SAssignIndex _ -> raise (Failure "Implement SAssignIndex")
     and stmt ((builder: L.llbuilder), env) sstmt =
       match sstmt with
           SBlock sblock ->
@@ -953,7 +944,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
                 let _ = L.build_call queue_push_func [| receiver_queue; data |] "" builder in
                 (builder, env'))
-        | SSendParent (message_expr) -> raise (Failure "todo")
           (* let parent_pool = (match parent_pool with
            | None -> raise (Failure "Cannot send message to parent thread pool from inside a function")
            | Some thread_pool -> thread_pool) in
@@ -1080,7 +1070,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
             (* Switch block directs the program to the proper case once the matching case_index has been identified *)
             let index_loaded = L.build_load case_index "index_load" switch_builder in
-            let _ = L.build_call printf_func [| L.build_global_stringptr "selected pattern %d\n" "fmt" switch_builder; index_loaded |] "print_test" switch_builder in
 
             (* the “else” case of the switch block should never be reached because semantic checker should enforce that there is a wildcard *)
             let else_bb = L.append_block context "default" the_thread in
@@ -1133,13 +1122,44 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
       ignore (L.build_call pthread_join_func [| id; (L.const_null i8_t) |] "join" builder) in
     let _ = List.iter join !pthread_ts in (builder, env') in
 
+  (*
+
+  thread_def a {
+    (* parent ->  *)
+    parent << "hi";
+  }
+
+  thread_def Main {
+    {parent -> parent_queue from main, }
+    thread a_type = spawn a;
+  }
+
+  thread_def b {
+      thread a_type2 = spawn a;
+  }
+
+  function main {
+    malloc argument = { parent_queue, child_queue }
+    spawn Main(argument);
+  }
+   *)
   let build_thread_body tdecl =
     let (the_thread, _) = StringMap.find tdecl.stname thread_decls in
     let builder = L.builder_at_end context (L.entry_block the_thread) in
     let argument = L.build_bitcast (L.param the_thread 0) arg_ptr "cast_void" builder in
     let arg_gep = build_arg_gep argument builder in
+    let { parent_queue = parent_queue_ptr; child_queue = child_queue_ptr; _ } = arg_gep in
+    let parent_queue_alloca = L.build_alloca queue_ptr "parent_queue_alloca" builder in
+    let child_queue_alloca = L.build_alloca queue_ptr "child_queue_alloca" builder in
+    let parent_queue = L.build_load parent_queue_ptr "parent_queue_load" builder in
+    let child_queue = L.build_load child_queue_ptr "child_queue_load" builder in
+    let _ = L.build_store parent_queue parent_queue_alloca builder in
+    let _ = L.build_store child_queue child_queue_alloca builder in
+    let env = StringMap.empty in
+    let env = StringMap.add "parent" parent_queue_alloca env in
+    let env = StringMap.add "self" child_queue_alloca env in
     let (final_builder, _) =
-      build_body ~arg_gep:arg_gep (builder, StringMap.empty) (SBlock tdecl.sbody) the_thread
+      build_body ~arg_gep:arg_gep (builder, env) (SBlock tdecl.sbody) the_thread
     (* thread function follows pthread function type and returns a NULL pointer *)
     in add_terminal final_builder (L.build_ret (L.const_null pointer_t))
   and build_func_body fdecl =

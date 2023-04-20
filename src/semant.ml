@@ -214,17 +214,18 @@ and pattern =
           let _ = check_assign Thread typ expr in
           let sexpr = check_expr envs expr in
           (envs, SSend (id, sexpr))
-      | SendParent expr -> (envs, SSendParent (check_expr envs expr))
       | Decl (lt, id, expr) ->
-        let _ = check_binds "local" [(lt, id)] in
-          (match envs with
-            env :: _ ->
-              if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
-              else let (rt, e') as sexpr = check_expr envs expr in
-              (match e' with
-                | SNoexpr -> (bind id lt envs, SDecl (lt, id, sexpr))
-                | _ -> (bind id lt envs, SDecl (check_assign lt rt expr, id, (lt, e'))))
-            | [] -> raise (Failure "Implementation bug: empty environments"))
+        (match id with
+          "parent" | "self" -> raise (Failure "parent/self is a keyword")
+          | _ as id ->  let _ = check_binds "local" [(lt, id)] in
+                  (match envs with
+                    env :: _ ->
+                      if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
+                      else let (rt, e') as sexpr = check_expr envs expr in
+                      (match e' with
+                        | SNoexpr -> (bind id lt envs, SDecl (lt, id, sexpr))
+                        | _ -> (bind id lt envs, SDecl (check_assign lt rt expr, id, (lt, e'))))
+                    | [] -> raise (Failure "Implementation bug: empty environments")))
       | Break -> (envs, SBreak)
       | Continue -> (envs, SContinue)
       | Receive receive_cases ->
@@ -365,7 +366,10 @@ and pattern =
 
 
   in let check_thread (tdecl: thread_decl) =
-    let (_, sstmt) = check_stmt [StringMap.empty] (Block tdecl.body)
+    let env = StringMap.empty in
+    let env = StringMap.add "parent" Thread env in
+    let env = StringMap.add "self" Thread env in
+    let (_, sstmt) = check_stmt [env] (Block tdecl.body)
     in match sstmt with
       SBlock (sl) ->
         let _ = List.iter loop_check sl in
