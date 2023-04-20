@@ -954,7 +954,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let case_index_increment = L.build_add old_index_loaded (L.const_int i32_t 1) "index_increment" find_case_builder in
             let _ = L.build_store case_index_increment case_index find_case_builder in
             let index_loaded = L.build_load case_index "index_load" find_case_builder in
-            (* let _ = L.build_call printf_func [| L.build_global_stringptr "trying pattern #%d\n" "fmt" builder; index_loaded |] "print_test" find_case_builder in *)
             (* Set up everything we need to pass to tag_compare_func *)
             let case_tag_ptr = L.build_in_bounds_gep ptags_alloca [| index_loaded |] "tag_ptr" find_case_builder in
             let case_tag = L.build_load case_tag_ptr "tag_load" find_case_builder in
@@ -962,10 +961,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let _ = L.build_store (L.const_int i32_t 0) case_tag_index_alloca find_case_builder in
             let case_tag_length_ptr = L.build_in_bounds_gep lengths_alloca [| index_loaded |] "length" find_case_builder in
             let case_tag_length = L.build_load case_tag_length_ptr "length_load" find_case_builder in
-            (* let tag_cast = L.build_bitcast tag_ptr (L.pointer_type i32_t) "tag_cast" find_case_builder in *)
             (* Did this case match? *)
             let case_matched = L.build_call tag_compare_func [| case_tag; case_tag_index_alloca; case_tag_length; message_data_ptr |] "tag_comparison" find_case_builder in
-            (* let _ = L.build_call printf_func [| L.build_global_stringptr "did the pattern match? %d\n" "fmt" builder; case_matched |] "print_test" find_case_builder in *)
             (* If it did, jump to the switch_bb. If not, we go back to find_case_bb to check the next case. *)
             let _ = L.build_cond_br case_matched switch_bb find_case_bb find_case_builder in
 
@@ -1011,12 +1008,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                 ignore (L.build_br end_bb new_builder )) receive_cases in
 
             (* Check if tags match and if so, pass that index to the switch block *)
-
-
-            (* Get the tag from the message *)
-            (end_builder, env)
-
-    in
+            (end_builder, env) in
     let (builder, env') = stmt (builder, env) sstmt in
     let join pthread =
       let id = L.build_load pthread "pthread_t" builder in
