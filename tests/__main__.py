@@ -5,6 +5,7 @@
 #       and ensuring it’s the same as the previous output
 
 import os
+from os import path
 import subprocess
 import glob
 from argparse import ArgumentParser
@@ -27,6 +28,7 @@ class Format:
     yellow = "\033[93m"
     dim = "\033[90m"
     reset = "\033[0m"
+    reset_color = "\033[39m"
     bold = "\033[1m"
     cursor_up = "\033[1A"
 
@@ -58,26 +60,34 @@ def report_status(exit_code, test_name):
         num_failed += 1
 
 
-def get_current_folders(path):
-    all_paths = map(lambda x: os.path.join(path, x), os.listdir(path))
-    folders = list(filter(lambda x: os.path.isdir(x), all_paths))
+def get_directories_in(p):
+    all_paths = map(lambda x: path.join(p, x), os.listdir(p))
+    folders = list(filter(lambda x: path.isdir(x), all_paths))
     return folders
 
 
 # PARSE ARGS ==================================================================
 
 ACTION_MAPPER = {"ast": "-a", "sast": "-s", "e2e": ""}
+STEP_NAMES = {
+    "ast": "abstract syntax tree",
+    "sast": "semantic",
+    "e2e": "end-to-end",
+}
 
 parser = ArgumentParser()
 group = parser.add_mutually_exclusive_group(required=False)
 group.add_argument("-t", "--tests", nargs="*",
-                   help="Limits tests to those with the specified names.", default=[])
+                   help="Limits tests to those with the specified names.",
+                   default=[])
 group.add_argument("-tg", "--test-groups", nargs="*", required=False,
-                   help="Limits tests to those in the specified test groups.", default=[])
+                   help="Limits tests to those in the specified test groups.",
+                   default=[])
 group.add_argument("-gt", "--record-ground-truths", nargs="*", required=False,
                    help="Regenerate ground truths from test outputs for the specified tests. Leave list blank to regenerate all.")  # noqa: E501
 parser.add_argument(
-    "-s", "--step", nargs="*", choices=STEPS, default=[], required=False, help="Specify which compiler's step to test. Leave blank to run all steps"
+    "-s", "--step", nargs="*", choices=STEPS, default=[], required=False,
+    help="Specify which compiler's step to test. Leave blank to run all steps"
 )
 args = parser.parse_args()
 
@@ -115,49 +125,71 @@ print()
 num_tests = 0
 
 for step_dir in COMPILER_STEPS_DIR:
-    compiler_step = os.path.basename(os.path.normpath(step_dir))
-    test_groups = get_current_folders(step_dir)
+    compiler_step = path.basename(path.normpath(step_dir))
+    test_groups = get_directories_in(step_dir)
     test_groups.append(step_dir)
     compiler_options = ACTION_MAPPER.get(compiler_step)
+    step_name = path.basename(step_dir)
 
     # Skip random folder
     if compiler_options is None:
         continue
 
+    step_display = f"{Format.bold}{STEP_NAMES[step_name]}{Format.reset} tests"
     # Skip if compiler step isn't in the filter
     if compiler_step not in TEST_STEPS_FILTER:
-        print(f"Skipping {compiler_step}")
+        print(f"Skipping {step_display}")
         continue
 
+    step_announced = False
     while len(test_groups) > 0:
         test_group_path = test_groups.pop(0)
-        group_name = os.path.basename(os.path.normpath(test_group_path))
+        group_name = path.basename(path.normpath(test_group_path))
 
         # Skip test groups that aren’t in the filter
         if group_name not in TEST_GROUPS_FILTER:
             continue
 
         # Add nested test folder
-        test_groups += get_current_folders(test_group_path)
-        input_files = glob.glob(os.path.join(test_group_path, "*.unt"))
+        test_groups += get_directories_in(test_group_path)
+        input_files = glob.glob(path.join(test_group_path, "*.unt"))
         for input_file_path in sorted(input_files):
-            test_name = os.path.splitext(os.path.basename(input_file_path))[0]
+            test_name = path.splitext(path.basename(input_file_path))[0]
             if test_name not in TESTS_FILTER:
                 continue
 
-            num_tests += 1
-            full_test_name = f"{group_name}/{test_name}"
-            output_path = os.path.join(test_group_path, f"{test_name}.output")
-            ground_truth_path = os.path.join(test_group_path, f"{test_name}.gt")
+            if not step_announced:
+                term_width = min(os.get_terminal_size().columns, 100)
+                text_length = 17 + len(STEP_NAMES[step_name])
+                num_dashes = (term_width - text_length) // 2
+                line = "—" * num_dashes
+                print(f"\n{line} running {step_display} {line}\n")
+                step_announced = True
 
-            print(f"Running test {Format.bold}{full_test_name}{Format.reset}...")
+            num_tests += 1
+            full_name = (
+                f"{Format.dim}{step_name}/{Format.reset_color}"
+                f"{group_name}/{test_name}"
+            )
+            output_path = path.join(test_group_path, f"{test_name}.output")
+            ground_truth_path = path.join(test_group_path, f"{test_name}.gt")
+
+            print(f"Running test {Format.bold}{full_name}{Format.reset}...")
             if compiler_step != "e2e":
                 # Run the test
-                os.system(f"./{BINARY} {compiler_options} < {input_file_path} > {output_path} 2>&1")
+                os.system(
+                    f"./{BINARY} {compiler_options}"
+                    f" < {input_file_path}"
+                    f" > {output_path} 2>&1"
+                )
             else:
-                exe_path = os.path.join(test_group_path, test_name)
+                exe_path = path.join(test_group_path, test_name)
                 # Build the executable
-                if os.system(f"./{BINARY} {compiler_options} < {input_file_path} -o {exe_path}") != 0:
+                if os.system(
+                    f"./{BINARY} {compiler_options}"
+                    f" < {input_file_path}"
+                    f" -o {exe_path}"
+                ) != 0:
                     print(
                         f"{Format.red}{Format.bold}\u2717{Format.reset} "
                         f"Test {Format.bold}{test_name}{Format.reset} "
@@ -176,21 +208,21 @@ for step_dir in COMPILER_STEPS_DIR:
                 print(
                     f"{Format.cursor_up}{Format.yellow}! "
                     "Overwriting ground truth for test "
-                    f"{Format.bold}{full_test_name}{Format.reset}\n"
+                    f"{Format.bold}{full_name}{Format.reset}\n"
                 )
 
-            if not os.path.isfile(ground_truth_path):
+            if not path.isfile(ground_truth_path):
                 print(
                     f"{Format.cursor_up}{Format.yellow}! "
                     "Could not find ground truth AST output for test "
-                    f"{Format.bold}{full_test_name}{Format.reset}{Format.yellow}; "
+                    f"{Format.bold}{full_name}{Format.reset}{Format.yellow}; "
                     f"skipping diff{Format.reset}"
                 )
                 continue
             diff_exit_code = subprocess.run(
                 ["diff", ground_truth_path, output_path],
             ).returncode
-            report_status(diff_exit_code, full_test_name)
+            report_status(diff_exit_code, full_name)
 
 # Report results of tests
 print()
