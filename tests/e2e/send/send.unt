@@ -1,87 +1,12 @@
-thread_def child {
-//  receive {
-//    int x -> {}
-//    _ -> {}
-//  }
-//
-//  receive {
-//    int x -> {}
-//    _ -> {}
-//  }
-//
-//  receive {
-//    int x -> {if (x == 3000) {print("This is 3000");}}
-//    _ -> {}
-//  }
-
-  print("
-about to receive an int
-
-");
-
+thread_def Child {
   receive {
-    (string x, (int z, int y)) -> {print("This is a string and an integer, and an integer");}
-    ((string x, int z), int y) -> {print("This is a string and an integer, and an integer");}
-    float x -> {print("This is a float");}
-    int x -> {print("This is an integer");}
-    _ -> {
-        print("This is not matched");
-      }
+    string x -> print(x);
+    (string x, string y) -> print("x: " + x + " y: " + y);
+    _ -> print("bad");
   }
-
-  print("
-about to receive a float
-
-");
-
-  receive {
-    (string x, (int z, int y)) -> {print("This is a string and an integer, and an integer");}
-    ((string x, int z), int y) -> {print("This is a string and an integer, and an integer");}
-    float x -> {print("This is a float");}
-    int x -> {print("This is an integer");}
-    _ -> {
-        print("This is not matched");
-      }
-  }
-
-  print("
-about to receive a tuple
-
-");
-
-  receive {
-    (string x, (int z, int y)) -> {print("This is a string and an integer, and an integer");}
-    ((string x, int z), int y) -> {print("This is a string and an integer, and an integer");}
-    float x -> {print("This is a float");}
-    int x -> {print("This is an integer");}
-    _ -> {
-        print("This is not matched");
-      }
-  }
-
-  print("
-about to receive a string
-
-");
-
-  receive {
-    (string x, (int z, int y)) -> {print("This is a string and an integer, and an integer");}
-    ((string x, int z), int y) -> {print("This is a string and an integer, and an integer");}
-    float x -> {print("This is a float");}
-    int x -> {print("This is an integer");}
-    _ -> { print("This is not matched"); }
-  }
-
-  print("
-done
-
-");
 }
 
 thread_def Main {
-  thread t = spawn child;
-  t << 10;
-  t << 30.12;
-  t << (("2000", 5), 2);
-  t << "asgd";
+  thread t = spawn Child;
+  t << ("hello", "bruh");
 }

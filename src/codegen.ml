@@ -908,7 +908,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let receiver_queue_ptr = StringMap.find receiver_name env in
             let receiver_queue = L.build_load receiver_queue_ptr "receiver_queue_load" builder in
             let (llvalue, env') = expr (builder, env) sexpr in
-            (* @TODO - Change this code after we implement tuple *)
             (match typ with
                 A.Tuple _ ->
                   let _ = L.build_call queue_push_func [| receiver_queue; llvalue |] "" builder in
@@ -1002,8 +1001,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let switch_bb = L.append_block context "switch_bb" the_thread in
             let switch_builder = L.builder_at_end context switch_bb in
             (* End block directs to code after the receive block *)
-            (* let end_bb = L.append_block context "end" the_thread in
-            let end_builder = L.builder_at_end context end_bb in *)
+            let end_bb = L.append_block context "end" the_thread in
+            let end_builder = L.builder_at_end context end_bb in
 
             let { child_mutex = self_mutex ; child_queue = receive_queue_ptr ; _ } = (match arg_gep with
                 Some gep -> gep
@@ -1079,159 +1078,54 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             (* If it did, jump to the switch_bb. If not, we go back to find_case_bb to check the next case. *)
             let _ = L.build_cond_br case_matched switch_bb find_case_bb find_case_builder in
 
-            let _ = L.build_call printf_func [| L.build_global_stringptr "selected pattern %d\n" "fmt" switch_builder; L.build_load case_index "index_load" switch_builder |] "print_test" switch_builder in
-            (switch_builder, env)
-
             (* Switch block directs the program to the proper case once the matching case_index has been identified *)
-            (*let index_loaded = L.build_load case_index "index_load" switch_builder in
-            let default_bb = L.append_block context "default" the_thread in
-            let default_builder  = L.builder_at_end context default_bb in
-            let _ = L.build_call printf_func [| int_format_str; (L.const_int i32_t (-1)) |] "print_test" default_builder in
-            let _ = L.build_br end_bb default_builder in
+            let index_loaded = L.build_load case_index "index_load" switch_builder in
+            let _ = L.build_call printf_func [| L.build_global_stringptr "selected pattern %d\n" "fmt" switch_builder; index_loaded |] "print_test" switch_builder in
 
-            let switch = L.build_switch index_loaded default_bb (List.length receive_cases) switch_builder in
+            (* the “else” case of the switch block should never be reached because semantic checker should enforce that there is a wildcard *)
+            let else_bb = L.append_block context "default" the_thread in
+            let else_builder  = L.builder_at_end context else_bb in
+            let _ = L.build_call printf_func [| L.build_global_stringptr "no patterns matched; this should never happen" "test" builder; (L.const_int i32_t (-1)) |] "print_test" else_builder in
+            let _ = L.build_br end_bb else_builder in
 
-            (* Build basic blocks for each pattern statement *)
+            let switch = L.build_switch index_loaded else_bb (List.length receive_cases) switch_builder in
+
+            let rec extend_env data_ptr_o builder env = function
+              SBasePattern (typ, id) ->
+                let { head = head_ptr; _ } = build_data_gep data_ptr_o builder in
+                let value_alloca = L.build_alloca (lltype_of_typ typ) "value_alloca" builder in
+                let value_ptr = L.build_load head_ptr "value_ptr_load" builder in
+                let value_ptr = L.build_bitcast value_ptr (L.pointer_type (lltype_of_typ typ)) "value_ptr_cast" builder in
+                let value = L.build_load value_ptr "value_load" builder in
+                let _ = L.build_store value value_alloca builder in
+                StringMap.add id value_alloca env
+              | SWildcardPattern -> env
+              | STuplePattern (p1, p2) ->
+                  let { head = head_ptr; tail = tail_ptr; _ } = build_data_gep data_ptr_o builder in
+                  let head_load = L.build_load head_ptr "head_load" builder in
+                  let head_cast = L.build_bitcast head_load data_ptr "head_cast" builder in
+                  let tail_load = L.build_load tail_ptr "tail_load" builder in
+                  let tail_cast = L.build_bitcast tail_load data_ptr "tail_cast" builder in
+                  let env' = extend_env head_cast builder env p1 in extend_env tail_cast builder env' p2
+            in
+
+            (* Build basic blocks for the body of each pattern *)
             let _ = List.iteri
               (fun i receive_case ->
                 let case_bb = L.append_block context "receive_case" the_thread in
                 let case_builder = L.builder_at_end context case_bb in
-                let _ = L.build_call printf_func [| int_format_str; (L.const_int i32_t i) |] "print_test" case_builder in
-                let _ = L.build_br end_bb case_builder in
-                (L.add_case switch (L.const_int i32_t i) case_bb)
-              ) receive_cases in
+                let _ = (L.add_case switch (L.const_int i32_t i) case_bb) in
+                let (pattern, sstmt) = receive_case in
+                let env' = extend_env message_data_ptr case_builder env pattern in
+                let (new_builder, _) = stmt (case_builder, env') sstmt in
+                ignore (L.build_br end_bb new_builder )) receive_cases in
 
             (* Check if tags match and if so, pass that index to the switch block *)
 
 
             (* Get the tag from the message *)
-            (end_builder, env) *)
+            (end_builder, env)
 
-
-
-
-          (*
-           * Build basic blocks for each pattern statement
-           * For each pattern, besides the wcard, create an array of tag values
-           * Store the array of tag values in an array of size n - 1
-           * Loop through each array, compare data_t with the array pattern
-           * If match, jump to that array basic block
-           * Otherwise, jump to the wildcard basic block *)
-          (* Start uncomment here *)
-          (* let { child_queue = self_queue_ptr; _ } = (match arg_gep with
-              Some queue -> queue
-            | None -> raise (Failure "Cannot receive message inside a function")) in
-          (* let self_queue_alloca = L.build_alloca queue_ptr "self_queue_alloca" builder in *)
-          let self_queue = L.build_load self_queue_ptr "self_queue_load" builder in
-          (* let _ = L.build_store self_queue self_queue_alloca builder in
-          let self_queue = L.build_load self_queue_alloca "self_queue_load" builder in *)
-
-          let pred_bb = L.append_block context "pred" the_thread in
-          let receive_bb = L.append_block context "receive" the_thread in
-          let pred_builder = L.builder_at_end context pred_bb in
-          let receive_builder = L.builder_at_end context receive_bb in
-
-          (* Jump to the predicate builder *)
-          let _ = L.build_br pred_bb pred_builder in
-          let empty = L.build_call queue_empty_func [| self_queue |] "queue_empty" pred_builder in
-          let _ = L.build_cond_br empty pred_bb receive_bb pred_builder in
-
-              tag_alloca = L.build_alloca i32_t "tag_alloca" receive_builder and
-              head_alloca = L.build_alloca pointer_t "head_alloca" receive_builder and
-              tail_alloca = L.build_alloca pointer_t "tail_alloca" receive_builder in
-          let data_pop = L.build_call queue_pop_func [| self_queue |] "queue_pop" receive_builder in
-          let _ = L.build_store data_pop data_alloca receive_builder in
-
-          (* and
-              post_receive_bb = L.append_block context "post_receive" the_thread in
-
-          let pred_builder = L.builder_at_end context pred_bb and
-              post_receive_builder = L.builder_at_end context post_receive_bb in
-
-            | Some arg_gep -> arg_gep ) in
-          let array_tags_alloca =
-            L.build_array_alloca
-              (L.pointer_type i32_t)
-              (L.const_int i32_t (List.length receive_cases))
-              "array_tags" builder in
-
-          let _ = L.build_br  *)
-          (*
-           * Takes a pattern, build the basic block, and return a basic block and a pattern
-           *)
-          let build_case_body index (pattern, sstmt) =
-            let ocaml_tags = tag_pattern pattern in
-            let tags_alloca = L.build_array_alloca i32_t (L.const_int i32_t (List.length ocaml_tags)) "tags_alloca" builder in
-            let _ = List.iteri (fun index value ->
-              let index = L.const_int i32_t index in
-              let lltag = L.const_int i32_t value in
-              let tags_index_ptr = L.build_in_bounds_gep tags_alloca [| index |] "gep_tag_index" builder
-              in ignore (L.build_store lltag tags_index_ptr builder)) ocaml_tags in
-            let arr_tags_ptr = L.build_in_bounds_gep tags_alloca [| L.const_int i32_t index |] "gep_tag_index" builder in
-            let tags = L.build_load tags_alloca "tags_load" builder in
-            let _ = L.build_store tags arr_tags_ptr builder in
-            match pattern with
-              SBasePattern (typ, id) ->
-                let tag_num = tag_of_type typ in
-                let case_bb = L.append_block context (A.string_of_typ typ) the_thread in
-                let case_builder = L.builder_at_end context case_bb in
-                (* @TODO - Ask about width of floats + pointers / potentially overflow *)
-                let value_alloca = L.build_alloca (lltype_of_typ typ) "value_alloca" case_builder in
-                let value_ptr = L.build_load head_ptr "value_ptr_load" case_builder in
-                let value_ptr = L.build_bitcast value_ptr (L.pointer_type (lltype_of_typ typ)) "value_ptr_cast" case_builder in
-                let value = L.build_load value_ptr "value_load" case_builder in
-                let _ = L.build_store value value_alloca case_builder in
-                let env' = StringMap.add id value_alloca env in
-                let (new_builder, _) = stmt (case_builder, env') sstmt in
-                let _ = L.build_br post_receive_bb new_builder in case_bb
-            | STuplePattern _ ->
-                let case_bb = L.append_block context "tuple_case" the_thread in
-                let case_builder = L.builder_at_end context case_bb in
-                let (new_builder, _) = stmt (case_builder, env) sstmt in
-                let _ = L.build_br post_receive_bb new_builder in case_bb
-            | SWildcardPattern ->
-                let default_bb = L.append_block context "wildcard" the_thread in
-                let default_builder = L.builder_at_end context default_bb in
-                let (new_builder, _) = stmt (default_builder, env) sstmt in
-                let _ = L.build_br post_receive_bb new_builder in default_bb in *)
-          (* let wildcard = List.find (fun (pattern, _) -> pattern = WildcardPattern) receive_cases in *)
-
-
-
-          (*let
-              receive_bb = L.append_block context "receive" the_thread and
-              post_bb = L.append_block context "post_receive" the_thread and
-              default_bb = L.append_block context "switch_end" the_thread in
-
-          let pred_builder = L.builder_at_end context pred_bb and
-              receive_builder = L.builder_at_end context receive_bb and
-              post_builder = L.builder_at_end context post_bb and
-              default_builder = L.builder_at_end context default_bb in
-
-          (* Move the current builder to pred_bb *)
-          let _ = L.build_br pred_bb builder in
-
-          (* Pop data from the queue and pattern match *)
-
-
-          let data = L.build_load data_alloca "data_load" receive_builder in
-          let { tag = tag_ptr; head = head_ptr; tail = tail_ptr }
-            = build_data_gep data receive_builder in
-          let tag_value = L.build_load tag_ptr "tag_load" receive_builder and
-              head_value = L.build_load head_ptr "head_load" receive_builder and
-              tail_value = L.build_load tail_ptr "tail_load" receive_builder in
-          let _ = L.build_store tag_value tag_alloca receive_builder and
-              _ = L.build_store head_value head_alloca receive_builder and
-              _ = L.build_store tail_value tail_alloca receive_builder in
-
-          let switch = L.build_switch tag_value default_bb (List.length receive_cases) receive_builder in
-
-          let build_case (pattern, sstmt) = match pattern with
-              SBasePattern (typ, id) ->
-            | SWildcardPattern ->
-            | _ -> raise (Failure "Implement composite case") in
-
-          let _ = List.iter build_case receive_cases in (post_builder, env)*)
     in
     let (builder, env') = stmt (builder, env) sstmt in
     let join pthread =
