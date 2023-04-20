@@ -1,8 +1,8 @@
 #!/usr/bin/python3
 
 # TODO: nicer diff output
-# TODO: options for end-to-end testing by re-parsing pretty printed AST output
-#       and ensuring it’s the same as the previous output
+# TODO: refactor to support arbitrary nesting
+# TODO: enforce that only tests that start with failure- have >0 exit code
 
 import os
 from os import path

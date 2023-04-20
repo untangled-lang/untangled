@@ -1,0 +1,13 @@
+thread_def Child {
+  parent << (string : "hi");
+}
+
+thread_def Main {
+  thread t = (thread : spawn Child);
+  receive {
+    string x -> (void : print((string : x)));
+    _ -> {
+
+    }
+  }
+}

@@ -1,4 +1,0 @@
-thread_def Main {
-  thread t;
-  t << "hi";
-}

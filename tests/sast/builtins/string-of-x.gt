@@ -1,0 +1,5 @@
+thread_def Main {
+  (void : print((string : string_of_float((float : 15.0)))));
+  (void : print((string : string_of_int((int : 10)))));
+  (void : print((string : string_of_bool((bool : true)))));
+}

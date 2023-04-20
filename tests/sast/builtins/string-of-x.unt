@@ -1,0 +1,6 @@
+thread_def Main {
+  print(string_of_float(15.0));
+  print(string_of_int(10));
+  print(string_of_bool(true));
+}
+
