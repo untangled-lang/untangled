@@ -1037,9 +1037,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   and build_func_body fdecl =
     let (the_func, _) = StringMap.find fdecl.sfname function_decls in
     let builder = L.builder_at_end context (L.entry_block the_func) in
-    let _ = build_body (builder, StringMap.empty) (SBlock fdecl.sbody) the_func in
+    let env = List.fold_left2 (fun map (typ, id) param ->
+        let local = L.build_alloca (lltype_of_typ typ) (id ^ "_alloca") builder in
+        let _ = L.build_store param local builder in StringMap.add id local map
+      ) StringMap.empty fdecl.sformals (Array.to_list (L.params the_func)) in
+    let _ = build_body (builder, env) (SBlock fdecl.sbody) the_func in
     () in
-    (* (L.build_ret (L.const_null (L.pointer_type i8_t)) final_builder) *)
   let _ = List.map build_thread_body tdecls in
   let _ = List.map build_func_body fdecls in
 
