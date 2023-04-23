@@ -38,7 +38,8 @@ type expr =
 | ArrayLit of expr list
 | Id of string
 | Binop of expr * op * expr
-| Unop of unop * expr
+| PrefixUnop of unop * expr
+| PostfixUnop of unop * expr
 | Assign of string * expr
 | AssignIndex of string * expr * expr
 | Spawn of string
@@ -144,7 +145,8 @@ and string_of_expr expr =
   | ArrayLit(n) -> "[" ^ String.concat ", " (List.map string_of_expr n) ^ "]"
   | Id(s) -> s
   | Binop (e1, o, e2) -> "(" ^ string_of_expr e1 ^ string_of_op o ^ string_of_expr e2 ^ ")"
-  | Unop(unop, e) -> "(" ^ string_of_unop unop e ^ ")"
+  | PrefixUnop (unop, e) -> "(" ^ string_of_unop unop e ^ ")"
+  | PostfixUnop (unop, e) -> "(" ^ string_of_unop unop e ^ ")"
   | Assign(s, e) -> "(" ^ s ^ " = " ^ string_of_expr e ^ ")"
   | Spawn(s) -> "spawn " ^ s
   | Call(s, es) ->

@@ -1,0 +1,12 @@
+thread_def Main {
+  for (int i = (int : 0); (bool : ((int : i) < (int : 5))); (int : (i = (int : ((int : i) + (int : 1)))))) {
+    (void : print((string : string_of_int((int : i)))));
+    (void : print((string : "
+    ")));
+  }
+  for (int i = (int : 5); (bool : ((int : i) > (int : 0))); (int : (i = (int : ((int : i) - (int : 1)))))) {
+    (void : print((string : string_of_int((int : i)))));
+    (void : print((string : "
+    ")));
+  }
+}

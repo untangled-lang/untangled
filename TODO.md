@@ -5,14 +5,17 @@
   - [x] float
   - [x] string
   - [x] tuples
+    - [ ] Make copy of tuple when send message
+    - [ ] Destructuring tuple in declaration assignment?
   - [ ] arrays
+    - [ ] Array index / assignment / access
   - [ ] semaphores
 
 - [x] Conditionals
 
 - Loops
   - [x] while
-  - [ ] for
+  - [x] for
   - [ ] break/continue
 
 - Variables
@@ -22,10 +25,18 @@
 - Binop
   - [x] Regular operations on ints/floats, **excluding** power
   - [x] String binary operations
+  - [ ] Add / subtract on semaphores
+  - [ ] Boolean operands && and ||
+
+- Unop
+  - [x] ++ and -- on ints and floats
+  - [ ] ++ and -- on semaphores
+  - [x] Not and Negate
 
 - Functions
-  - [ ] Regular function calls without passing threads
+  - [X] Regular function calls without passing threads
   - [ ] Passing threads to function calls
+  - [ ] Passing an array in arguments
 
 - Threading
   - [x] Message queue

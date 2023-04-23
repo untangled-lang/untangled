@@ -89,10 +89,10 @@ expr:
   | expr AND    expr { Binop($1, And,   $3)   }
   | expr OR     expr { Binop($1, Or,    $3)   }
   // Unary operators
-  | MINUS expr %prec NOT { Unop(Neg, $2)      }
-  | NOT expr         { Unop(Not, $2)          }
-  | expr PLUSPLUS    { Unop(Plusplus, $1)     }
-  | expr MINUSMINUS  { Unop(Minmin, $1)       }
+  | MINUS expr %prec NOT { PrefixUnop(Neg, $2)      }
+  | NOT expr         { PrefixUnop(Not, $2)          }
+  | ID PLUSPLUS    { PostfixUnop(Plusplus, Id($1))     }
+  | ID MINUSMINUS  { PostfixUnop(Minmin, Id($1))       }
   // Assignment
   | ID ASSIGN expr   { Assign($1, $3)         }
   | ID PLUSASSIGN expr { Assign($1, Binop(Id($1), Add, $3)) }

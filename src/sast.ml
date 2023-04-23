@@ -11,7 +11,7 @@ and sx =
 | SArrayLit of sexpr list
 | SId of string
 | SBinop of sexpr * op * sexpr
-| SUnop of unop * sexpr
+| SPreUnop of unop * sexpr
 | SAssign of string * sexpr
 | SAssignIndex of string * sexpr * sexpr
 | SSpawn of string
@@ -82,7 +82,7 @@ and string_of_sexpr (t, expr) =
     | SArrayLit(n) -> "[" ^ String.concat ", " (List.map string_of_sexpr n) ^ "]"
     | SId(s) -> s
     | SBinop (e1, o, e2) -> "(" ^ string_of_sexpr e1 ^ string_of_op o ^ string_of_sexpr e2 ^ ")"
-    | SUnop(unop, e) -> "(" ^ string_of_unop unop e ^ ")"
+    | SPreUnop (unop, e) -> "(" ^ string_of_unop unop e ^ ")"
     | SAssign(s, e) -> "(" ^ s ^ " = " ^ string_of_sexpr e ^ ")"
     | SSpawn(s) -> "spawn " ^ s
     | SCall(s, es) ->

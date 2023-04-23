@@ -740,7 +740,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                     | _ -> raise (Failure "Operation not supported on string arguments"))
                 | _ -> raise (Failure "Implement other")) in
             (op e1' e2' "binop_result" builder, env'')
-        | SUnop _ -> raise (Failure "unop not implemented")
         | SIndex _ -> raise (Failure "index not implemented")
         | SUnit -> raise (Failure "sunit not implemented")
         | SSpawn tn ->
@@ -785,6 +784,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let _ = L.build_store value_to_assign storage builder in
             (value_to_assign, env')
         | SAssignIndex _ -> raise (Failure "Implement SAssignIndex")
+        | SPreUnop (_, sexpr) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+            let negated = L.build_xor llvalue (L.const_int i1_t 1) "negate_bool" builder in
+            (negated, env')
     and stmt ((builder: L.llbuilder), env) sstmt =
       match sstmt with
           SBlock sblock ->
@@ -810,7 +813,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               | Array _ -> raise (Failure "TODO array")) var_name builder in
             let _ = L.build_store llvalue alloca builder in
             (builder, StringMap.add var_name alloca env2)
-        | SFor _ -> raise (Failure "implement sfor")
+        | SFor (init, cond, post, body) ->
+            let (builder, _) = stmt (builder, env) (SBlock [init ; SWhile (cond, SBlock [body ; SExpr post])])
+            in (builder, env)
         | SWhile (pred_expr, body) ->
             let pred_bb = L.append_block context "while_pred" the_thread in
             let body_bb = L.append_block context "while_body" the_thread in

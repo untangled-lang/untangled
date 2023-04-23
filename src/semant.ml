@@ -235,7 +235,31 @@ let check (tdecls, fdecls) =
           in (check_assign lt rt expr, SAssign (id, (lt, sexpr)))
       | Noexpr -> (Void, SNoexpr)
       | Unit -> raise (Failure "semantic unit")
-      | Unop _ -> raise (Failure "semantic unop")
+      | PrefixUnop (op, expr) ->
+          let (t, _) as e' = check_expr envs expr in
+          (match op with
+              Neg ->
+                let operand = match t with
+                    Int -> IntLit (-1)
+                  | Float -> FloatLit "-1.0"
+                  | typ -> raise (Failure (string_of_typ typ ^ " can't be negated")) in
+                check_expr envs (Binop (expr, Mult, operand))
+            | Not -> ((check_assign Bool t expr), SPreUnop (op, e'))
+            | _ -> raise (Failure "Parsing bug"))
+      | PostfixUnop (op, expr) ->
+          let (t, e') = check_expr envs expr in
+          let id = match e' with
+              SId id -> id
+            | _ -> raise (Failure "Expected ID in postfix operation") in
+          let op = match op with
+              Plusplus -> Add
+            | Minmin -> Sub
+            | _ -> raise (Failure "Parsing bug")
+          in (match t with
+            Int -> check_expr envs (Assign (id, Binop (expr, op, IntLit 1)))
+            | Float -> check_expr envs (Assign (id, Binop (expr, op, FloatLit "1.0")))
+            | Semaphore -> raise (Failure "semaphore")
+            | typ -> raise (Failure (string_of_typ typ ^ " can't be assigned to postfix operation")))
       | AssignIndex (_, _, _) -> raise (Failure "semantic assignIndex")
       | Index (_, _) -> raise (Failure "semantic index")
 

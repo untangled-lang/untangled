@@ -1,0 +1,30 @@
+thread_def Main {
+  int i = 6;
+  i++;
+  print(string_of_int(i));
+  print("
+");
+  i--;
+  print(string_of_int(i));
+  print("
+");
+
+  print(string_of_int(-i));
+  print("
+");
+  print(string_of_int(-10));
+  print("
+");
+  print(string_of_float(-5.02));
+  print("
+");
+
+
+  bool b = false;
+  print(string_of_bool(!b));
+  print("
+");
+  print(string_of_bool(!true));
+  print("
+");
+}
