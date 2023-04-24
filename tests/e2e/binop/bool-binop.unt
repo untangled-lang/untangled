@@ -1,0 +1,17 @@
+thread_def Main {
+  bool a = true;
+  bool b = true;
+  bool c = false;
+  bool d = false;
+  if (a == b) print("a == b");
+  if (a == c) print("WRONG");
+
+  if (a != c) print("a != c");
+  if (c != d) print("WRONG");
+
+  if (a && b) print("a && b");
+  if (a && c) print("WRONG");
+
+  if (a || c) print("a || c");
+  if (c || d) print("WRONG");
+}

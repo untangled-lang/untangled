@@ -745,6 +745,14 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                           var_name
                           builder)
                     | _ -> raise (Failure "Operation not supported on string arguments"))
+                | A.Bool ->
+                  (match op with
+                    | A.Equality -> L.build_icmp L.Icmp.Eq
+                    | A.Neq -> L.build_icmp L.Icmp.Ne
+                    | A.And -> L.build_and
+                    | A.Or -> L.build_or
+                    | _ -> raise (Failure "Boolean binary operation not supported")
+                    )
                 | _ -> raise (Failure "Implement other")) in
             (op e1' e2' "binop_result" builder, env'')
         | SIndex _ -> raise (Failure "index not implemented")
