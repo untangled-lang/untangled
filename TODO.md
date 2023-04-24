@@ -7,6 +7,9 @@
   - [x] tuples
     - [ ] Make copy of tuple when send message
     - [ ] Destructuring tuple in declaration assignment?
+      - [x] AST
+      - [ ] semantic type checking
+      - [ ] Codegen
   - [ ] arrays
     - [ ] Array index / assignment / access
   - [ ] semaphores
@@ -16,7 +19,7 @@
 - Loops
   - [x] while
   - [x] for
-  - [ ] break/continue
+  - [x] break/continue
 
 - Variables
   - [x] assignment
@@ -26,7 +29,7 @@
   - [x] Regular operations on ints/floats, **excluding** power
   - [x] String binary operations
   - [ ] Add / subtract on semaphores
-  - [ ] Boolean operands && and ||
+  - [x] Boolean operands && and ||
 
 - Unop
   - [x] ++ and -- on ints and floats

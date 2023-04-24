@@ -137,13 +137,13 @@ expr_opt:
   | expr          { $1 }
 
 for_init_statement:
-  vdecl { $1 }
+  vdecl SEMI { Decl($1) }
   | expr_opt SEMI { Expr($1) }
 
 stmt:
   expr SEMI                                 { Expr($1)              }
   | LBRACE stmt_list RBRACE                 { Block(List.rev $2)    }
-  | vdecl                                   { $1                    }
+  | vdecl SEMI                              { Decl($1)                    }
   | IF LPAREN expr RPAREN stmt %prec NOELSE { If($3, $5, Block([])) }
   | IF LPAREN expr RPAREN stmt ELSE stmt    { If($3, $5, $7)        }
   | FOR LPAREN for_init_statement expr SEMI expr_opt RPAREN stmt
@@ -175,8 +175,13 @@ receive: RECEIVE LBRACE receive_cases RBRACE { Receive(List.rev $3) }
 
 // TODO: syntactic sugar for multiple variable declarations? e.g. `int x, y = 2, z;`
 vdecl:
-    typ ID SEMI                 { Decl($1, $2, Noexpr)  }
-  | typ ID ASSIGN expr SEMI     { Decl($1, $2, $4)      }
+    typ ID                                      { BaseDecl($1, $2, Noexpr) }
+  | typ ID ASSIGN expr                          { BaseDecl($1, $2, $4)     }
+  | LPAREN tupdecl COMMA tupdecl RPAREN ASSIGN expr { TupleDecl($2, $4, $7)    }
+
+tupdecl:
+  | typ ID { BaseDecl($1, $2, Noexpr) }
+  | LPAREN tupdecl COMMA tupdecl RPAREN { TupleDecl($2, $4, Noexpr) }
 
 thread_decl: THREAD_DEF ID LBRACE stmt_list RBRACE
     { { tname = $2; body = List.rev $4; } }

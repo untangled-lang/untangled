@@ -30,8 +30,11 @@ type sstmt =
 | SFor of sstmt * sexpr * sexpr * sstmt
 | SWhile of sexpr * sstmt
 | SSend of string * sexpr
-| SDecl of typ * string * sexpr
+| SDecl of sdecl_type
 | SReceive of receive_case list
+and sdecl_type =
+| SBaseDecl of typ * string * sexpr
+| STupleDecl of sdecl_type * sdecl_type * sexpr
 and receive_case = (pattern * sstmt)
 and pattern =
   SBasePattern of typ * string
@@ -101,6 +104,11 @@ let rec string_of_spattern pat =
   | SWildcardPattern -> "_"
   | STuplePattern(p1, p2) -> "(" ^ string_of_spattern p1 ^ ", " ^ string_of_spattern p2 ^ ")"
 
+let rec string_of_stuple = function
+  | STupleDecl(t1, t2, (_, SNoexpr)) -> "(" ^ string_of_stuple t1 ^ ", " ^ string_of_stuple t2 ^ ")"
+  | STupleDecl(t1, t2, sexpr) -> "(" ^ string_of_stuple t1 ^ ", " ^ string_of_stuple t2 ^ ")" ^ " = " ^ string_of_sexpr sexpr
+  | SBaseDecl(t, s, _) -> string_of_typ t ^ " " ^ s
+
 
 let rec string_of_sstmt statement =
   match statement with
@@ -118,8 +126,9 @@ let rec string_of_sstmt statement =
       string_of_sexpr e3  ^ ") " ^ string_of_sstmt s
   | SWhile(e, s) -> "while (" ^ string_of_sexpr e ^ ") " ^ string_of_sstmt s
   | SSend(s, e) -> s ^ " << " ^ (string_of_sexpr e) ^ ";"
-  | SDecl(t, id, (_, SNoexpr)) -> string_of_typ t ^ " " ^ id ^ ";"
-  | SDecl(t, id, expr) -> string_of_typ t ^ " " ^ id ^ " = " ^ (string_of_sexpr expr) ^ ";"
+  | SDecl(SBaseDecl (t, id, (_, SNoexpr))) -> string_of_typ t ^ " " ^ id ^ ";"
+  | SDecl(SBaseDecl (t, id, expr)) -> string_of_typ t ^ " " ^ id ^ " = " ^ (string_of_sexpr expr) ^ ";"
+  | SDecl (STupleDecl _ as tup) -> string_of_stuple tup ^ ";"
   | SReceive(cases) -> "receive {\n" ^ indent (String.concat "\n" (List.map
       (fun (pat, stmt) -> ((string_of_spattern pat) ^ " -> " ^ (string_of_sstmt stmt)))
     cases)) ^ "\n}"

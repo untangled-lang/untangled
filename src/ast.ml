@@ -58,8 +58,11 @@ type stmt =
 | For of stmt * expr * expr * stmt
 | While of expr * stmt
 | Send of string * expr
-| Decl of typ * string * expr
+| Decl of decl_type
 | Receive of receive_case list
+and decl_type =
+| BaseDecl of typ * string * expr
+| TupleDecl of decl_type * decl_type * expr
 and receive_case = (pattern * stmt)
 and pattern =
   BasePattern of typ * string
@@ -164,6 +167,11 @@ let rec string_of_pattern pat =
   | WildcardPattern -> "_"
   | TuplePattern(p1, p2) -> "(" ^ string_of_pattern p1 ^ ", " ^ string_of_pattern p2 ^ ")"
 
+let rec string_of_tuple = function
+  | TupleDecl(t1, t2, Noexpr) -> "(" ^ string_of_tuple t1 ^ ", " ^ string_of_tuple t2 ^ ")"
+  | TupleDecl(t1, t2, e) -> "(" ^ string_of_tuple t1 ^ ", " ^ string_of_tuple t2 ^ ")" ^ " = " ^ (string_of_expr e)
+  | BaseDecl(t, s, _) -> string_of_typ t ^ " " ^ s
+
 
 let rec string_of_stmt statement =
   match statement with
@@ -181,8 +189,9 @@ let rec string_of_stmt statement =
       string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
   | Send(s, e) -> s ^ " << " ^ (string_of_expr e) ^ ";"
-  | Decl(t, id, Noexpr) -> string_of_typ t ^ " " ^ id ^ ";"
-  | Decl(t, id, expr) -> string_of_typ t ^ " " ^ id ^ " = " ^ (string_of_expr expr) ^ ";"
+  | Decl(BaseDecl (t, id, Noexpr)) -> string_of_typ t ^ " " ^ id ^ ";"
+  | Decl(BaseDecl (t, id, expr)) -> string_of_typ t ^ " " ^ id ^ " = " ^ (string_of_expr expr) ^ ";"
+  | Decl(TupleDecl _ as tup) -> string_of_tuple tup ^ ";"
   | Receive(cases) -> "receive {\n" ^ indent (String.concat "\n" (List.map
       (fun (pat, stmt) -> ((string_of_pattern pat) ^ " -> " ^ (string_of_stmt stmt)))
     cases)) ^ "\n}"

@@ -3,4 +3,5 @@ thread_def Main {
   bool b = true;
   float f = 0.5;
   string s = "hello world";
+  (int x, (bool c, float d)) = (1, (true, 0.5));
 }

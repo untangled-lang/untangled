@@ -127,7 +127,7 @@ let check (tdecls, fdecls) =
           let _ = check_assign Thread typ expr in
           let sexpr = check_expr envs expr in
           (envs, SSend (id, sexpr))
-      | Decl (lt, id, expr) ->
+      | Decl (BaseDecl (lt, id, expr)) ->
         (match id with
           "parent" | "self" -> raise (Failure "parent/self is a keyword")
           | _ as id ->  let _ = check_binds "local" [(lt, id)] in
@@ -136,9 +136,21 @@ let check (tdecls, fdecls) =
                       if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
                       else let (rt, e') as sexpr = check_expr envs expr in
                       (match e' with
-                        | SNoexpr -> (bind id lt envs, SDecl (lt, id, sexpr))
-                        | _ -> (bind id lt envs, SDecl (check_assign lt rt expr, id, (lt, e'))))
+                        | SNoexpr -> (bind id lt envs, SDecl (SBaseDecl (lt, id, sexpr)))
+                        | _ -> (bind id lt envs, SDecl (SBaseDecl (check_assign lt rt expr, id, (lt, e')))))
                     | [] -> raise (Failure "Implementation bug: empty environments")))
+      | Decl (TupleDecl (t1, t2, expr)) ->
+          let (res_type, sx) as sexpr = check_expr envs expr in
+          let (envs', t1') = check_stmt envs (Decl t1) in
+          let t1' = match t1' with
+            | SDecl decl -> decl
+            | _ -> raise (Failure "Implementation bug: expected SDecl in Tuple Decl") in
+          let (envs'', t2') = check_stmt envs' (Decl t2) in
+          let t2' = match t2' with
+            | SDecl decl -> decl
+            | _ -> raise (Failure "Implementation bug: expected SDecl in Tuple Decl") in
+          (* TODO check if the type of e matches with t1 and t2 *)
+          (envs'', SDecl (STupleDecl (t1', t2', sexpr)))
       | Break -> (envs, SBreak)
       | Continue -> (envs, SContinue)
       | Receive receive_cases ->

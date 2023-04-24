@@ -4,6 +4,7 @@ thread_def MyThread {
 }
 
 thread_def Main {
+  (int aa, (string bb, (bool cc, int dd))) = (1, ("hello", (true, 2)));
   int i = 7;
   bool b = true;
   thread t = spawn MyThread;

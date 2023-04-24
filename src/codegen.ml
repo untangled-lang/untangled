@@ -816,7 +816,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | SReturn sexpr -> let (value, _) = expr (builder, env) sexpr in
             let _ = L.build_ret value builder in
             (builder, env)
-        | SDecl (ty, var_name, sx) ->
+        | SDecl (SBaseDecl (ty, var_name, sx)) ->
             let (llvalue, env2) = expr (builder, env) sx in
             let alloca = L.build_alloca (match ty with
               | Void -> void_t
@@ -830,6 +830,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               | Array _ -> raise (Failure "TODO array")) var_name builder in
             let _ = L.build_store llvalue alloca builder in
             (builder, StringMap.add var_name alloca env2)
+        | SDecl (STupleDecl _) -> raise (Failure "Implement tuple unpacking")
         | SFor (init, cond, afterthought, body) ->
             let pred_bb = L.append_block context "for_pred" the_thread in
             let pred_builder = L.builder_at_end context pred_bb in
