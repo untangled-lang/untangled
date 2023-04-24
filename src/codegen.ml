@@ -23,6 +23,13 @@ type arg_gep = {
   child_queue : L.llvalue;
 }
 
+(* for implementing break / continue *)
+type stmt_context = {
+  continue_target_block : L.llbasicblock option;
+  break_target_block : L.llbasicblock option;
+}
+
+
 let deep_copy_stringmap map =
   let new_map = StringMap.empty in
   let new_map = StringMap.fold (fun k v acc -> StringMap.add k v acc) map new_map in
@@ -788,17 +795,19 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (llvalue, env') = expr (builder, env) sexpr in
             let negated = L.build_xor llvalue (L.const_int i1_t 1) "negate_bool" builder in
             (negated, env')
-    and stmt ((builder: L.llbuilder), env) sstmt =
+    and stmt ((builder: L.llbuilder), env, (ctx : stmt_context)) sstmt =
       match sstmt with
           SBlock sblock ->
-            let (builder_final, _) = List.fold_left stmt (builder, env) sblock in
+            let (builder_final, _) = List.fold_left
+              (fun (builder, env) sstmt -> stmt (builder, env, ctx) sstmt)
+              (builder, env)
+              sblock
+            in
             (builder_final, env)
         | SExpr sexpr -> let (_, env2) = expr (builder, env) sexpr in (builder, env2)
         | SReturn sexpr -> let (value, _) = expr (builder, env) sexpr in
             let _ = L.build_ret value builder in
             (builder, env)
-        | SBreak -> raise (Failure "implement break")
-        | SContinue -> raise (Failure "implement continue")
         | SDecl (ty, var_name, sx) ->
             let (llvalue, env2) = expr (builder, env) sx in
             let alloca = L.build_alloca (match ty with
@@ -813,20 +822,42 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               | Array _ -> raise (Failure "TODO array")) var_name builder in
             let _ = L.build_store llvalue alloca builder in
             (builder, StringMap.add var_name alloca env2)
-        | SFor (init, cond, post, body) ->
-            let (builder, _) = stmt (builder, env) (SBlock [init ; SWhile (cond, SBlock [body ; SExpr post])])
-            in (builder, env)
+        | SFor (init, cond, afterthought, body) ->
+            let pred_bb = L.append_block context "for_pred" the_thread in
+            let pred_builder = L.builder_at_end context pred_bb in
+            let body_bb = L.append_block context "for_body" the_thread in
+            let body_builder = L.builder_at_end context body_bb in
+            let afterthought_bb = L.append_block context "for_post_body" the_thread in
+            let afterthought_builder = L.builder_at_end context afterthought_bb in
+            let end_bb = L.append_block context "for_end" the_thread in
+            let end_builder = L.builder_at_end context end_bb in
+
+            (* 1. Init (and go into first predicate) *)
+            let (_, env') = stmt (builder, env, { continue_target_block = None; break_target_block = None }) init in
+            let _ = L.build_br pred_bb builder in
+            (* 2. Predicate - either ends loop or goes into the loop body *)
+            let (pred, _) = expr (pred_builder, env') cond in
+            let _ = L.build_cond_br pred body_bb end_bb pred_builder in
+            (* 3. Body - the continue target is the post_body_bb *)
+            let (final_builder, _) = stmt (body_builder, env', { continue_target_block = Some afterthought_bb; break_target_block = Some end_bb }) body in
+            (* 4. Afterthought - runs after the body *)
+            let _ = L.build_br afterthought_bb final_builder in
+            let (afterthought_final_builder, _) = stmt (afterthought_builder, env', { continue_target_block = None; break_target_block = None }) (SExpr afterthought) in
+            (* 5. Go back to the predicate to maybe loop again *)
+            let _ = L.build_br pred_bb afterthought_final_builder in
+            (* 6. End *)
+            (end_builder, env)
         | SWhile (pred_expr, body) ->
             let pred_bb = L.append_block context "while_pred" the_thread in
-            let body_bb = L.append_block context "while_body" the_thread in
-            let _ = L.build_br pred_bb builder in
             let pred_builder = L.builder_at_end context pred_bb in
-            let (pred, _) = expr (pred_builder, env) pred_expr in
+            let body_bb = L.append_block context "while_body" the_thread in
+            let body_builder = L.builder_at_end context body_bb in
             let end_bb = (L.append_block context "while_end" the_thread) in
             let end_builder = L.builder_at_end context end_bb in
+            let _ = L.build_br pred_bb builder in
+            let (pred, _) = expr (pred_builder, env) pred_expr in
             let _ = L.build_cond_br pred body_bb end_bb pred_builder in
-            let body_builder = L.builder_at_end context body_bb in
-            let (final_builder, _) = stmt (body_builder, env) body in
+            let (final_builder, _) = stmt (body_builder, env, { continue_target_block = Some body_bb; break_target_block = Some end_bb }) body in
             let _ = L.build_br pred_bb final_builder in
             (end_builder, env)
         | SIf (pred_expr, t_block, f_block) ->
@@ -838,9 +869,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let end_builder = L.builder_at_end context end_bb in
             let (pred, _) = expr (builder, env) pred_expr in
             let _ = L.build_cond_br pred t_bb f_bb builder in
-            let (t_builder, _) = stmt (t_builder, env) t_block in
+            let (t_builder, _) = stmt (t_builder, env, ctx) t_block in
             let _ = L.build_br end_bb t_builder in
-            let (f_builder, _) = stmt (f_builder, env) f_block in
+            let (f_builder, _) = stmt (f_builder, env, ctx) f_block in
             let _ = L.build_br end_bb f_builder in
             (end_builder, env)
         | SSend (receiver_name, sexpr) ->
@@ -882,6 +913,18 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                 let _ = L.build_store tail_cast tail_ptr builder in
                 let _ = L.build_call queue_push_func [| receiver_queue; data |] "" builder in
                 (builder, env'))
+        | SContinue ->
+            let { continue_target_block = continue_option; _ } = ctx in
+            let _ = match continue_option with
+                Some continue_bb -> L.build_br continue_bb builder
+              | None -> raise (Failure "Found a continue statement without basic block") in
+            (builder, env)
+        | SBreak ->
+            let { break_target_block = break_option; _ } = ctx in
+            let _ = match break_option with
+                Some break_bb -> L.build_br break_bb builder
+              | None -> raise (Failure "Found a break statement without basic block") in
+            (builder, env)
         | SReceive receive_cases ->
             (* Predicate block checks whether the queue is empty; used in the spin lock to wait for a message *)
             let pred_bb = L.append_block context "pred_bb" the_thread in
@@ -1009,12 +1052,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                 let _ = (L.add_case switch (L.const_int i32_t i) case_bb) in
                 let (pattern, sstmt) = receive_case in
                 let env' = extend_env message_data_ptr case_builder env pattern in
-                let (new_builder, _) = stmt (case_builder, env') sstmt in
+                let (new_builder, _) = stmt (case_builder, env', ctx) sstmt in
                 ignore (L.build_br end_bb new_builder )) receive_cases in
 
             (* Check if tags match and if so, pass that index to the switch block *)
             (end_builder, env) in
-    let (builder, env') = stmt (builder, env) sstmt in
+    let (builder, env') = stmt (builder, env, { continue_target_block = None; break_target_block = None}) sstmt in
     let join pthread =
       let id = L.build_load pthread "pthread_t" builder in
       ignore (L.build_call pthread_join_func [| id; (L.const_null i8_t) |] "join" builder) in
