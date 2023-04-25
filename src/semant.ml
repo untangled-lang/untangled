@@ -140,30 +140,31 @@ let check (tdecls, fdecls) =
                   | SNoexpr -> (bind id lt envs, SDecl (SBaseDecl (lt, id, sexpr)))
                   | _ -> (bind id lt envs, SDecl (SBaseDecl (check_assign lt rt expr, id, (lt, e')))))
               | [] -> raise (Failure "Implementation bug: empty environments")))
-      | Decl (TupleDecl (t1, t2, expr)) ->
-          let extract_sdecl = function
-              SDecl decl -> decl
-            | _ -> raise (Failure "Implement bug: expected SDecl in Tuple Decl") in
-
-          (* Compare that the left hand assignment's type matches the right hand assignment type *)
-          let rec compare_tuple (decl : sdecl_type) (assignment : typ) = match decl with
-              SBaseDecl (typ, _, _) ->
-                if typ != assignment then
-                raise (Failure ("Can't assign " ^ string_of_typ typ ^ " to " ^ string_of_typ assignment))
-                else ()
-            | STupleDecl (tuple1, tuple2, _) ->
-                match assignment with
-                  Tuple (typ1, typ2) ->
-                    let _ = compare_tuple tuple1 typ1 in
-                    let _ = compare_tuple tuple2 typ2 in ()
-                  | _ -> raise (Failure ("Can't unpack " ^ string_of_typ assignment ^ " as tuple")) in
-          let (rt, _) as sexpr = check_expr envs expr in
-          let (envs', sstmt1) = check_stmt envs (Decl t1) in
-          let (envs'', sstmt2) = check_stmt envs' (Decl t2) in
-          let ldecl = extract_sdecl sstmt1 and
-              rdecl = extract_sdecl sstmt2 in
-          let tuple_decl = STupleDecl (ldecl, rdecl, sexpr) in
-          let _ = compare_tuple tuple_decl rt in (envs'', SDecl tuple_decl)
+      | Decl (TupleDecl (leftTup, rightTup, expr) as tupDecl) ->
+          let (res_type, _) as sexpr = check_expr envs expr in
+          let rec check_tuple_assign declType ty = match declType with
+            | BaseDecl (t, _, _) -> if t != ty then raise (Failure ("Tuple type mismatch, expected a " ^ string_of_typ t ^ " but got a " ^ string_of_typ ty))
+            | TupleDecl (leftTup, rightTup, _) ->
+                (match ty with
+                  | Tuple (t1, t2) ->
+                    let _ = check_tuple_assign leftTup t1 in
+                    let _ = check_tuple_assign rightTup t2 in ()
+                  | _ -> raise (Failure ("Tuple type mismatch, expected a tuple but got a " ^ string_of_typ ty ^ " instead")))
+          in
+          let rec build_stuple = function
+            | BaseDecl (t, id, _) -> SBaseDecl (t, id, (t, SNoexpr))
+            | TupleDecl (leftTup, rightTup, _) ->
+                STupleDecl (build_stuple leftTup, build_stuple rightTup, (Void, SNoexpr))
+          in let rec add_unpacked_vars envs decl =
+            (match decl with
+              BaseDecl _ as decl ->
+                let (envs', _) = check_stmt envs (Decl decl) in
+                envs'
+            | TupleDecl (leftTup, rightTup, _) ->
+                let envs' = add_unpacked_vars envs leftTup in add_unpacked_vars envs' rightTup)
+          in
+          let _ = check_tuple_assign tupDecl res_type in
+          (add_unpacked_vars envs tupDecl, SDecl (STupleDecl (build_stuple leftTup, build_stuple rightTup, sexpr)))
       | Break -> (envs, SBreak)
       | Continue -> (envs, SContinue)
       | Receive receive_cases ->
