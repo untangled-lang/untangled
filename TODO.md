@@ -8,7 +8,7 @@
     - [ ] Make copy of tuple when send message
     - [ ] Destructuring tuple in declaration assignment?
       - [x] AST
-      - [ ] semantic type checking
+      - [x] semantic type checking
       - [ ] Codegen
   - [ ] arrays
     - [ ] Array index / assignment / access
