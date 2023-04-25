@@ -828,9 +828,35 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               | Semaphore -> void_t
               | Tuple _ -> data_ptr
               | Array _ -> raise (Failure "TODO array")) var_name builder in
+            let llvalue = if ty = String then
+              L.build_bitcast llvalue pointer_t "cast_string" builder
+            else llvalue in
             let _ = L.build_store llvalue alloca builder in
             (builder, StringMap.add var_name alloca env2)
-        | SDecl (STupleDecl _) -> raise (Failure "Implement tuple unpacking")
+        | SDecl (STupleDecl (_, _, sexpr) as tupDecl) ->
+            let rec unpack_tuple decl_type tuple_data env =
+              let { head = head_ptr; tail = tail_ptr; _ } = build_data_gep tuple_data builder in
+              match decl_type with
+              | SBaseDecl (base_ty, id, _) as base_decl ->
+                  let (_, env') = stmt (builder, env, ctx) (SDecl base_decl) in
+                  let storage = StringMap.find id env' in
+                  let value_ptr = L.build_load head_ptr "value_ptr_load" builder in
+                  let value_ptr = L.build_bitcast value_ptr (L.pointer_type (lltype_of_typ base_ty)) "head_cast" builder in
+                  let value = L.build_load value_ptr "value_load" builder in
+                  let _ = L.build_store value storage builder in
+                  env'
+              | STupleDecl (left_decl, right_decl, _) ->
+                  let head_load = L.build_load head_ptr "head_load" builder in
+                  let head_cast = L.build_bitcast head_load data_ptr "head_cast" builder in
+                  let tail_load = L.build_load tail_ptr "tail_load" builder in
+                  let tail_cast = L.build_bitcast tail_load data_ptr "tail_cast" builder in
+                  let env' = unpack_tuple left_decl head_cast env in
+                  let env'' = unpack_tuple right_decl tail_cast env' in
+                  env''
+            in
+            let (ll_data, env') = expr (builder, env) sexpr in
+            let env'' = unpack_tuple tupDecl ll_data env' in
+            (builder, env'')
         | SFor (init, cond, afterthought, body) ->
             let pred_bb = L.append_block context "for_pred" the_thread in
             let pred_builder = L.builder_at_end context pred_bb in

@@ -6,10 +6,7 @@
   - [x] string
   - [x] tuples
     - [ ] Make copy of tuple when send message
-    - [ ] Destructuring tuple in declaration assignment?
-      - [x] AST
-      - [x] semantic type checking
-      - [ ] Codegen
+    - [x] Destructuring tuple in declaration assignment?
   - [ ] arrays
     - [ ] Array index / assignment / access
   - [ ] semaphores

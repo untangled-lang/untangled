@@ -1,0 +1,9 @@
+thread_def Main {
+  string newline = "
+";
+  ((int x, string a), (int y, int z)) = ((1, "hello"), (2, 3));
+  print(a + newline);
+  print(string_of_int(x) + newline);
+  print(string_of_int(y) + newline);
+  print(string_of_int(z) + newline);
+}
