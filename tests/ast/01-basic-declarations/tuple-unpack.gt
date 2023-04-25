@@ -1,0 +1,4 @@
+thread_def Main {
+  ((int, string) x, (float f, int y)) = ((0, "a"), (0.0, 10));
+  (int x, (string y, float z)) = (0, ("abc", 50.0));
+}
