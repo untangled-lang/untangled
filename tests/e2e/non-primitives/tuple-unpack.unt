@@ -2,8 +2,7 @@ thread_def Main {
   string newline = "
 ";
 
-  ((int, string), (int, int)) b =  ((2, "hello"), (9, 3));
-  b = ((1, 9), (2, 3));
+  ((int, string), (int, int)) b =  ((1, "hello"), (2, 3));
   ((int x, string a), (int y, int z)) = b;
 
 
