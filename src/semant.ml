@@ -210,12 +210,10 @@ let check (tdecls, fdecls) =
       | TupleLit (e1, e2) as tuple ->
           let (t1, sexpr1) = check_expr envs e1 and
               (t2, sexpr2) = check_expr envs e2 in
+          (* Check that there is no void assignment *)
           let _ = List.iter (fun (typ, _) -> check_lit tuple typ) [t1, t2]
           in (Tuple (t1, t2), STupleLit ((t1, sexpr1), (t2, sexpr2)))
       | ArrayLit xs as array ->
-          (* let check_lit (typ, _) =
-            try check_typ typ
-            with Failure s -> raise (Failure (s ^ " found in " ^ string)) *)
           (* Semantically check each element *)
           let sexprs = List.map (check_expr envs) xs in
           (* Check that there is no void assignment *)
