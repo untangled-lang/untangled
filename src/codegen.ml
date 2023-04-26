@@ -849,7 +849,17 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let storage = StringMap.find var_name env' in
             let _ = L.build_store value_to_assign storage builder in
             (value_to_assign, env')
-        | SAssignIndex _ -> raise (Failure "Implement SAssignIndex")
+        | SAssignIndex (id, sindex, sexpr) ->
+            let array_ptr = StringMap.find id env in
+            let array_loaded = L.build_load array_ptr "array_load" builder in
+            let { size = size_ptr; data_array = data_ptr } = build_array_gep array_loaded builder in
+            let (ll_index, env') = expr (builder, env) sindex in
+            let (value_to_assign, env'') = expr (builder, env') sexpr in
+            let array = L.build_load data_ptr "array_load" builder in
+            let array = L.build_bitcast array (L.pointer_type (lltype_of_typ typ)) "array_cast" builder in
+            let ptr = L.build_in_bounds_gep array [| ll_index |] "array_gep" builder in
+            let _ = L.build_store value_to_assign ptr builder in
+            (value_to_assign, env'')
         | SPreUnop (_, sexpr) ->
             let (llvalue, env') = expr (builder, env) sexpr in
             let negated = L.build_xor llvalue (L.const_int i1_t 1) "negate_bool" builder in
