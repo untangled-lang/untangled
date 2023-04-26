@@ -176,6 +176,22 @@ let check (tdecls, fdecls) =
           (*
            * @TODO - Check that all patterns are unique
            *)
+          (* Check all patterns are unique *)
+          (* Extract 1 pattern and compare with the rest *)
+          (* let check_unique p =
+            let dup_err p = "Pattern " ^ string_of_pattern p ^ " is not unique" in
+            let patterns = List.map (fun (p, _) -> p) receive_cases in
+            let rec eq_pattern lpattern rpattern = match (lpattern, rpattern) with
+                (BasePattern (lt, _), BasePattern (rt, _)) -> lt = rt
+              | (TuplePattern (ltuple1, ltuple2), TuplePattern (rtuple1, rtuple2)) ->
+                  (eq_pattern ltuple1 rtuple1) && (eq_pattern ltuple2 rtuple2)
+              | (WildcardPattern, WildcardPattern) -> true
+              | _ -> false in
+            let (to_check, remaining) = List.partition (fun other -> other = p) patterns in
+            if List.length to_check > 1 then raise (Failure (dup_err p))
+            else
+              let
+            in *)
           (* Extend the environment with pattern *)
           let rec extend_env env = function
               WildcardPattern -> env

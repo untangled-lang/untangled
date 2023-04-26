@@ -4,6 +4,11 @@ open Sast
 
 module StringMap = Map.Make(String)
 
+type array_gep = {
+  size : L.llvalue;
+  array : L.llvalue;
+}
+
 type queue_gep = {
   size : L.llvalue;
   cap : L.llvalue;
@@ -45,6 +50,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let pointer_t = L.pointer_type i8_t in
   let double_ptr = L.pointer_type pointer_t in
   let the_module = L.create_module context "Untangled" in
+
+  (* For array type in Untangled *)
+  let array_t = L.struct_type context [| i32_t; pointer_t |] in
 
   let data_t = L.struct_type context [| i32_t; pointer_t; pointer_t |] in
   let data_ptr = L.pointer_type data_t in
@@ -117,6 +125,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
          child_mutex = child_mutex;
          parent_queue = parent_queue;
          child_queue = child_queue }
+  and build_array_gep array_struct builder =
+    let size = L.build_in_bounds_gep array_struct [| gep_index 0; gep_index 0 |] "gep_array_size" builder and
+        array = L.build_in_bounds_gep array_struct [| gep_index 0; gep_index 1 |] "gep_array_array" builder in
+    { size = size; array = array }
   in
 
   (*
@@ -662,7 +674,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let _ = L.build_store data_malloc data_alloca builder in
             let data = L.build_load data_alloca "data_load" builder in
             let _ = build_tuple data builder (typ, sexpr) in (data, env)
-        | SArrayLit _ -> raise (Failure "array not implemented")
+        | SArrayLit sexprs ->
+            (* TODO - Wrap this up *)
+            let size = L.const_int i32_t (List.length sexprs) in
+            let array_struct_malloc = L.build_malloc array_t "array_struct_malloc" builder in
+            let array_malloc = L.build_array_malloc in
+            (array_struct_malloc, env)
         | SNoexpr -> (L.const_int i32_t 0, env)
         | SId s -> (L.build_load (StringMap.find s env) s builder, env)
         | SCall ("print", [sexpr]) ->
