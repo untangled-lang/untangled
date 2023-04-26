@@ -6,33 +6,35 @@ exception TODO of string
 module StringMap = Map.Make(String)
 
 let check (tdecls, fdecls) =
+  let rec check_lit expr = function
+      Void -> raise (Failure ("illegal void in " ^ string_of_expr expr))
+    | Array (typ, _) -> check_lit expr typ
+    | Tuple (t1, t2) ->
+        let _ = check_lit expr t1 and
+            _ = check_lit expr t2 in ()
+    | _ -> () in
   let check_binds (kind : string) (to_check : bind list) =
     let name_compare (_, n1) (_, n2) = compare n1 n2 in
-    let check_it checked binding =
-      let void_err = "illegal void " ^ kind ^ " " ^ snd binding
-      and dup_err = "duplicate " ^ kind ^ " " ^ snd binding
-      in match binding with
-        (* No void bindings *)
-        (Void, _) -> raise (Failure void_err)
-      | (_, n1) -> match checked with
-                    (* No duplicate bindings *)
-                      ((_, n2) :: _) when n1 = n2 -> raise (Failure dup_err)
-                    | _ -> binding :: checked
-
-    in let _ = List.fold_left check_it [] (List.sort name_compare to_check)
-       in to_check
-  in
-
-  let fmap =
+    let check_name checked binding = match binding with
+      | (_, n1) ->
+          match checked with
+              ((_, n2) :: _) when n1 = n2 -> raise (Failure ("duplicate " ^ kind ^ " " ^ snd binding))
+            | _ -> binding :: checked  in
+    let rec check_typ id = function
+        Void -> raise (Failure ("illegal void " ^ kind ^ " " ^ id))
+      | Array (typ, _) -> check_typ id typ
+      | Tuple (t1, t2) ->
+          let _ = check_typ id t1 and
+              _ = check_typ id t2 in ()
+      | _ -> () in
+    let _ = List.fold_left check_name [] (List.sort name_compare to_check) in
+    let _ = List.iter (fun (typ, id) -> check_typ id typ) to_check in to_check
+  in let fmap =
     let add_bind map (name, formal_type, return_type) = StringMap.add name
       { fname = name;
         formals = [(formal_type, "x")];
         body = [];
         ret_type = return_type } map
-    (*
-     * @TODO - we currently have a to_string function which takes any type. But
-     * our language is statically type
-     *)
     (* TODO: - Add more builtin functions *)
     in List.fold_left add_bind StringMap.empty
        [("print", String, Void);
@@ -45,6 +47,7 @@ let check (tdecls, fdecls) =
       and dup_err = "duplicate function " ^ fd.fname
       and make_err er = raise (Failure er)
       and n = fd.fname
+      and _ = check_binds "fdecl" fd.formals
     in match fd with
       _ when StringMap.mem n map -> make_err built_in_err
     | _ when StringMap.mem n map -> make_err dup_err
@@ -136,6 +139,7 @@ let check (tdecls, fdecls) =
               env :: _ ->
                 if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
                 else let (rt, e') as sexpr = check_expr envs expr in
+                let _ = check_binds "decl" [(lt, id)] in
                 (match e' with
                   | SNoexpr -> (bind id lt envs, SDecl (SBaseDecl (lt, id, sexpr)))
                   | _ -> (bind id lt envs, SDecl (SBaseDecl (check_assign lt rt expr, id, (lt, e')))))
@@ -152,7 +156,8 @@ let check (tdecls, fdecls) =
                   | _ -> raise (Failure ("Tuple type mismatch, expected a tuple but got a " ^ string_of_typ ty ^ " instead")))
           in
           let rec build_stuple = function
-            | BaseDecl (t, id, _) -> SBaseDecl (t, id, (t, SNoexpr))
+            | BaseDecl (t, id, _) ->
+                let _ = check_binds "tuple_unpack" [(t, id)] in SBaseDecl (t, id, (t, SNoexpr))
             | TupleDecl (leftTup, rightTup, _) ->
                 STupleDecl (build_stuple leftTup, build_stuple rightTup, (Void, SNoexpr))
           in let rec add_unpacked_vars envs decl =
@@ -202,17 +207,20 @@ let check (tdecls, fdecls) =
       | StringLit s -> (String, SStringLit s)
       | FloatLit n -> (Float, SFloatLit n)
       | BoolLit b -> (Bool, SBoolLit b)
-      | TupleLit (e1, e2) ->
+      | TupleLit (e1, e2) as tuple ->
           let (t1, sexpr1) = check_expr envs e1 and
-              (t2, sexpr2) = check_expr envs e2
+              (t2, sexpr2) = check_expr envs e2 in
+          let _ = List.iter (fun (typ, _) -> check_lit tuple typ) [t1, t2]
           in (Tuple (t1, t2), STupleLit ((t1, sexpr1), (t2, sexpr2)))
-      (*
-       * @TODO - How do we deal with an empty array declaration?
-       *)
-      | ArrayLit xs ->
+      | ArrayLit xs as array ->
+          (* let check_lit (typ, _) =
+            try check_typ typ
+            with Failure s -> raise (Failure (s ^ " found in " ^ string)) *)
           (* Semantically check each element *)
           let sexprs = List.map (check_expr envs) xs in
-          (* Compare type of each element *)
+          (* Check that there is no void assignment *)
+          let _ = List.iter (fun (typ, _) -> check_lit array typ) sexprs in
+          (* Enforce that each element has the same type *)
           let typ = match sexprs with
               [] -> Void
             | ((lt, _) :: _) ->
@@ -280,9 +288,23 @@ let check (tdecls, fdecls) =
             | Float -> check_expr envs (Assign (id, Binop (expr, op, FloatLit "1.0")))
             | Semaphore -> raise (Failure "semaphore")
             | typ -> raise (Failure (string_of_typ typ ^ " can't be assigned to postfix operation")))
-      | AssignIndex (_, _, _) -> raise (Failure "semantic assignIndex")
-      | Index (_, _) -> raise (Failure "semantic index")
-
+      | AssignIndex (id, index, expr) ->
+          let typ = lookup id envs and
+              (index_typ, _) as sindex = check_expr envs index and
+              (expr_typ, _) as sexpr = check_expr envs expr in
+          (match typ with
+              Array (array_typ, _) ->
+                let _ = check_assign Int index_typ index in
+                let _ = check_assign array_typ expr_typ expr in
+                (expr_typ, SAssignIndex (id, sindex, sexpr))
+            | _ -> raise (Failure ("Expected " ^ id ^ " to be an array but found " ^ string_of_typ typ)))
+      | Index (id, index) ->
+          let typ = lookup id envs and
+              (index_typ, _) as sindex = check_expr envs index in
+          (match typ with
+              Array (array_typ, _) ->
+                let _ = check_assign Int index_typ index in (array_typ, SIndex (id, sindex))
+            | _ -> raise (Failure ("Expected " ^ id ^ " to be an array but found " ^ string_of_typ typ)))
   (*
    * Check that break and continue statements are inside for and while loop
    *)

@@ -1,0 +1,7 @@
+thread_def Main {
+  int[5] my_array;
+  int[5] new_array;
+  (int[5] : (my_array = (int[5] : new_array)));
+  bool[3] b = (bool[3] : [(bool : true), (bool : false), (bool : true)]);
+  int[2][3] nested = (int[2][3] : [(int[2] : [(int : 0), (int : 1)]), (int[2] : [(int : 3), (int : 4)]), (int[2] : [(int : 2), (int : 6)])]);
+}

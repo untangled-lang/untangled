@@ -1,0 +1,7 @@
+void foo(void x) {
+
+}
+
+thread_def Main {
+
+}
