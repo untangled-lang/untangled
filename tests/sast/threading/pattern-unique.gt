@@ -1,0 +1,16 @@
+thread_def Main {
+  receive {
+    int a -> {
+
+    }
+    (float b, (string c, int d)) -> {
+
+    }
+    ((float b, string c), int d) -> {
+
+    }
+    _ -> {
+
+    }
+  }
+}

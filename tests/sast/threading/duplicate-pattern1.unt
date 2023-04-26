@@ -1,0 +1,7 @@
+thread_def Main {
+  receive {
+    int x -> {}
+    int z -> {}
+    _ -> {}
+  }
+}

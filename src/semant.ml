@@ -173,12 +173,8 @@ let check (tdecls, fdecls) =
       | Break -> (envs, SBreak)
       | Continue -> (envs, SContinue)
       | Receive receive_cases ->
-          (*
-           * @TODO - Check that all patterns are unique
-           *)
-          (* Check all patterns are unique *)
-          (* Extract 1 pattern and compare with the rest *)
-          (* let check_unique p =
+          (* Check all patterns are unique by comparing each pattern with the rest *)
+          let check_unique p =
             let dup_err p = "Pattern " ^ string_of_pattern p ^ " is not unique" in
             let patterns = List.map (fun (p, _) -> p) receive_cases in
             let rec eq_pattern lpattern rpattern = match (lpattern, rpattern) with
@@ -188,10 +184,13 @@ let check (tdecls, fdecls) =
               | (WildcardPattern, WildcardPattern) -> true
               | _ -> false in
             let (to_check, remaining) = List.partition (fun other -> other = p) patterns in
-            if List.length to_check > 1 then raise (Failure (dup_err p))
-            else
-              let
-            in *)
+            let to_check = match to_check with
+                  [p] -> p
+                | [] -> raise (Failure "Implement bug: Fail to extract pattern")
+                | _ -> raise (Failure (dup_err p)) in
+
+            if List.exists (fun pattern -> eq_pattern to_check pattern) remaining then raise (Failure (dup_err p))
+            else () in
           (* Extend the environment with pattern *)
           let rec extend_env env = function
               WildcardPattern -> env
@@ -211,6 +210,7 @@ let check (tdecls, fdecls) =
             let env' = extend_env StringMap.empty pattern in
             let (_, sstmt) = check_stmt (env' :: envs) stmt in (get_sast_pattern pattern, sstmt)
 
+          in let _ = List.iter (fun (pattern, _) -> check_unique pattern) receive_cases
           (* Check if a wilcard pattern exists *)
           in if (List.exists (fun (p, _) -> p = WildcardPattern) receive_cases) then
             (* Semantically check each pattern *)

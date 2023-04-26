@@ -6,7 +6,7 @@ module StringMap = Map.Make(String)
 
 type array_gep = {
   size : L.llvalue;
-  array : L.llvalue;
+  data_array : L.llvalue;
 }
 
 type queue_gep = {
@@ -53,6 +53,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
   (* For array type in Untangled *)
   let array_t = L.struct_type context [| i32_t; pointer_t |] in
+  let array_ptr = L.pointer_type array_t in
 
   let data_t = L.struct_type context [| i32_t; pointer_t; pointer_t |] in
   let data_ptr = L.pointer_type data_t in
@@ -128,7 +129,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   and build_array_gep array_struct builder =
     let size = L.build_in_bounds_gep array_struct [| gep_index 0; gep_index 0 |] "gep_array_size" builder and
         array = L.build_in_bounds_gep array_struct [| gep_index 0; gep_index 1 |] "gep_array_array" builder in
-    { size = size; array = array }
+    { size = size; data_array = array }
   in
 
   (*
@@ -677,9 +678,33 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | SArrayLit sexprs ->
             (* TODO - Wrap this up *)
             let size = L.const_int i32_t (List.length sexprs) in
+            let base_lltype =
+              match sexprs with
+                | ((ty, _)::_) -> lltype_of_typ ty
+                | _ -> raise (Failure "Cannot have empty array literals")
+            in
+            let (llvalues, env') = List.fold_left
+              (fun (llvalues, env) sexpr ->
+                let (llvalue, env') = (expr (builder, env) sexpr) in
+              (llvalue::llvalues, env')) ([], env) sexprs
+            in
+
             let array_struct_malloc = L.build_malloc array_t "array_struct_malloc" builder in
-            let array_malloc = L.build_array_malloc in
-            (array_struct_malloc, env)
+            let array_malloc = L.build_array_malloc base_lltype size "array_lit_malloc" builder in
+
+            let _ = List.iteri
+              (fun i llvalue ->
+                let gep = L.build_gep array_malloc [| L.const_int i32_t i |] ("array_lit_gep " ^ string_of_int i) builder in
+                let _ = L.build_store llvalue gep builder in ()) llvalues
+            in
+
+            let { size = size_ptr; data_array = array_ptr } = build_array_gep array_struct_malloc builder in
+            let _ = L.build_store size size_ptr builder in
+
+            let array_cast = L.build_bitcast array_malloc pointer_t "array_cast" builder in
+            let _ = L.build_store array_cast array_ptr builder in
+
+            (array_struct_malloc, env')
         | SNoexpr -> (L.const_int i32_t 0, env)
         | SId s -> (L.build_load (StringMap.find s env) s builder, env)
         | SCall ("print", [sexpr]) ->
@@ -772,7 +797,16 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                     )
                 | _ -> raise (Failure "Implement other")) in
             (op e1' e2' "binop_result" builder, env'')
-        | SIndex _ -> raise (Failure "index not implemented")
+        | SIndex (id, ((ty, _) as sexpr)) ->
+            let array_alloca = StringMap.find id env in
+            let array_struct = L.build_load array_alloca "array_load" builder in
+            let { size = size_ptr; data_array = array_ptr } = build_array_gep array_struct builder in
+            let (ll_index, _) = expr (builder, env) sexpr in
+            let array = L.build_load array_ptr "array_load" builder in
+            let ptr = L.build_in_bounds_gep array [| ll_index |] "array_gep" builder in
+            let res_value = L.build_load ptr "array_load" builder in
+            let res_cast = L.build_bitcast res_value (lltype_of_typ ty) "sindex_cast" builder in
+            (res_cast, env)
         | SUnit -> raise (Failure "sunit not implemented")
         | SSpawn tn ->
           (*
@@ -844,7 +878,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               | Thread -> queue_ptr
               | Semaphore -> void_t
               | Tuple _ -> data_ptr
-              | Array _ -> raise (Failure "TODO array")) var_name builder in
+              | Array _ -> array_ptr) var_name builder in
             let llvalue = if ty = String then
               L.build_bitcast llvalue pointer_t "cast_string" builder
             else llvalue in
