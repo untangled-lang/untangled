@@ -209,21 +209,15 @@ let check (tdecls, fdecls) =
       (*
        * @TODO - How do we deal with an empty array declaration?
        *)
-      | ArrayLit _ -> raise (TODO "Implement array literal")
-          (* let sexprs = List.map (check_expr envs) xs in
-          (* let ty_check (t1, _) =  *)
-          let ty_check sexprs = match sexprs with
-            | [] -> true
-            | ((t1, _) :: rest) -> List.iter check_assign  *)
-
-          (* (match (List.map (fun x -> check_expr envs x) xs) with
-            [] -> (Array (Void, 0), SArrayLit [])
-            | (sexpr :: sexprs) as list_sexprs ->
-                let (lt, _) = sexpr in
-                let _ = List.iter (fun (rt, _) -> check_assign )
-                if List.for_all (fun (rt, _) -> check_assign ) sexprs then
-                (Array (lt, List.length list_sexprs), SArrayLit list_sexprs)
-                else raise (Failure ()) *)
+      | ArrayLit xs ->
+          (* Semantically check each element *)
+          let sexprs = List.map (check_expr envs) xs in
+          (* Compare type of each element *)
+          let typ = match sexprs with
+              [] -> Void
+            | ((lt, _) :: _) ->
+                let _ = List.iter2 (fun (typ, _) e -> ignore (check_assign lt typ e)) sexprs xs in lt
+          in (Array (typ, List.length xs), SArrayLit sexprs)
       | Call (fname, args) as call ->
         let fd = find_func fname in
         let _ = check_binds "formals" fd.formals in
@@ -256,8 +250,8 @@ let check (tdecls, fdecls) =
       | Id s -> let t = (lookup s envs) in (t, SId s)
       | Spawn t -> let _ = find_thread_def t in (Thread, SSpawn t)
       | Assign (id, expr) ->
-          let rt = lookup id envs
-          and (lt, sexpr) = check_expr envs expr
+          let lt = lookup id envs
+          and (rt, sexpr) = check_expr envs expr
           in (check_assign lt rt expr, SAssign (id, (lt, sexpr)))
       | Noexpr -> (Void, SNoexpr)
       | Unit -> raise (Failure "semantic unit")

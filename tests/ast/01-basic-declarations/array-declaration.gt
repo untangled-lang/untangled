@@ -1,0 +1,4 @@
+thread_def Main {
+  int[5][100] x;
+  float[0][0][0] x;
+}
