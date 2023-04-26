@@ -1,0 +1,4 @@
+thread_def Main {
+  int[10] x;
+  x[0] = "hello";
+}

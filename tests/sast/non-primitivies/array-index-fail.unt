@@ -1,0 +1,4 @@
+thread_def Main {
+  int[100] x;
+  print(string_of_int(x[1.0]));
+}

@@ -62,7 +62,7 @@ def report_status(exit_code, test_name):
 
 def get_directories_in(p):
     all_paths = map(lambda x: path.join(p, x), os.listdir(p))
-    folders = list(filter(lambda x: path.isdir(x), all_paths))
+    folders = list((filter(lambda x: path.isdir(x), all_paths)))
     return folders
 
 
@@ -126,7 +126,7 @@ num_tests = 0
 
 for step_dir in COMPILER_STEPS_DIR:
     compiler_step = path.basename(path.normpath(step_dir))
-    test_groups = get_directories_in(step_dir)
+    test_groups = []
     test_groups.append(step_dir)
     compiler_options = ACTION_MAPPER.get(compiler_step)
     step_name = path.basename(step_dir)
