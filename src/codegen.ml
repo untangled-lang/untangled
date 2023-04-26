@@ -695,7 +695,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let _ = List.iteri
               (fun i llvalue ->
                 let gep = L.build_gep array_malloc [| L.const_int i32_t i |] ("array_lit_gep " ^ string_of_int i) builder in
-                let _ = L.build_store llvalue gep builder in ()) llvalues
+                let _ = L.build_store llvalue gep builder in ()) (List.rev llvalues)
             in
 
             let { size = size_ptr; data_array = array_ptr } = build_array_gep array_struct_malloc builder in
@@ -797,16 +797,16 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                     )
                 | _ -> raise (Failure "Implement other")) in
             (op e1' e2' "binop_result" builder, env'')
-        | SIndex (id, ((ty, _) as sexpr)) ->
+        | SIndex (id, sexpr) ->
             let array_alloca = StringMap.find id env in
             let array_struct = L.build_load array_alloca "array_load" builder in
             let { size = size_ptr; data_array = array_ptr } = build_array_gep array_struct builder in
             let (ll_index, _) = expr (builder, env) sexpr in
             let array = L.build_load array_ptr "array_load" builder in
+            let array = L.build_bitcast array (L.pointer_type (lltype_of_typ typ)) "array_cast" builder in
             let ptr = L.build_in_bounds_gep array [| ll_index |] "array_gep" builder in
             let res_value = L.build_load ptr "array_load" builder in
-            let res_cast = L.build_bitcast res_value (lltype_of_typ ty) "sindex_cast" builder in
-            (res_cast, env)
+            (res_value, env)
         | SUnit -> raise (Failure "sunit not implemented")
         | SSpawn tn ->
           (*

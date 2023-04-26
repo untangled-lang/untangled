@@ -7,8 +7,10 @@
   - [x] tuples
     - [ ] Make copy of tuple when send message
     - [x] Destructuring tuple in declaration assignment?
-  - [ ] arrays
-    - [ ] Array index / assignment / access
+  - [x] arrays
+    - [x] Array index /
+    - [ ] assignment /
+    - [ ] access
   - [ ] semaphores
 
 - [x] Conditionals
