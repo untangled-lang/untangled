@@ -8,9 +8,8 @@
     - [ ] Make copy of tuple when send message
     - [x] Destructuring tuple in declaration assignment?
   - [x] arrays
-    - [x] Array index /
-    - [ ] assignment /
-    - [ ] access
+    - [x] assignment /
+    - [x] access
   - [ ] semaphores
 
 - [x] Conditionals

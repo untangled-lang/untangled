@@ -223,6 +223,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let strcat_func : L.llvalue =
     L.declare_function "strcat" strcat_t the_module in
 
+  let assert_t : L.lltype = L.function_type void_t [| i32_t; pointer_t |] in
+  let assert_func : L.llvalue = L.declare_function "assert_func" assert_t the_module in
+
   let add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
         Some _ -> ()
@@ -626,6 +629,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let string_format_str = L.build_global_stringptr "%s" "fmt" builder in
     let int_format_str = L.build_global_stringptr "%d" "fmt" builder in
     let float_format_str = L.build_global_stringptr "%f" "fmt" builder in
+    let index_oob_str = L.build_global_stringptr "Index out of bounds" "fmt" builder in
     let pthread_ts = ref [] in
 
     let rec expr ((builder: L.llbuilder), env) ((typ, sexpr : sexpr)) =
@@ -801,7 +805,14 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let array_alloca = StringMap.find id env in
             let array_struct = L.build_load array_alloca "array_load" builder in
             let { size = size_ptr; data_array = array_ptr } = build_array_gep array_struct builder in
+
             let (ll_index, _) = expr (builder, env) sexpr in
+            let size = L.build_load size_ptr "size_load" builder in
+            let pred = L.build_icmp L.Icmp.Slt ll_index size "index_pred" builder in
+            let pred = L.build_and pred (L.build_icmp L.Icmp.Sge ll_index (L.const_int i32_t 0) "index_pred" builder) "index_pred" builder in
+            let pred = L.build_intcast pred i32_t "index_pred" builder in
+            let _ = L.build_call assert_func [| pred; index_oob_str |] "" builder in
+
             let array = L.build_load array_ptr "array_load" builder in
             let array = L.build_bitcast array (L.pointer_type (lltype_of_typ typ)) "array_cast" builder in
             let ptr = L.build_in_bounds_gep array [| ll_index |] "array_gep" builder in
@@ -854,6 +865,13 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let array_loaded = L.build_load array_ptr "array_load" builder in
             let { size = size_ptr; data_array = data_ptr } = build_array_gep array_loaded builder in
             let (ll_index, env') = expr (builder, env) sindex in
+
+            let size = L.build_load size_ptr "size_load" builder in
+            let pred = L.build_icmp L.Icmp.Slt ll_index size "index_pred" builder in
+            let pred = L.build_and pred (L.build_icmp L.Icmp.Sge ll_index (L.const_int i32_t 0) "index_pred" builder) "index_pred" builder in
+            let pred = L.build_intcast pred i32_t "index_pred" builder in
+            let _ = L.build_call assert_func [| pred; index_oob_str |] "" builder in
+
             let (value_to_assign, env'') = expr (builder, env') sexpr in
             let array = L.build_load data_ptr "array_load" builder in
             let array = L.build_bitcast array (L.pointer_type (lltype_of_typ typ)) "array_cast" builder in
