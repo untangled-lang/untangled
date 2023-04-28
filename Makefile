@@ -1,5 +1,8 @@
+CC := clang
+LIB = src/c
+
 .PHONY: untangled.exe test clean-untangled
-.PHONY: clean-vscode
+.PHONY: clean-vscode vscode-extension
 .PHONY: docs-dev docs-build docs-pdf clean-docs
 .PHONY: default clean
 
@@ -9,7 +12,10 @@ clean: clean-untangled clean-vscode clean-docs
 
 # Untangled language
 
-untangled.exe: src/untangled.ml src/ast.ml src/parser.mly src/scanner.mll src/sast.ml
+$(LIB)/%.o: src/c/%.cpp
+	$(CC) $< -o $@
+
+untangled.exe: src/untangled.ml src/ast.ml src/parser.mly src/scanner.mll src/sast.ml src/c/libraries.o
 	dune build
 
 clean-untangled:
