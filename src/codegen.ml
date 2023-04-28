@@ -616,14 +616,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
           ttype = L.function_type (L.pointer_type i8_t) [| L.pointer_type i8_t |] in
       (* Add paramaters for threads *)
       StringMap.add stname (L.define_function tdecl.stname ttype the_module, tdecl) m in
-      (* StringMap.add stname (L.define_function (if tdecl.stname = "Main" then "main" else tdecl.stname) ttype the_module, tdecl) m in *)
     List.fold_left thread_decl StringMap.empty tdecls in
-
-  (* TODO - What is this for? *)
-  (* let (the_thread, _) = StringMap.find "Main" thread_decls in
-  let builder = L.builder_at_end context (L.entry_block the_thread) in
-  let string_format_str = L.build_global_stringptr "%s" "fmt" builder in
-  let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in *)
 
   let build_body ?(arg_gep : arg_gep option) (builder, env) sstmt the_thread =
     let string_format_str = L.build_global_stringptr "%s" "fmt" builder in
