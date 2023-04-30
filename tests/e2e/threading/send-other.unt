@@ -1,0 +1,38 @@
+thread_def Foo {
+  receive {
+    string x -> print(x);
+    _ -> {}
+  }
+
+  receive {
+    thread t -> {
+      t << "Hello parent";
+    }
+    _ -> {}
+  }
+}
+
+thread_def Bar {
+  thread foo = spawn Foo;
+  parent << foo;
+}
+
+thread_def Main {
+  thread bar = spawn Bar;
+  receive {
+    thread foo -> {
+      foo << "Hello Foo
+";
+      foo << self;
+    }
+    _ -> {}
+  }
+
+  receive {
+    string x -> {
+      print(x);
+    }
+
+    _ -> {}
+  }
+}

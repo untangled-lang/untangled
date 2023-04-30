@@ -78,6 +78,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
       | A.Float -> [1]
       | A.String -> [2]
       | A.Bool -> [3]
+      | A.Thread -> [6]
       | _ -> raise (Failure "array tag") in
   let rec tag_pattern = function
       | SBasePattern (typ, _) -> ocaml_tag typ
@@ -92,6 +93,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | A.String -> (L.const_int i32_t 2)
         | A.Bool -> (L.const_int i32_t 3)
         | A.Tuple _ -> (L.const_int i32_t 4)
+        | A.Thread -> (L.const_int i32_t 6)
         | _ -> raise (Failure " site tag")
   and lltype_of_typ = function
           A.Int   -> i32_t
@@ -99,14 +101,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | A.Float -> float_t
         | A.Void  -> void_t
         | A.String -> pointer_t
+        | A.Thread -> queue_ptr
         | _ -> raise (Failure "hello")
   and cast_llvalue_to_ptr typ llvalue builder = match typ with
-      A.Int -> L.build_bitcast llvalue pointer_t "int_to_ptr" builder
-    | A.Float -> L.build_bitcast llvalue pointer_t "float_to_ptr" builder
-    | A.String -> L.build_bitcast llvalue pointer_t "string_to_ptr" builder
-    | A.Bool -> L.build_bitcast llvalue pointer_t "bool_to_ptr" builder
-    | A.Tuple _ -> L.build_bitcast llvalue pointer_t "tuple_to_ptr" builder
-    | _ -> raise (Failure "implement array")
+        A.Array _ -> raise (Failure "Implement array")
+        | _ -> L.build_bitcast llvalue pointer_t (A.string_of_typ typ ^ "_to_ptr") builder
   and build_queue_gep queue builder =
     let size = L.build_in_bounds_gep queue [| gep_index 0; gep_index 0 |] "gep_size" builder and
         cap =  L.build_in_bounds_gep queue [| gep_index 0; gep_index 1 |] "gep_cap" builder and
@@ -885,9 +884,13 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             in
             (builder_final, env)
         | SExpr sexpr -> let (_, env2) = expr (builder, env) sexpr in (builder, env2)
-        | SReturn sexpr -> let (value, _) = expr (builder, env) sexpr in
-            let _ = L.build_ret value builder in
-            (builder, env)
+        | SReturn sexpr ->
+            let (typ, _) = sexpr in
+            let _ = match typ with
+              A.Void -> L.build_ret_void builder
+              | _ ->
+                let (value, _) = expr (builder, env) sexpr in L.build_ret value builder
+            in (builder, env)
         | SDecl (SBaseDecl (ty, var_name, sx)) ->
             let (llvalue, env2) = expr (builder, env) sx in
             let alloca = L.build_alloca (match ty with

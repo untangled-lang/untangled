@@ -1,0 +1,7 @@
+thread_def Main {
+  int[1][10] arr;
+  int[1] tmp = arr[0];
+  tmp[0] = 10;
+  tmp = arr[0];
+  print(string_of_int(tmp[0]));
+}

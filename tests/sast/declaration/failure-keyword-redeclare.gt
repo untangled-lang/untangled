@@ -1,1 +1,1 @@
-Fatal error: exception Failure("parent/self is a keyword")
+Fatal error: exception Failure("parent/self can't be declared in thread")

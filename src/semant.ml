@@ -131,19 +131,16 @@ let check (tdecls, fdecls) =
           let sexpr = check_expr envs expr in
           (envs, SSend (id, sexpr))
       | Decl (BaseDecl (lt, id, expr)) ->
-        (match id with
-          "parent" | "self" -> raise (Failure "parent/self is a keyword")
-          | _ as id ->
-            let _ = check_binds "local" [(lt, id)] in
-            (match envs with
-              env :: _ ->
-                if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
-                else let (rt, e') as sexpr = check_expr envs expr in
-                let _ = check_binds "decl" [(lt, id)] in
-                (match e' with
-                  | SNoexpr -> (bind id lt envs, SDecl (SBaseDecl (lt, id, sexpr)))
-                  | _ -> (bind id lt envs, SDecl (SBaseDecl (check_assign lt rt expr, id, (lt, e')))))
-              | [] -> raise (Failure "Implementation bug: empty environments")))
+          let _ = check_binds "local" [(lt, id)] in
+          (match envs with
+            env :: _ ->
+              if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
+              else let (rt, e') as sexpr = check_expr envs expr in
+              let _ = check_binds "decl" [(lt, id)] in
+              (match e' with
+                | SNoexpr -> (bind id lt envs, SDecl (SBaseDecl (lt, id, sexpr)))
+                | _ -> (bind id lt envs, SDecl (SBaseDecl (check_assign lt rt expr, id, (lt, e')))))
+            | [] -> raise (Failure "Implementation bug: empty environments"))
       | Decl (TupleDecl (leftTup, rightTup, expr) as tupDecl) ->
           let (res_type, _) as sexpr = check_expr envs expr in
           let rec check_tuple_assign declType ty = match declType with
@@ -331,7 +328,7 @@ let check (tdecls, fdecls) =
     | _ -> ()
   (*
    * Check that thread do not have return statements and function return type is equivalent
-   * to function return type
+   * to function return type.
    *)
   in let return_check is_thread name =
     let rec checker = function
@@ -343,6 +340,25 @@ let check (tdecls, fdecls) =
           raise (Failure ("return has " ^ string_of_typ typ ^ " but expected " ^ string_of_typ fdecl.ret_type))
       | _ -> ()
     in checker
+  (*
+   * Check that a function has a return statement
+   *)
+  in let rec return_exist = function
+    | SBlock sl -> List.exists return_exist sl
+    | SReturn _ -> true
+    | _ -> false
+  (*
+   * Check that parent / self is not redeclared
+   *)
+  in let rec keyword_check = function
+    | SBlock sl -> List.iter keyword_check sl
+    | SDecl (SBaseDecl (_, id, _)) ->
+        (match id with
+          "parent" | "self" -> raise (Failure "parent/self can't be declared in thread")
+          | _ -> ())
+    | SDecl (STupleDecl (ldecl, rdecl, _)) ->
+        let _ = keyword_check (SDecl ldecl) in keyword_check (SDecl rdecl)
+    | _ -> ()
 
   in let check_function (fdecl: func_decl) =
     let formals = check_binds "formal" fdecl.formals in
@@ -356,7 +372,9 @@ let check (tdecls, fdecls) =
          *)
         let _ = List.iter loop_check sl in
         let _ = List.iter (fun sstmt -> return_check false fdecl.fname sstmt) sl in
-        { sfname = fdecl.fname; sformals = fdecl.formals; sbody = sl; sret_type = fdecl.ret_type }
+        if return_exist sstmt then
+          { sfname = fdecl.fname; sformals = fdecl.formals; sbody = sl; sret_type = fdecl.ret_type }
+        else raise (Failure ("Function " ^ fdecl.fname ^ " does not have a return statement"))
       | _ -> raise (Failure "Failed to parsed function")
 
 
@@ -368,6 +386,7 @@ let check (tdecls, fdecls) =
     in match sstmt with
       SBlock (sl) ->
         let _ = List.iter loop_check sl in
+        let _ = List.iter keyword_check sl in
         let _ = List.iter (fun sstmt -> return_check true tdecl.tname sstmt) sl in
         { stname = tdecl.tname; sbody = sl }
       | _ -> raise (Failure "Failed to parsed thread")

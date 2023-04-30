@@ -1,0 +1,12 @@
+void foo(thread t) {
+  t << "hello good sir";
+  return;
+}
+
+thread_def Main {
+  foo(self);
+  receive {
+    string x -> print(x);
+    _ -> {}
+  }
+}

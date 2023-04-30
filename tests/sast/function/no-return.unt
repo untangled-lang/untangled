@@ -1,7 +1,7 @@
 void foo() {
-  return;
+
 }
 
 thread_def Main {
-  (foo(), 1);
+
 }
