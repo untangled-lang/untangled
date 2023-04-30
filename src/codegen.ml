@@ -4,6 +4,11 @@ open Sast
 
 module StringMap = Map.Make(String)
 
+type sem_gep = {
+  lock : L.llvalue;
+  count : L.llvalue;
+}
+
 type array_gep = {
   size : L.llvalue;
   data_array : L.llvalue;
@@ -12,6 +17,7 @@ type array_gep = {
 type queue_gep = {
   size : L.llvalue;
   cap : L.llvalue;
+  sem : L.llvalue;
   array : L.llvalue;
 }
 
@@ -55,6 +61,14 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let array_t = L.struct_type context [| i32_t; pointer_t |] in
   let array_ptr = L.pointer_type array_t in
 
+  (*
+   * Semaphore representation
+   * @field 1 Lock / unlock flag
+   * @field 2 Count value
+   *)
+  let sem_t = L.struct_type context [| i1_t; i32_t |] in
+  let sem_ptr = L.pointer_type sem_t in
+
   let data_t = L.struct_type context [| i32_t; pointer_t; pointer_t |] in
   let data_ptr = L.pointer_type data_t in
   let data_double_ptr = L.pointer_type data_ptr in
@@ -64,7 +78,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
    * @field 2 capacity of queue
    * @field 3 pointer to an array of data
    *)
-  let queue_t = L.struct_type context [| i32_t; i32_t; data_double_ptr |] in
+  let queue_t = L.struct_type context [| i32_t; i32_t; sem_ptr; data_double_ptr |] in
   let queue_ptr = L.pointer_type queue_t in
   let arg_t = L.struct_type context [| pointer_t; pointer_t; queue_ptr; queue_ptr |] in
   let arg_ptr = L.pointer_type arg_t in
@@ -109,8 +123,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   and build_queue_gep queue builder =
     let size = L.build_in_bounds_gep queue [| gep_index 0; gep_index 0 |] "gep_size" builder and
         cap =  L.build_in_bounds_gep queue [| gep_index 0; gep_index 1 |] "gep_cap" builder and
-        array = L.build_in_bounds_gep queue [| gep_index 0; gep_index 2 |] "gep_array" builder
-    in { size = size; cap = cap; array = array }
+        sem = L.build_in_bounds_gep queue [| gep_index 0; gep_index 2 |] "gep_array" builder and
+        array = L.build_in_bounds_gep queue [| gep_index 0; gep_index 4 |] "gep_array" builder
+    in { size = size; cap = cap; sem = sem; array = array }
   and build_data_gep data builder =
     let tag = L.build_in_bounds_gep data [| gep_index 0; gep_index 0 |] "gep_tag" builder and
         head =  L.build_in_bounds_gep data [| gep_index 0; gep_index 1 |] "gep_head" builder and
@@ -129,6 +144,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let size = L.build_in_bounds_gep array_struct [| gep_index 0; gep_index 0 |] "gep_array_size" builder and
         array = L.build_in_bounds_gep array_struct [| gep_index 0; gep_index 1 |] "gep_array_array" builder in
     { size = size; data_array = array }
+  and build_sem_gep sem builder =
+    let lock = L.build_in_bounds_gep sem [| gep_index 0; gep_index 0 |] "gep_lock" builder and
+        count = L.build_in_bounds_gep sem [| gep_index 0; gep_index 1 |] "gep_count" builder in
+    { lock = lock; count = count }
   in
 
   (*
@@ -165,40 +184,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     L.declare_function "pthread_join" pthread_join_t the_module in
 
   (*
-   * https://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread_mutex_init.html
-   *
-   * pthread_mutex_init: C routine to initialize a mutex
-   * 1st argument: Address of opaque struct pthread_mutex_t
-   * 2nd argument: A pointer to specifiy the mutex attributes
-   *)
-  (* let pthread_mutex_init_t : L.lltype =
-    L.function_type i32_t [| double_ptr; double_ptr |] in
-  let pthread_mutex_init_func : L.llvalue =
-    L.declare_function "pthread_mutex_init" pthread_mutex_init_t the_module in *)
-
-  (*
-   * https://pubs.opengroup.org/onlinepubs/7908799/xsh/pthread_mutex_lock.html
-   *
-   * pthread_mutex_lock: C routine to lock a mutex
-   * 1st argument: Address of opaque struct pthread_mutex_t
-   *)
-  (* let pthread_mutex_lock_t : L.lltype =
-    L.function_type i32_t [| double_ptr |] in
-  let pthread_mutex_lock_func : L.llvalue =
-    L.declare_function "pthread_mutex_lock" pthread_mutex_lock_t the_module in *)
-
-  (*
-   * https://linux.die.net/man/3/pthread_mutex_unlock
-   *
-   * pthread_mutex_unlock: C routine to unlock a mutex
-   * 1st argument: Address of opaque struct pthread_mutex_t
-   *)
-  (* let pthread_mutex_unlock_t : L.lltype =
-    L.function_type i32_t [| double_ptr |] in
-  let pthread_mutex_unlock_func : L.llvalue =
-    L.declare_function "pthread_mutex_unlock" pthread_mutex_unlock_t the_module in *)
-
-  (*
    * C util functions
    *)
   let printf_t : L.lltype =
@@ -230,6 +215,22 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         Some _ -> ()
       | None -> ignore (instr builder)
 
+  (* Semaphore implementation
+   *
+   * @param Initial semaphore value
+   *)
+  in let sem_init_func =
+    let sem_init_t = L.function_type sem_ptr [| i32_t |] in
+    let sem_init_func = L.define_function "Sem_init" sem_init_t the_module in
+    let builder = L.builder_at_end context (L.entry_block sem_init_func) in
+
+    let count = L.param sem_init_func 0 in
+    let sem_malloc = L.build_malloc sem_t "sem_malloc" builder in
+    let { lock = lock_ptr; count = count_ptr } = build_sem_gep sem_malloc builder in
+    let _ = L.build_store (L.const_int i1_t 0) lock_ptr builder in
+    let _ = L.build_store count count_ptr builder in
+    let _ = add_terminal builder (L.build_ret sem_malloc) in sem_init_func
+
   (* Message queue implementation *)
   (*
    * Initialize a queue on the heap and return a pointer to it
@@ -252,12 +253,14 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         _ = L.build_store array_malloc array_alloca builder in
 
     let queue = L.build_load queue_alloca "queue_load" builder and
-        array = L.build_load array_alloca "array_load" builder in
+        array = L.build_load array_alloca "array_load" builder and
+        sem = L.build_call sem_init_func [| L.const_int i32_t 1 |] "sem_init" builder in
 
-    let { size = size_ptr; cap = cap_ptr; array = array_ptr } = build_queue_gep queue builder in
+    let { size = size_ptr; cap = cap_ptr; array = array_ptr; sem = sem_ptr } = build_queue_gep queue builder in
     let _ = L.build_store (L.const_int i32_t 0) size_ptr builder and
         _ = L.build_store capacity cap_ptr builder and
         _ = L.build_store array array_ptr builder and
+        _ = L.build_store sem sem_ptr builder and
         _ = add_terminal builder (L.build_ret queue) in queue_init_func
 
   (*
@@ -1218,6 +1221,20 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         parent_queue = L.build_call queue_init_func [| |] "init_parent_queue" builder and
         child_queue = L.build_call queue_init_func [| |] "init_child_queue" builder in
 
+    let _ = L.build_store parent_queue parent_queue_alloca builder in
+    let _ = L.build_store child_queue child_queue_alloca builder in
+    let _ = L.build_store arg_malloc arg_alloca builder in
+
+    (* TODO - mutex_init is for some reason giving segfault *)
+    let arg = L.build_load arg_alloca "arg_load" builder in
+    let { parent_queue = parent_queue_ptr; child_queue = child_queue_ptr; _ }
+      = build_arg_gep arg builder in
+    let _ = L.build_store parent_queue parent_queue_ptr builder in
+    let _ = L.build_store child_queue child_queue_ptr builder in
+
+    let arg = L.build_bitcast arg pointer_t "cast_arg" builder in
+    let _ = L.build_call main_thread [| arg |] "start_main_thread" builder in
+    let _ = add_terminal builder (L.build_ret (L.const_int i32_t 0)) in
     let _ = L.build_store parent_queue parent_queue_alloca builder in
     let _ = L.build_store child_queue child_queue_alloca builder in
     let _ = L.build_store arg_malloc arg_alloca builder in
