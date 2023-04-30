@@ -1,3 +1,4 @@
 {
-  "build": { "dockerfile": "Dockerfile" }
+  "build": { "dockerfile": "Dockerfile" },
+  "remoteUser": "tangler"
 }
