@@ -107,14 +107,17 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | A.Tuple _ -> (L.const_int i32_t 4)
         | A.Thread -> (L.const_int i32_t 6)
         | _ -> raise (Failure " site tag")
-  and lltype_of_typ = function
+  in
+  let rec lltype_of_typ = function
           A.Int   -> i32_t
         | A.Bool  -> i1_t
         | A.Float -> float_t
         | A.Void  -> void_t
         | A.String -> pointer_t
         | A.Thread -> queue_ptr
-        | _ -> raise (Failure "hello")
+        | A.Array _ -> array_ptr
+        | A.Tuple _ -> data_ptr
+        | _ -> raise (Failure "Unsupported type in lltype_of_typ")
   and cast_llvalue_to_ptr typ llvalue builder = match typ with
         A.Array _ -> raise (Failure "Implement array")
         | _ -> L.build_bitcast llvalue pointer_t (A.string_of_typ typ ^ "_to_ptr") builder
@@ -805,6 +808,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let _ = L.build_call assert_func [| pred; index_oob_str |] "" builder in
 
             let array = L.build_load array_ptr "array_load" builder in
+            (* let _ = print_endline (A.string_of_typ typ) in *)
             let array = L.build_bitcast array (L.pointer_type (lltype_of_typ typ)) "array_cast" builder in
             let ptr = L.build_in_bounds_gep array [| ll_index |] "array_gep" builder in
             let res_value = L.build_load ptr "array_load" builder in
@@ -902,9 +906,39 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
               | Semaphore -> void_t
               | Tuple _ -> data_ptr
               | Array _ -> array_ptr) var_name builder in
-            let llvalue = if ty = String then
-              L.build_bitcast llvalue pointer_t "cast_string" builder
-            else llvalue in
+            let llvalue =
+              let rec initialize_array array_ty =
+                match (array_ty : A.typ) with
+                  | Array (ty, len) ->
+                      let size = L.const_int i32_t len in
+                      let base_lltype = lltype_of_typ ty in
+
+                      let array_struct_malloc = L.build_malloc array_t "array_struct_malloc" builder in
+                      let array_malloc = L.build_array_malloc base_lltype size "array_lit_malloc" builder in
+
+                      let _ =
+                        for i = 0 to len - 1 do
+                          let gep = L.build_gep array_malloc [| L.const_int i32_t i |] ("array_lit_gep " ^ string_of_int i) builder in
+                          let llvalue = initialize_array ty in
+                          let _ = L.build_store llvalue gep builder in ()
+                        done
+                      in
+
+                      let { size = size_ptr; data_array = array_ptr } = build_array_gep array_struct_malloc builder in
+                      let _ = L.build_store size size_ptr builder in
+
+                      let array_cast = L.build_bitcast array_malloc pointer_t "array_cast" builder in
+                      let _ = L.build_store array_cast array_ptr builder in
+                      array_struct_malloc
+                | _ -> L.const_null (lltype_of_typ array_ty)
+              in match ty with
+                | Array _ ->
+                    let (_, sx) = sx in
+                    (match sx with
+                      | SNoexpr -> initialize_array ty
+                      | _ -> llvalue)
+                | _ -> L.build_bitcast llvalue (lltype_of_typ ty) "cast_initialize" builder
+            in
             let _ = L.build_store llvalue alloca builder in
             (builder, StringMap.add var_name alloca env2)
         | SDecl (STupleDecl (_, _, sexpr) as tupDecl) ->

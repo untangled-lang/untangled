@@ -1,7 +1,11 @@
 thread_def Main {
+  string newline = "
+";
   int[1][10] arr;
   int[1] tmp = arr[0];
   tmp[0] = 10;
-  tmp = arr[0];
-  print(string_of_int(tmp[0]));
+  int[1] hello = arr[0];
+  print(string_of_int(hello[0]) + newline);
+  hello[0] = 20;
+  print(string_of_int(tmp[0]) + newline);
 }
