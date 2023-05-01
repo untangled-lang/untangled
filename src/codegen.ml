@@ -17,8 +17,8 @@ type array_gep = {
 type queue_gep = {
   size : L.llvalue;
   cap : L.llvalue;
-  sem : L.llvalue;
   array : L.llvalue;
+  mutex : L.llvalue;
 }
 
 type data_gep = {
@@ -28,8 +28,6 @@ type data_gep = {
 }
 
 type arg_gep = {
-  parent_mutex : L.llvalue;
-  child_mutex : L.llvalue;
   parent_queue : L.llvalue;
   child_queue : L.llvalue;
 }
@@ -63,10 +61,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
   (*
    * Semaphore representation
-   * @field 1 Lock / unlock flag
+   * @field 1 pthread_mutex_t*
    * @field 2 Count value
    *)
-  let sem_t = L.struct_type context [| i1_t; i32_t |] in
+  let sem_t = L.struct_type context [| i32_t; pointer_t |] in
   let sem_ptr = L.pointer_type sem_t in
 
   let data_t = L.struct_type context [| i32_t; pointer_t; pointer_t |] in
@@ -78,7 +76,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
    * @field 2 capacity of queue
    * @field 3 pointer to an array of data
    *)
-  let queue_t = L.struct_type context [| i32_t; i32_t; sem_ptr; data_double_ptr |] in
+  let queue_t = L.struct_type context [| i32_t; i32_t; data_double_ptr; pointer_t |] in
   let queue_ptr = L.pointer_type queue_t in
   let arg_t = L.struct_type context [| pointer_t; pointer_t; queue_ptr; queue_ptr |] in
   let arg_ptr = L.pointer_type arg_t in
@@ -100,7 +98,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         let tag1 = tag_pattern pattern1 in
         let tag2 = tag_pattern pattern2 in
         4 :: (tag1 @ tag2)
-      | SWildcardPattern -> [6] in
+      | SWildcardPattern -> [-1] in
   let tag_of_type = function
           A.Int -> (L.const_int i32_t 0)
         | A.Float -> (L.const_int i32_t 1)
@@ -123,32 +121,32 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   and build_queue_gep queue builder =
     let size = L.build_in_bounds_gep queue [| gep_index 0; gep_index 0 |] "gep_size" builder and
         cap =  L.build_in_bounds_gep queue [| gep_index 0; gep_index 1 |] "gep_cap" builder and
-        sem = L.build_in_bounds_gep queue [| gep_index 0; gep_index 2 |] "gep_array" builder and
-        array = L.build_in_bounds_gep queue [| gep_index 0; gep_index 4 |] "gep_array" builder
-    in { size = size; cap = cap; sem = sem; array = array }
+        array = L.build_in_bounds_gep queue [| gep_index 0; gep_index 2 |] "gep_array" builder and
+        mutex = L.build_in_bounds_gep queue [| gep_index 0; gep_index 3 |] "gep_mutex" builder
+    in { size = size; cap = cap; array = array; mutex = mutex }
   and build_data_gep data builder =
     let tag = L.build_in_bounds_gep data [| gep_index 0; gep_index 0 |] "gep_tag" builder and
         head =  L.build_in_bounds_gep data [| gep_index 0; gep_index 1 |] "gep_head" builder and
         tail = L.build_in_bounds_gep data [| gep_index 0; gep_index 2 |] "gep_tail" builder
     in { tag = tag; head = head; tail = tail }
   and build_arg_gep data builder =
-    let parent_mutex = L.build_in_bounds_gep data [| gep_index 0; gep_index 0 |] "gep_parent_mutex" builder and
-        child_mutex = L.build_in_bounds_gep data [| gep_index 0; gep_index 1 |] "gep_child_mutex" builder and
-        parent_queue = L.build_in_bounds_gep data [| gep_index 0; gep_index 2 |] "gep_parent_queue" builder and
+    let parent_queue = L.build_in_bounds_gep data [| gep_index 0; gep_index 2 |] "gep_parent_queue" builder and
         child_queue = L.build_in_bounds_gep data [| gep_index 0; gep_index 3 |] "gep_child_queue" builder
-    in { parent_mutex = parent_mutex;
-         child_mutex = child_mutex;
-         parent_queue = parent_queue;
-         child_queue = child_queue }
+    in { parent_queue = parent_queue; child_queue = child_queue }
   and build_array_gep array_struct builder =
     let size = L.build_in_bounds_gep array_struct [| gep_index 0; gep_index 0 |] "gep_array_size" builder and
         array = L.build_in_bounds_gep array_struct [| gep_index 0; gep_index 1 |] "gep_array_array" builder in
     { size = size; data_array = array }
-  and build_sem_gep sem builder =
-    let lock = L.build_in_bounds_gep sem [| gep_index 0; gep_index 0 |] "gep_lock" builder and
-        count = L.build_in_bounds_gep sem [| gep_index 0; gep_index 1 |] "gep_count" builder in
-    { lock = lock; count = count }
   in
+
+  let mutex_init_t : L.lltype = L.function_type void_t [| double_ptr |] in
+  let mutex_init_func : L.llvalue = L.declare_function "mutex_init" mutex_init_t the_module in
+
+  let mutex_lock_t : L.lltype = L.function_type void_t [| pointer_t |] in
+  let mutex_lock_func : L.llvalue = L.declare_function "mutex_lock" mutex_lock_t the_module in
+
+  let mutex_unlock_t : L.lltype = L.function_type void_t [| pointer_t |] in
+  let mutex_unlock_func : L.llvalue = L.declare_function "mutex_unlock" mutex_lock_t the_module in
 
   (*
    * https://man7.org/linux/man-pages/man3/pthread_create.3.html
@@ -215,22 +213,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         Some _ -> ()
       | None -> ignore (instr builder)
 
-  (* Semaphore implementation
-   *
-   * @param Initial semaphore value
-   *)
-  in let sem_init_func =
-    let sem_init_t = L.function_type sem_ptr [| i32_t |] in
-    let sem_init_func = L.define_function "Sem_init" sem_init_t the_module in
-    let builder = L.builder_at_end context (L.entry_block sem_init_func) in
-
-    let count = L.param sem_init_func 0 in
-    let sem_malloc = L.build_malloc sem_t "sem_malloc" builder in
-    let { lock = lock_ptr; count = count_ptr } = build_sem_gep sem_malloc builder in
-    let _ = L.build_store (L.const_int i1_t 0) lock_ptr builder in
-    let _ = L.build_store count count_ptr builder in
-    let _ = add_terminal builder (L.build_ret sem_malloc) in sem_init_func
-
   (* Message queue implementation *)
   (*
    * Initialize a queue on the heap and return a pointer to it
@@ -247,20 +229,23 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let queue_alloca = L.build_alloca queue_ptr "queue_alloca" builder and
         queue_malloc = L.build_malloc queue_t "queue_malloc" builder and
         array_alloca = L.build_alloca data_double_ptr "data_alloca" builder and
-        array_malloc = L.build_array_malloc data_ptr capacity "data_malloc" builder in
+        array_malloc = L.build_array_malloc data_ptr capacity "data_malloc" builder and
+        mutex_alloca = L.build_alloca pointer_t "mutex_alloca" builder in
 
     let _ = L.build_store queue_malloc queue_alloca builder and
         _ = L.build_store array_malloc array_alloca builder in
 
     let queue = L.build_load queue_alloca "queue_load" builder and
         array = L.build_load array_alloca "array_load" builder and
-        sem = L.build_call sem_init_func [| L.const_int i32_t 1 |] "sem_init" builder in
+        _ = L.build_call mutex_init_func [| mutex_alloca |] "" builder in
 
-    let { size = size_ptr; cap = cap_ptr; array = array_ptr; sem = sem_ptr } = build_queue_gep queue builder in
+    let { size = size_ptr; cap = cap_ptr; array = array_ptr; mutex = mutex_ptr } = build_queue_gep queue builder in
+
+    let mutex = L.build_load mutex_alloca "mutex_load" builder in
     let _ = L.build_store (L.const_int i32_t 0) size_ptr builder and
         _ = L.build_store capacity cap_ptr builder and
         _ = L.build_store array array_ptr builder and
-        _ = L.build_store sem sem_ptr builder and
+        _ = L.build_store mutex mutex_ptr builder and
         _ = add_terminal builder (L.build_ret queue) in queue_init_func
 
   (*
@@ -280,9 +265,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let _ = L.build_store argument queue_alloca builder in
 
     let queue = L.build_load queue_alloca "queue_load" builder in
-    let { size = size_ptr; _ } = build_queue_gep queue builder in
+    let { size = size_ptr; mutex = mutex_ptr } = build_queue_gep queue builder in
+    let mutex = L.build_load mutex_ptr "mutex_load" builder in
+    let _ = L.build_call mutex_lock_func [| mutex |] "" builder in
     let size = L.build_load size_ptr "size_load" builder in
     let empty = L.build_icmp L.Icmp.Eq size (L.const_int i32_t 0) "queue_empty" builder in
+    let _ = L.build_call mutex_unlock_func [| mutex |] "" builder in
     let _ = add_terminal builder (L.build_ret empty) in queue_empty_func in
 
   let queue_push_func =
@@ -312,6 +300,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         _ = L.build_store (L.param queue_push_func 1) data_alloca builder and
         _ = L.build_store (L.const_int i32_t 0) index_alloca builder in
     let queue = L.build_load queue_alloca "queue_load" builder in
+    let { mutex = mutex_ptr; _ } = build_queue_gep queue builder in
+    let mutex = L.build_load mutex_ptr "mutex_load" builder in
+    let _ = L.build_call mutex_lock_func [| mutex |] "" builder in
     let size_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 0 |] "gep_size" builder and
         capacity_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 1|] "gep_capacity" builder in
     let size = L.build_load size_ptr "size_load" builder and
@@ -360,6 +351,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let _ = L.build_store data data_ptr push_builder in
     let new_size = L.build_add size (L.const_int i32_t 1) "increment_size" push_builder in
     let _ = L.build_store new_size size_ptr push_builder in
+    let _ = L.build_call mutex_unlock_func [| mutex |] "" push_builder in
     let _ = add_terminal push_builder L.build_ret_void in queue_push_func
 
   in let queue_pop_func =
@@ -383,6 +375,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
     let _ = L.build_store (L.param queue_pop_func 0) queue_alloca builder in
     let queue = L.build_load queue_alloca "queue_load" builder in
+    let { mutex = mutex_ptr } = build_queue_gep queue builder in
+    let mutex = L.build_load mutex_ptr "mutex_load" builder in
+    let _ = L.build_call mutex_lock_func [| mutex |] "" builder in
     let size_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 0 |] "gep_size" builder in
     let data_array_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 2 |] "gep_data_array" builder in
     let data_array = L.build_load data_array_ptr "data_array_load" builder in
@@ -415,6 +410,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let size = L.build_load size_ptr "size_load" pop_builder in
     let new_size = L.build_sub size (L.const_int i32_t 1) "decrement_size" pop_builder in
     let _ = L.build_store new_size size_ptr pop_builder in
+    let _ = L.build_call mutex_unlock_func [| mutex |] "" pop_builder in
     let _ = add_terminal pop_builder (L.build_ret data) in queue_pop_func
 
   (*
@@ -576,7 +572,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let _ = L.build_store incremented_index index_ptr wcard_builder in
 
     (* 2. Check if the tag contains a wildcard at this position. If it does, return true. *)
-    let wcard_pred = L.build_icmp L.Icmp.Eq tag_val (L.const_int i32_t 6) "wildcard_pred" wcard_builder in
+    let wcard_pred = L.build_icmp L.Icmp.Eq tag_val (L.const_int i32_t (-1)) "wildcard_pred" wcard_builder in
     let _ = L.build_cond_br wcard_pred true_bb equiv_bb wcard_builder in
 
     (* 3. Make sure this next value in the tag array—if it’s not a wildcard—matches the tag on the data. If it doesn’t, return false. *)
@@ -1211,10 +1207,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let main_func = L.define_function "main" main_t the_module in
     let builder = L.builder_at_end context (L.entry_block main_func) in
     let (main_thread, _) = StringMap.find "Main" thread_decls in
-    let
-        (* parent_mutex_alloca = L.build_alloca pointer_t "parent_pool_mutex_ptr" builder and
-        child_mutex_alloca = L.build_alloca pointer_t "child_pool_mutex_ptr" builder and *)
-        arg_malloc = L.build_malloc arg_t "arg_malloc" builder and
+    let arg_malloc = L.build_malloc arg_t "arg_malloc" builder and
         arg_alloca = L.build_alloca arg_ptr "arg_alloca" builder and
         parent_queue_alloca = L.build_alloca queue_ptr "parent_queue_alloca" builder and
         child_queue_alloca = L.build_alloca queue_ptr "child_queue_alloca" builder and
