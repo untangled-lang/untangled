@@ -1,0 +1,4 @@
+thread_def Main {
+  int[5][6] a;
+  a[0][0][0];
+}

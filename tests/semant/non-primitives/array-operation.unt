@@ -1,5 +1,8 @@
 thread_def Main {
   int[100] x;
+  int[5][10] y;
   x[0] = 100;
+  y[0][0] = 100;
   print(string_of_int(x[10]));
+  print(string_of_int(y[0][0]));
 }

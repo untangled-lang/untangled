@@ -41,10 +41,10 @@ type expr =
 | PrefixUnop of unop * expr
 | PostfixUnop of unop * expr
 | Assign of string * expr
-| AssignIndex of string * expr * expr
+| AssignIndex of expr * expr * expr
 | Spawn of string
 | Call of string * expr list
-| Index of string * expr
+| Index of expr * expr
 | Noexpr
 | Unit
 
@@ -156,8 +156,8 @@ and string_of_expr expr =
     (let expressionStrings = List.map string_of_expr es in
     s ^ "(" ^ String.concat ", " expressionStrings ^ ")")
   | Noexpr -> ""
-  | Index(s, e) -> s ^ "[" ^ string_of_expr e ^ "]"
-  | AssignIndex(s, e1, e2) -> s ^ "[" ^ string_of_expr e1 ^ "] = " ^ string_of_expr e2
+  | Index(s, e) -> string_of_expr s ^ "[" ^ string_of_expr e ^ "]"
+  | AssignIndex(s, e1, e2) -> string_of_expr s ^ "[" ^ string_of_expr e1 ^ "] = " ^ string_of_expr e2
   | Unit -> "()"
 
 

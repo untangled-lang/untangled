@@ -299,23 +299,23 @@ let check (tdecls, fdecls) =
             | Float -> check_expr envs (Assign (id, Binop (expr, op, FloatLit "1.0")))
             | Semaphore -> raise (Failure "semaphore")
             | typ -> raise (Failure (string_of_typ typ ^ " can't be assigned to postfix operation")))
-      | AssignIndex (id, index, expr) ->
-          let typ = lookup id envs and
-              (index_typ, _) as sindex = check_expr envs index and
-              (expr_typ, _) as sexpr = check_expr envs expr in
+      | AssignIndex (arr_expr, index, expr) ->
+          let (typ, _) as arr_sexpr = check_expr envs arr_expr and
+              (index_typ, _) as index_sexpr = check_expr envs index and
+              (expr_typ, _) as assign_sexpr = check_expr envs expr in
+          (match typ with
+              Array (array_typ, _) ->
+                let _ = check_assign array_typ expr_typ expr in
+                (expr_typ, SAssignIndex (arr_sexpr, index_sexpr, assign_sexpr))
+            | _ -> raise (Failure ("Expected an array for assign index but found " ^ string_of_typ typ)))
+      | Index (expr, index) ->
+          let (typ, _) as sexpr = check_expr envs expr in
+          let (index_typ, _) as sindex = check_expr envs index in
           (match typ with
               Array (array_typ, _) ->
                 let _ = check_assign Int index_typ index in
-                let _ = check_assign array_typ expr_typ expr in
-                (expr_typ, SAssignIndex (id, sindex, sexpr))
-            | _ -> raise (Failure ("Expected " ^ id ^ " to be an array but found " ^ string_of_typ typ)))
-      | Index (id, index) ->
-          let typ = lookup id envs and
-              (index_typ, _) as sindex = check_expr envs index in
-          (match typ with
-              Array (array_typ, _) ->
-                let _ = check_assign Int index_typ index in (array_typ, SIndex (id, sindex))
-            | _ -> raise (Failure ("Expected " ^ id ^ " to be an array but found " ^ string_of_typ typ)))
+                (array_typ, SIndex (sexpr, sindex))
+            | _ -> raise (Failure ("Expected an array but found " ^ string_of_typ typ)))
   (*
    * Check that break and continue statements are inside for and while loop
    *)

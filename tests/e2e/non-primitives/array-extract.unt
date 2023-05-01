@@ -8,4 +8,10 @@ thread_def Main {
   print(string_of_int(hello[0]) + newline);
   hello[0] = 20;
   print(string_of_int(tmp[0]) + newline);
+  print(string_of_int(arr[0][0]) + newline);
+  arr[0][0] = 30;
+  print(string_of_int(hello[0]) + newline);
+  int[5][10] arr2;
+  arr2[2][3] = 69;
+  print(string_of_int(arr2[2][3]) + newline);
 }

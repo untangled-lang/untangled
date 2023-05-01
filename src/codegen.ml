@@ -108,7 +108,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | A.Thread -> (L.const_int i32_t 6)
         | _ -> raise (Failure " site tag")
   in
-  let rec lltype_of_typ = function
+  let lltype_of_typ = function
           A.Int   -> i32_t
         | A.Bool  -> i1_t
         | A.Float -> float_t
@@ -786,8 +786,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                 | _ -> raise (Failure "Implement other")) in
             (op e1' e2' "binop_result" builder, env'')
         | SIndex (id, sexpr) ->
-            let array_alloca = StringMap.find id env in
-            let array_struct = L.build_load array_alloca "array_load" builder in
+            let (array_struct, _) = expr (builder, env) id in
             let { size = size_ptr; data_array = array_ptr } = build_array_gep array_struct builder in
 
             let (ll_index, _) = expr (builder, env) sexpr in
@@ -845,9 +844,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let storage = StringMap.find var_name env' in
             let _ = L.build_store value_to_assign storage builder in
             (value_to_assign, env')
-        | SAssignIndex (id, sindex, sexpr) ->
-            let array_ptr = StringMap.find id env in
-            let array_loaded = L.build_load array_ptr "array_load" builder in
+        | SAssignIndex (array_sx, sindex, sexpr) ->
+            let (array_loaded, _) = expr (builder, env) array_sx in
             let { size = size_ptr; data_array = data_ptr } = build_array_gep array_loaded builder in
             let (ll_index, env') = expr (builder, env) sindex in
 

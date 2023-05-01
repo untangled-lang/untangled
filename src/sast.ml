@@ -13,10 +13,10 @@ and sx =
 | SBinop of sexpr * op * sexpr
 | SPreUnop of unop * sexpr
 | SAssign of string * sexpr
-| SAssignIndex of string * sexpr * sexpr
+| SAssignIndex of sexpr * sexpr * sexpr
 | SSpawn of string
 | SCall of string * sexpr list
-| SIndex of string * sexpr
+| SIndex of sexpr * sexpr
 | SNoexpr
 | SUnit
 
@@ -92,8 +92,8 @@ and string_of_sexpr (t, expr) =
       (let expressionStrings = List.map string_of_sexpr es in
       s ^ "(" ^ String.concat ", " expressionStrings ^ ")")
     | SNoexpr -> ""
-    | SIndex(s, e) -> s ^ "[" ^ string_of_sexpr e ^ "]"
-    | SAssignIndex(s, e1, e2) -> s ^ "[" ^ string_of_sexpr e1 ^ "] = " ^ string_of_sexpr e2
+    | SIndex(s, e) -> string_of_sexpr s ^ "[" ^ string_of_sexpr e ^ "]"
+    | SAssignIndex(s, e1, e2) -> string_of_sexpr s ^ "[" ^ string_of_sexpr e1 ^ "] = " ^ string_of_sexpr e2
     | SUnit -> "()" )
   ^ ")"
 

@@ -102,15 +102,22 @@ expr:
   | ID MODASSIGN expr { Assign($1, Binop(Id($1), Mod, $3)) }
   | ID POWASSIGN expr { Assign($1, Binop(Id($1), Pow, $3)) }
   // Array access (reading)
-  | ID LBRACKET expr RBRACKET { Index($1, $3) }
+  | array_access { $1 }
   // Array access (writing)
-  | ID LBRACKET expr RBRACKET ASSIGN expr { AssignIndex($1, $3, $6) }
-  | ID LBRACKET expr RBRACKET PLUSASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Add, $6)) }
-  | ID LBRACKET expr RBRACKET MINUSASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Sub, $6)) }
-  | ID LBRACKET expr RBRACKET TIMESASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Mult, $6)) }
-  | ID LBRACKET expr RBRACKET DIVIDEASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Div, $6)) }
-  | ID LBRACKET expr RBRACKET MODASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Mod, $6)) }
-  | ID LBRACKET expr RBRACKET POWASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Pow, $6)) }
+  | ID LBRACKET expr RBRACKET ASSIGN expr { AssignIndex(Id($1), $3, $6) }
+  | ID LBRACKET expr RBRACKET PLUSASSIGN expr { AssignIndex(Id($1), $3, Binop(Index(Id($1), $3), Add, $6)) }
+  | ID LBRACKET expr RBRACKET MINUSASSIGN expr { AssignIndex(Id($1), $3, Binop(Index(Id($1), $3), Sub, $6)) }
+  | ID LBRACKET expr RBRACKET TIMESASSIGN expr { AssignIndex(Id($1), $3, Binop(Index(Id($1), $3), Mult, $6)) }
+  | ID LBRACKET expr RBRACKET DIVIDEASSIGN expr { AssignIndex(Id($1), $3, Binop(Index(Id($1), $3), Div, $6)) }
+  | ID LBRACKET expr RBRACKET MODASSIGN expr { AssignIndex(Id($1), $3, Binop(Index(Id($1), $3), Mod, $6)) }
+  | ID LBRACKET expr RBRACKET POWASSIGN expr { AssignIndex(Id($1), $3, Binop(Index(Id($1), $3), Pow, $6)) }
+  | array_access LBRACKET expr RBRACKET ASSIGN expr { AssignIndex($1, $3, $6) }
+  | array_access LBRACKET expr RBRACKET PLUSASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Add, $6)) }
+  | array_access LBRACKET expr RBRACKET MINUSASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Sub, $6)) }
+  | array_access LBRACKET expr RBRACKET TIMESASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Mult, $6)) }
+  | array_access LBRACKET expr RBRACKET DIVIDEASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Div, $6)) }
+  | array_access LBRACKET expr RBRACKET MODASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Mod, $6)) }
+  | array_access LBRACKET expr RBRACKET POWASSIGN expr { AssignIndex($1, $3, Binop(Index($1, $3), Pow, $6)) }
   // Grouping (parentheses)
   | LPAREN expr RPAREN { $2                   }
   // `spawn` keyword
@@ -118,6 +125,9 @@ expr:
   // Function calls
   | ID LPAREN args_opt RPAREN { Call($1, $3)  }
 
+array_access:
+  | ID LBRACKET expr RBRACKET { Index(Id($1), $3) }
+  | array_access LBRACKET expr RBRACKET { Index($1, $3) }
 
 array_elements:
   /* nothing */ { [] }
