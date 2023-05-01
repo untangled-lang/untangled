@@ -69,12 +69,15 @@ def report_status(diff_exit_code, test_display, test_exit_code, expect_fail):
 
 
 class CompilerStep:
-    """Represents a compiler step"""
     def __init__(self, name, compiler_arg):
         self.name = name
         self.compiler_arg = compiler_arg
 
 
+# Different “phases”/”steps” of the compiler pipeline
+# We have a separate folder of tests for each of these steps
+# For each step, the compiler has a different flag for output that can
+# interrogate that specific step.
 COMPILER_STEPS = {
     "ast": CompilerStep("abstract syntax tree", "--print-ast"),
     "semant": CompilerStep("semantic", "--print-sast"),
@@ -90,6 +93,7 @@ group.add_argument("-gt", "--record-ground-truths", nargs="*", required=False,
                    help="Regenerate ground truths from test outputs for the specified tests. Leave list blank to regenerate all.")  # noqa: E501
 args = parser.parse_args()
 
+# Set flags based on the command line arguments we get
 TESTS_FILTERS = args.filter
 REGENERATE_GTS = args.record_ground_truths
 REGENERATE_ALL_GTS = REGENERATE_GTS is not None and len(REGENERATE_GTS) == 0
@@ -102,7 +106,7 @@ def test_matches_filter(test_id, filters=TESTS_FILTERS):
     for filter in filters:
         if test_id == filter:
             return True
-        elif filter.endswith("*") and test_id.startswith(filter[:-1]):
+        elif filter.endswith("/*") and test_id.startswith(filter[:-1]):
             return True
     return False
 
@@ -120,11 +124,13 @@ for step_name in COMPILER_STEPS:
 
     step_display = f"{Format.bold}{step.name}{Format.reset} tests"
 
+    # Identify tests to run
     test_files = glob.glob(f"{step_dir}/**/*.unt")
     test_ids = [
         path.splitext(path.relpath(test_file, TESTS_DIR))[0]
         for test_file in test_files
     ]
+    # Apply filter
     test_ids_filtered = [
         test_id
         for test_id in test_ids
@@ -132,6 +138,7 @@ for step_name in COMPILER_STEPS:
     ] if TESTS_FILTERS else test_ids
     num_tests += len(test_ids_filtered)
 
+    # “announce” this new compiler step, if we are going to run any tests here
     if (len(test_ids_filtered) > 0):
         step_display = f"{Format.bold}{step.name}{Format.reset} tests"
         term_width = min(os.get_terminal_size().columns, 100)
@@ -140,18 +147,21 @@ for step_name in COMPILER_STEPS:
         line = "—" * num_dashes
         print(f"\n{line} running {step_display} {line}\n")
 
+    # Run the tests for this step
     for test in test_ids_filtered:
         input_path = path.join(TESTS_DIR, f"{test}.unt")
         output_path = path.join(TESTS_DIR, f"{test}.output")
         ground_truth_path = path.join(TESTS_DIR, f"{test}.gt")
         expected_failure = path.basename(test).startswith("failure-") \
             or "failure" in test.split(os.sep)
-
+        # Terminal-formatted test name
         test_display = f"{Format.bold}{test}{Format.reset}" \
             if not expected_failure else \
             f"{Format.bold}{path.split(test)[0]}/{Format.reset}{Format.red}failure-{Format.reset}{Format.bold}{path.basename(test)[8:]}{Format.reset}"  # noqa: E501
         print(f"Running test {test_display}...")
 
+        # Steps that pass an argument to the compiler just compare the stdout
+        # from the compiler to a ground truth.
         if step.compiler_arg:
             # Run the test
             exit_code = os.system(
@@ -159,19 +169,22 @@ for step_name in COMPILER_STEPS:
                 f" < {input_path}"
                 f" > {output_path} 2>&1"
             )
+        # The e2e step passes no argument to the compiler. It compiles a
+        # program and then executes that program, comparing the final output
+        # of the compiled program to a ground truth.
         else:
             exe_path = path.join(TESTS_DIR, test)
+            # Compile the program
             compile_return_code = os.system(
                 f"./{BINARY}"
                 f" < {input_path}"
                 f" -o {exe_path} > {output_path} 2>&1"
             )
-
             # Run the generated program
             exit_code = os.system(f"{exe_path} >> {output_path} 2>&1") \
                 + compile_return_code
 
-        # Record a new ground truth if requested
+        # Record a new ground truth for this test if that was requested
         if REGENERATE_ALL_GTS or test_matches_filter(test, REGENERATE_GTS):
             subprocess.run(
                 ["cp", output_path, ground_truth_path]
@@ -181,28 +194,31 @@ for step_name in COMPILER_STEPS:
                 f" truth for test {Format.bold}{test}{Format.reset}"
             )
             num_tests -= 1
-        else:
-            if not path.isfile(ground_truth_path):
-                print(
-                    f"{Format.cursor_up}{Format.yellow}! "
-                    "Could not find ground truth output for test "
-                    f"{test_display}{Format.yellow}; "
-                    f"skipping checks{Format.reset}"
-                )
-                continue
-            diff_exit_code = subprocess.run(
-                ["diff", ground_truth_path, output_path],
-            ).returncode
+            continue
 
-            report_status(
-                diff_exit_code,
-                test_display,
-                exit_code,
-                expected_failure,
+        # Compare the output of the test to the ground truth
+        if not path.isfile(ground_truth_path):
+            print(
+                f"{Format.cursor_up}{Format.yellow}! "
+                "Could not find ground truth output for test "
+                f"{test_display}{Format.yellow}; "
+                f"skipping checks{Format.reset}"
             )
+            continue
+        diff_exit_code = subprocess.run(
+            ["diff", ground_truth_path, output_path],
+        ).returncode
+
+        # Report the results of this test
+        report_status(
+            diff_exit_code,
+            test_display,
+            exit_code,
+            expected_failure,
+        )
 
 
-# Report results of tests
+# Report final summary of results of all tests
 print()
 print(
     f"{Format.red if num_failed > 0 else Format.green}{Format.bold}"

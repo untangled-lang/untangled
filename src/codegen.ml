@@ -149,7 +149,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let mutex_lock_func : L.llvalue = L.declare_function "mutex_lock" mutex_lock_t the_module in
 
   let mutex_unlock_t : L.lltype = L.function_type void_t [| pointer_t |] in
-  let mutex_unlock_func : L.llvalue = L.declare_function "mutex_unlock" mutex_lock_t the_module in
+  let mutex_unlock_func : L.llvalue = L.declare_function "mutex_unlock" mutex_unlock_t the_module in
 
   (*
    * https://man7.org/linux/man-pages/man3/pthread_create.3.html
@@ -268,7 +268,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let _ = L.build_store argument queue_alloca builder in
 
     let queue = L.build_load queue_alloca "queue_load" builder in
-    let { size = size_ptr; mutex = mutex_ptr } = build_queue_gep queue builder in
+    let { size = size_ptr; mutex = mutex_ptr; _ } = build_queue_gep queue builder in
     let mutex = L.build_load mutex_ptr "mutex_load" builder in
     let _ = L.build_call mutex_lock_func [| mutex |] "" builder in
     let size = L.build_load size_ptr "size_load" builder in
@@ -303,11 +303,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         _ = L.build_store (L.param queue_push_func 1) data_alloca builder and
         _ = L.build_store (L.const_int i32_t 0) index_alloca builder in
     let queue = L.build_load queue_alloca "queue_load" builder in
-    let { mutex = mutex_ptr; _ } = build_queue_gep queue builder in
+    let { mutex = mutex_ptr; size = size_ptr; cap = capacity_ptr; array = array_ptr } = build_queue_gep queue builder in
     let mutex = L.build_load mutex_ptr "mutex_load" builder in
     let _ = L.build_call mutex_lock_func [| mutex |] "" builder in
-    let size_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 0 |] "gep_size" builder and
-        capacity_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 1|] "gep_capacity" builder in
     let size = L.build_load size_ptr "size_load" builder and
         capacity = L.build_load capacity_ptr "capacity_load" builder in
     let full = L.build_icmp L.Icmp.Eq size capacity "queue_is_full" builder in
@@ -322,9 +320,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let finished = L.build_icmp L.Icmp.Eq index size "finished_copy" cond_builder in
     let _ = L.build_cond_br finished terminate_bb copy_bb cond_builder in
 
-    let queue = L.build_load queue_alloca "queue_load" copy_builder in
-    let old_data_array_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 2 |] "gep_old_data_array" copy_builder in
-    let old_data_array = L.build_load old_data_array_ptr "old_data_array_load" copy_builder in
+    let old_data_array = L.build_load array_ptr "old_data_array_load" copy_builder in
     let index = L.build_load index_alloca "index_load" copy_builder in
     let old_data_ptr = L.build_in_bounds_gep old_data_array [| index |] "gep_old_data" copy_builder in
     let data = L.build_load old_data_ptr "data_load" copy_builder in
@@ -338,18 +334,14 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let _ = L.build_store increment index_alloca post_copy_builder in
     let _ = L.build_br cond_bb post_copy_builder in
 
-    let queue = L.build_load queue_alloca "queue_load" terminate_builder in
     let new_data_array = L.build_load data_array_alloca "new_data_array_load" terminate_builder in
-    let old_data_array_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 2|] "gep_old_data_array" terminate_builder in
-    let _ = L.build_store new_data_array old_data_array_ptr terminate_builder in
+    let _ = L.build_store new_data_array array_ptr terminate_builder in
     let new_capacity = L.build_mul capacity (L.const_int i32_t 2) "double_capacity" terminate_builder in
     let _ = L.build_store new_capacity capacity_ptr terminate_builder in
     let _ = L.build_br push_bb terminate_builder in
 
-    let queue = L.build_load queue_alloca "queue_load" push_builder and
-        data = L.build_load data_alloca "data_load" push_builder in
-    let data_array_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 2 |] "gep_data_array" push_builder in
-    let data_array = L.build_load data_array_ptr "data_load" push_builder in
+    let data = L.build_load data_alloca "data_load" push_builder in
+    let data_array = L.build_load array_ptr "data_load" push_builder in
     let data_ptr = L.build_in_bounds_gep data_array [| size |] "gep_data_ptr" push_builder in
     let _ = L.build_store data data_ptr push_builder in
     let new_size = L.build_add size (L.const_int i32_t 1) "increment_size" push_builder in
@@ -378,12 +370,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
     let _ = L.build_store (L.param queue_pop_func 0) queue_alloca builder in
     let queue = L.build_load queue_alloca "queue_load" builder in
-    let { mutex = mutex_ptr } = build_queue_gep queue builder in
+    let { mutex = mutex_ptr; array = array_ptr; size = size_ptr; _ } = build_queue_gep queue builder in
     let mutex = L.build_load mutex_ptr "mutex_load" builder in
     let _ = L.build_call mutex_lock_func [| mutex |] "" builder in
-    let size_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 0 |] "gep_size" builder in
-    let data_array_ptr = L.build_in_bounds_gep queue [| gep_index 0; gep_index 2 |] "gep_data_array" builder in
-    let data_array = L.build_load data_array_ptr "data_array_load" builder in
+    let data_array = L.build_load array_ptr "data_array_load" builder in
     let data_ptr = L.build_in_bounds_gep data_array [| gep_index 0 |] "gep_data" builder in
     let data = L.build_load data_ptr "data_load" builder in
 
