@@ -1,0 +1,5 @@
+thread_def Main {
+  int[100] x;
+  (int : x[(int : 0)] = (int : 100));
+  (void : print((string : string_of_int((int : (int[100] : x)[(int : 10)])))));
+}
