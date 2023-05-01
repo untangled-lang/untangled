@@ -27,7 +27,7 @@ You will also be able to:
 - Run `make docs` to generate a PDF of the Language Reference Manual. The generated PDF appears at
   `docs/untangled.pdf`. Requires a recent version Node.js.
 - Run `make test-ast` to run all ast tests inside of the tests/ast folder
-- Run `make test-semants` to run all tests inside of the tests/semantics folder
+- Run `make test-semant` to run all tests inside of the tests/semant folder
 - Run `make test-e2e` to run all tests inside of the tests/e2e folder
 - Run `make clean` to remove artifacts of all of these
 
@@ -41,12 +41,13 @@ You can invoke the test script directly using `python3 tests` to pass additional
 arguments. Note that in this case, it is your responsibility to run `make` first to ensure the
 executable is up to date.
 
-- `python3 tests --tests test1 test2 ...` runs only the specified tests
-- `python3 tests --test-groups group1 group2 ...` limits tests to those in the specified groups
+- `python3 tests --filter e2e/real-programs/factorial e2e/real-programs/string-of-int ...` runs only
+  the specified tests
+  - Use wildcards like `python3 tests --filter "ast/*" "e2e/real-programs/*" ...` to run all the
+    tests inside a folder (including nested subfolders)
 - `python3 tests --record-ground-truths` writes new `.gt` ground truths for all tests
-- `python3 tests --record-ground-truths test1 test2 ...` writes new `.gt` ground truths for the
-  specified tests
-- `python3 tests --steps {ast|sast|e2e}` specifies which step of the compiler to test
+  - `python3 tests --record-ground-truths test1 pattern2 ...` writes new `.gt` ground truths for the
+    specified tests (following the filter syntax above).
 
 
 ### Methodology

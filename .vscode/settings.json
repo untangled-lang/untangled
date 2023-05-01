@@ -16,5 +16,5 @@
   "ocaml.sandbox": {
     "kind": "global"
   },
-  "files.insertFinalNewline": false,
+  "files.insertFinalNewline": true,
 }

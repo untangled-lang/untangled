@@ -1,8 +1,6 @@
 #!/usr/bin/python3
 
 # TODO: nicer diff output
-# TODO: refactor to support arbitrary nesting
-# TODO: enforce that only tests that start with failure- have >0 exit code
 
 import os
 from os import path
@@ -10,13 +8,9 @@ import subprocess
 import glob
 from argparse import ArgumentParser
 
-STEPS = [
-    "ast", "sast", "e2e"
-]
 PWD = os.getcwd()
 BINARY = "untangled.exe"
 TESTS_DIR = f"{PWD}/tests"
-COMPILER_STEPS_DIR = list(map(lambda step: f"{TESTS_DIR}/{step}", STEPS))
 num_succeeded = 0
 num_failed = 0
 
@@ -33,188 +27,180 @@ class Format:
     cursor_up = "\033[1A"
 
 
-class EverythingSet:
-    """A collection that contains everything"""
-    def __contains__(self, item):
-        return True
-
-
-def report_status(exit_code, test_name):
+def report_status(diff_exit_code, test_display, test_exit_code, expect_fail):
     """Record the status of a test given its exit code"""
     global num_succeeded, num_failed
-    if exit_code == 0:
+
+    if test_exit_code != 0 and not expect_fail:
         print(
             f"{Format.cursor_up}"
-            f"{Format.green}{Format.bold}\u2713{Format.reset} "
-            f"Test {Format.bold}{test_name}{Format.reset} "
-            f"{Format.green}succeeded{Format.reset}         "
+            f"{Format.red}{Format.bold}\u2717{Format.reset} "
+            f"Test {test_display} "
+            f"{Format.red}failed with status {test_exit_code}{Format.reset}"
         )
-        num_succeeded += 1
-    else:
+        num_failed += 1
+    elif test_exit_code == 0 and expect_fail:
+        print(
+            f"{Format.cursor_up}"
+            f"{Format.red}{Format.bold}\u2717{Format.reset} "
+            f"Test {test_display} "
+            f"{Format.red}succeeded, but was expected to fail{Format.reset}"
+        )
+        num_failed += 1
+    elif diff_exit_code != 0:
         print(
             f"{Format.red}{Format.bold}\u2717{Format.reset} "
-            f"Test {Format.bold}{test_name}{Format.reset} "
-            f"{Format.red}failed with status {exit_code}{Format.reset}"
+            f"Test {test_display} "
+            f"{Format.red}did not match ground-truth output{Format.reset}"
             "\n"
         )
         num_failed += 1
-
-
-def get_directories_in(p):
-    all_paths = map(lambda x: path.join(p, x), os.listdir(p))
-    folders = list((filter(lambda x: path.isdir(x), all_paths)))
-    return folders
+    else:
+        print(
+            f"{Format.cursor_up}"
+            f"{Format.green}{Format.bold}\u2713{Format.reset} "
+            f"Test {test_display} "
+            f"{Format.green}passed{Format.reset}         "
+        )
+        num_succeeded += 1
 
 
 # PARSE ARGS ==================================================================
 
-ACTION_MAPPER = {"ast": "-a", "sast": "-s", "e2e": ""}
-STEP_NAMES = {
-    "ast": "abstract syntax tree",
-    "sast": "semantic",
-    "e2e": "end-to-end",
+
+class CompilerStep:
+    """Represents a compiler step"""
+    def __init__(self, name, compiler_arg):
+        self.name = name
+        self.compiler_arg = compiler_arg
+
+
+COMPILER_STEPS = {
+    "ast": CompilerStep("abstract syntax tree", "--print-ast"),
+    "semant": CompilerStep("semantic", "--print-sast"),
+    "e2e": CompilerStep("end-to-end", None),
 }
 
 parser = ArgumentParser()
 group = parser.add_mutually_exclusive_group(required=False)
-group.add_argument("-t", "--tests", nargs="*",
-                   help="Limits tests to those with the specified names.",
-                   default=[])
-group.add_argument("-tg", "--test-groups", nargs="*", required=False,
-                   help="Limits tests to those in the specified test groups.",
+group.add_argument("-f", "--filter", nargs="*",
+                   help="Limits tests to those with the specified prefix",
                    default=[])
 group.add_argument("-gt", "--record-ground-truths", nargs="*", required=False,
                    help="Regenerate ground truths from test outputs for the specified tests. Leave list blank to regenerate all.")  # noqa: E501
-parser.add_argument(
-    "-s", "--step", nargs="*", choices=STEPS, default=[], required=False,
-    help="Specify which compiler's step to test. Leave blank to run all steps"
-)
 args = parser.parse_args()
 
-TEST_GROUPS_FILTER = args.test_groups
-TESTS_FILTER = args.tests
+TESTS_FILTERS = args.filter
 REGENERATE_GTS = args.record_ground_truths
-TEST_STEPS_FILTER = args.step
+REGENERATE_ALL_GTS = REGENERATE_GTS is not None and len(REGENERATE_GTS) == 0
 
-if len(TESTS_FILTER) == 0:
-    TESTS_FILTER = EverythingSet()
 
-if len(TEST_GROUPS_FILTER) == 0:
-    TEST_GROUPS_FILTER = EverythingSet()
+def test_matches_filter(test_id, filters=TESTS_FILTERS):
+    if not filters:
+        return False
 
-# If -gt is passed without specific tests, we will regenerate all ground truths
-if REGENERATE_GTS is not None and len(REGENERATE_GTS) == 0:
-    REGENERATE_GTS = EverythingSet()
+    for filter in filters:
+        if test_id == filter:
+            return True
+        elif filter.endswith("*") and test_id.startswith(filter[:-1]):
+            return True
+    return False
 
-if len(TEST_STEPS_FILTER) == 0:
-    TEST_STEPS_FILTER = EverythingSet()
 
 # RUN TESTS ===================================================================
 
 
-test_group_folders = glob.glob(f"{TESTS_DIR}/*/")
-print()
-if TESTS_FILTER:  # don’t know which groups we’re running if we filter by test
-    print(f"Executing specified test(s)...")
-else:
-    num_test_groups = len(TEST_GROUPS_FILTER or test_group_folders)
-    plural = "s" if num_test_groups != 1 else ""
-    print(f"Executing {num_test_groups} test group{plural}...")
-print()
-
 num_tests = 0
 
-for step_dir in COMPILER_STEPS_DIR:
-    compiler_step = path.basename(path.normpath(step_dir))
-    test_groups = []
-    test_groups.append(step_dir)
-    compiler_options = ACTION_MAPPER.get(compiler_step)
-    step_name = path.basename(step_dir)
+# The top-level groups inside the tests directory represent tests for different
+# compiler stages, matching the COMPILER_STEPS map above.
+for step_name in COMPILER_STEPS:
+    step_dir = path.join(TESTS_DIR, step_name)
+    step = COMPILER_STEPS[step_name]
 
-    # Skip random folder
-    if compiler_options is None:
-        continue
+    step_display = f"{Format.bold}{step.name}{Format.reset} tests"
 
-    step_display = f"{Format.bold}{STEP_NAMES[step_name]}{Format.reset} tests"
-    # Skip if compiler step isn't in the filter
-    if compiler_step not in TEST_STEPS_FILTER:
-        print(f"Skipping {step_display}")
-        continue
+    test_files = glob.glob(f"{step_dir}/**/*.unt")
+    test_ids = [
+        path.splitext(path.relpath(test_file, TESTS_DIR))[0]
+        for test_file in test_files
+    ]
+    test_ids_filtered = [
+        test_id
+        for test_id in test_ids
+        if test_matches_filter(test_id)
+    ] if TESTS_FILTERS else test_ids
+    num_tests += len(test_ids_filtered)
 
-    step_announced = False
-    while len(test_groups) > 0:
-        test_group_path = test_groups.pop(0)
-        group_name = path.basename(path.normpath(test_group_path))
+    if (len(test_ids_filtered) > 0):
+        step_display = f"{Format.bold}{step.name}{Format.reset} tests"
+        term_width = min(os.get_terminal_size().columns, 100)
+        text_length = 17 + len(step.name)
+        num_dashes = (term_width - text_length) // 2
+        line = "—" * num_dashes
+        print(f"\n{line} running {step_display} {line}\n")
 
-        # Skip test groups that aren’t in the filter
-        if group_name not in TEST_GROUPS_FILTER:
-            continue
+    for test in test_ids_filtered:
+        input_path = path.join(TESTS_DIR, f"{test}.unt")
+        output_path = path.join(TESTS_DIR, f"{test}.output")
+        ground_truth_path = path.join(TESTS_DIR, f"{test}.gt")
+        expected_failure = path.basename(test).startswith("failure-") \
+            or "failure" in test.split(os.sep)
 
-        # Add nested test folder
-        test_groups += get_directories_in(test_group_path)
-        input_files = glob.glob(path.join(test_group_path, "*.unt"))
-        for input_file_path in sorted(input_files):
-            test_name = path.splitext(path.basename(input_file_path))[0]
-            if test_name not in TESTS_FILTER:
-                continue
+        test_display = f"{Format.bold}{test}{Format.reset}" \
+            if not expected_failure else \
+            f"{Format.bold}{path.split(test)[0]}/{Format.reset}{Format.red}failure-{Format.reset}{Format.bold}{path.basename(test)[8:]}{Format.reset}"  # noqa: E501
+        print(f"Running test {test_display}...")
 
-            if not step_announced:
-                term_width = min(os.get_terminal_size().columns, 100)
-                text_length = 17 + len(STEP_NAMES[step_name])
-                num_dashes = (term_width - text_length) // 2
-                line = "—" * num_dashes
-                print(f"\n{line} running {step_display} {line}\n")
-                step_announced = True
-
-            num_tests += 1
-            full_name = (
-                f"{Format.dim}{step_name}/{Format.reset_color}"
-                f"{group_name}/{test_name}"
+        if step.compiler_arg:
+            # Run the test
+            exit_code = os.system(
+                f"./{BINARY} {step.compiler_arg}"
+                f" < {input_path}"
+                f" > {output_path} 2>&1"
             )
-            output_path = path.join(test_group_path, f"{test_name}.output")
-            ground_truth_path = path.join(test_group_path, f"{test_name}.gt")
+        else:
+            exe_path = path.join(TESTS_DIR, test)
+            compile_return_code = os.system(
+                f"./{BINARY}"
+                f" < {input_path}"
+                f" -o {exe_path} > {output_path} 2>&1"
+            )
 
-            print(f"Running test {Format.bold}{full_name}{Format.reset}...")
-            if compiler_step != "e2e":
-                # Run the test
-                os.system(
-                    f"./{BINARY} {compiler_options}"
-                    f" < {input_file_path}"
-                    f" > {output_path} 2>&1"
-                )
-            else:
-                exe_path = path.join(test_group_path, test_name)
-                if os.system(
-                    f"./{BINARY} {compiler_options}"
-                    f" < {input_file_path}"
-                    f" -o {exe_path} > {output_path} 2>&1"
-                ) == 0:
-                    # Run the generated program
-                    os.system(f"{exe_path} > {output_path}")
+            # Run the generated program
+            exit_code = os.system(f"{exe_path} >> {output_path} 2>&1") \
+                + compile_return_code
 
-            # Record a new ground truth if requested
-            if REGENERATE_GTS and test_name in REGENERATE_GTS:
-                subprocess.run(
-                    ["cp", output_path, ground_truth_path]
-                ).check_returncode()
-                print(
-                    f"{Format.cursor_up}{Format.yellow}! "
-                    "Overwriting ground truth for test "
-                    f"{Format.bold}{full_name}{Format.reset}\n"
-                )
-
+        # Record a new ground truth if requested
+        if REGENERATE_ALL_GTS or test_matches_filter(test, REGENERATE_GTS):
+            subprocess.run(
+                ["cp", output_path, ground_truth_path]
+            ).check_returncode()
+            print(
+                f"{Format.cursor_up}{Format.yellow}! Overwriting ground"
+                f" truth for test {Format.bold}{test}{Format.reset}"
+            )
+            num_tests -= 1
+        else:
             if not path.isfile(ground_truth_path):
                 print(
                     f"{Format.cursor_up}{Format.yellow}! "
-                    "Could not find ground truth AST output for test "
-                    f"{Format.bold}{full_name}{Format.reset}{Format.yellow}; "
-                    f"skipping diff{Format.reset}"
+                    "Could not find ground truth output for test "
+                    f"{test_display}{Format.yellow}; "
+                    f"skipping checks{Format.reset}"
                 )
                 continue
             diff_exit_code = subprocess.run(
                 ["diff", ground_truth_path, output_path],
             ).returncode
-            report_status(diff_exit_code, full_name)
+
+            report_status(
+                diff_exit_code,
+                test_display,
+                exit_code,
+                expected_failure,
+            )
+
 
 # Report results of tests
 print()

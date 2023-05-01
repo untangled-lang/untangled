@@ -5,10 +5,10 @@ let () =
   let set_action a () = action := a in
   let output_file = ref "" in
   let speclist = [
-    ("-a", Arg.Unit (set_action Ast), "Print the AST");
-    ("-s", Arg.Unit (set_action Sast), "Print the SAST");
-    ("-l", Arg.Unit (set_action LLVM_IR), "Print the generated LLVM IR");
-    ("-o", Arg.Set_string output_file, "Compile to an executable with the given name. When provided, supersedes -a, -s, and -l; no output is printed to the console.");
+    ("--print-ast", Arg.Unit (set_action Ast), "Print the AST");
+    ("--print-sast", Arg.Unit (set_action Sast), "Print the SAST");
+    ("--print-llvm", Arg.Unit (set_action LLVM_IR), "Print the generated LLVM IR");
+    ("-o", Arg.Set_string output_file, "Compile to an executable with the given name. When provided, supersedes other output options; no output is printed to the console.");
   ] in
   let usage_msg = "usage: ./untangled.native [-a|-s|-l|-c] [file.unt]" in
   let channel = ref stdin in

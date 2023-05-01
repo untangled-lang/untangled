@@ -30,13 +30,13 @@ test: clean-untangled untangled.exe
 	python3 tests
 
 test-ast: clean-untangled untangled.exe
-	python3 tests --step ast
+	python3 tests --filter "ast/*"
 
-test-semants: clean-untangled untangled.exe
-	python3 tests --step sast
+test-semant: clean-untangled untangled.exe
+	python3 tests --filter "semant/*"
 
 test-e2e: clean-untangled untangled.exe
-	python3 tests --step e2e
+	python3 tests --filter "e2e/*"
 
 
 # VSCode extension
