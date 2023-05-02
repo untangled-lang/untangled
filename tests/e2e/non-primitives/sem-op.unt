@@ -1,0 +1,7 @@
+thread_def Main {
+  semaphore s = make_semaphore(10);
+  s--;
+  s++;
+  print("Finish semaphore wait/post without deadlock
+");
+}

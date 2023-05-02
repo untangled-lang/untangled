@@ -6,7 +6,8 @@ thread_def Foo {
 
   receive {
     thread t -> {
-      t << "Hello parent";
+      t << "Hello parent
+";
     }
     _ -> {}
   }

@@ -12,6 +12,7 @@ and sx =
 | SId of string
 | SBinop of sexpr * op * sexpr
 | SPreUnop of unop * sexpr
+| SPostUnop of unop * sexpr
 | SAssign of string * sexpr
 | SAssignIndex of sexpr * sexpr * sexpr
 | SSpawn of string
@@ -86,6 +87,7 @@ and string_of_sexpr (t, expr) =
     | SId(s) -> s
     | SBinop (e1, o, e2) -> "(" ^ string_of_sexpr e1 ^ string_of_op o ^ string_of_sexpr e2 ^ ")"
     | SPreUnop (unop, e) -> "(" ^ string_of_unop unop e ^ ")"
+    | SPostUnop (unop, e) -> "(" ^ string_of_unop unop e ^ ")"
     | SAssign(s, e) -> "(" ^ s ^ " = " ^ string_of_sexpr e ^ ")"
     | SSpawn(s) -> "spawn " ^ s
     | SCall(s, es) ->

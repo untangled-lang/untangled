@@ -1,0 +1,4 @@
+thread_def Main {
+  semaphore s = make_semaphore(5);
+  s += "b";
+}

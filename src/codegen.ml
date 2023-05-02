@@ -90,8 +90,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
       | A.Float -> [1]
       | A.String -> [2]
       | A.Bool -> [3]
+      | A.Array _ -> [5]
+      | A.Semaphore -> [6]
       | A.Thread -> [6]
-      | _ -> raise (Failure "array tag") in
+      | A.Void -> raise (Failure "Semantic bug: Void should not be tagged in pattern generation")
+      | A.Tuple _ -> raise (Failure "Codegen bug: Tuple should not be tagged in pattern generator") in
   let rec tag_pattern = function
       | SBasePattern (typ, _) -> ocaml_tag typ
       | STuplePattern (pattern1, pattern2) ->
@@ -105,9 +108,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | A.String -> (L.const_int i32_t 2)
         | A.Bool -> (L.const_int i32_t 3)
         | A.Tuple _ -> (L.const_int i32_t 4)
+        | A.Array _ -> (L.const_int i32_t 5)
         | A.Thread -> (L.const_int i32_t 6)
-        | _ -> raise (Failure " site tag")
-  in
+        | A.Semaphore -> (L.const_int i32_t 7)
+        | _ -> raise (Failure "Semantic bug: Void should not be tagged") in
   let lltype_of_typ = function
           A.Int   -> i32_t
         | A.Bool  -> i1_t
@@ -117,7 +121,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | A.Thread -> queue_ptr
         | A.Array _ -> array_ptr
         | A.Tuple _ -> data_ptr
-        | _ -> raise (Failure "Unsupported type in lltype_of_typ")
+        | A.Semaphore -> sem_ptr
   and cast_llvalue_to_ptr typ llvalue builder = match typ with
         A.Array _ -> raise (Failure "Implement array")
         | _ -> L.build_bitcast llvalue pointer_t (A.string_of_typ typ ^ "_to_ptr") builder
@@ -825,6 +829,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let _ = (L.build_call sprintf_func [| buf ; float_format_str; llvalue |]
                                                 "string_of_float" builder)
             in (buf, env')
+        | SCall ("make_semaphore", [sexpr]) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+            let sem = L.build_call sem_init_func [| llvalue |] "sem_init" builder in
+            (sem, env')
         | SCall (func_name, arg_list) ->
             let (fdef, fdecl) = StringMap.find func_name function_decls in
             let llargs = List.map (fun e -> let (llvalue, _) = expr (builder, env) e in llvalue) arg_list in
@@ -890,8 +898,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                     | A.Or -> L.build_or
                     | _ -> raise (Failure "Boolean binary operation not supported")
                     )
-                | _ -> raise (Failure "Implement other")) in
-            (op e1' e2' "binop_result" builder, env'')
+                | typ -> raise (Failure ("Semantic bug: " ^ A.string_of_typ typ ^ " does not support binop")))
+            in (op e1' e2' "binop_result" builder, env'')
         | SIndex (id, sexpr) ->
             let (array_struct, _) = expr (builder, env) id in
             let { size = size_ptr; data_array = array_ptr } = build_array_gep array_struct builder in
@@ -972,6 +980,22 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (llvalue, env') = expr (builder, env) sexpr in
             let negated = L.build_xor llvalue (L.const_int i1_t 1) "negate_bool" builder in
             (negated, env')
+        | SPostUnop (op, sexpr) ->
+            let (sem, env') = expr (builder, env) sexpr in
+            let fn = match op with
+                  Plusplus -> sem_post_func
+                | Minmin -> sem_wait_func
+                | _ -> raise (Failure ("Parsing bug: " ^ string_of_unop op sexpr ^ " should not be postfix")) in
+            (L.build_call fn [| sem |] "" builder, env')
+            (* (match sexpr with
+              (_, SId id) ->
+                let sem = StringMap.find id env in
+                let fn = match op with
+                    Plusplus -> sem_post_func
+                  | Minmin -> sem_wait_func
+                  | _ -> raise (Failure ("Parsing bug: " ^ string_of_unop op sexpr ^ " should not be postfix")) in
+                (L.build_call fn [| sem |] "" builder, env)
+              | _ -> raise (Failure ("Semantic bug: " ^ string_of_sexpr sexpr ^ " should be a variable"))) *)
     and stmt ((builder: L.llbuilder), env, (ctx : stmt_context)) sstmt =
       match sstmt with
           SBlock sblock ->
@@ -991,16 +1015,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             in (builder, env)
         | SDecl (SBaseDecl (ty, var_name, sx)) ->
             let (llvalue, env2) = expr (builder, env) sx in
-            let alloca = L.build_alloca (match ty with
-              | Void -> void_t
-              | Bool -> i1_t
-              | Int -> i32_t
-              | Float -> float_t
-              | String -> pointer_t
-              | Thread -> queue_ptr
-              | Semaphore -> void_t
-              | Tuple _ -> data_ptr
-              | Array _ -> array_ptr) var_name builder in
+            let alloca = L.build_alloca (lltype_of_typ ty) var_name builder in
             let llvalue =
               let rec initialize_array array_ty =
                 match (array_ty : A.typ) with

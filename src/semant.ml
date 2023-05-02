@@ -40,7 +40,8 @@ let check (tdecls, fdecls) =
        [("print", String, Void);
         ("string_of_int", Int, String);
         ("string_of_float", Float, String);
-        ("string_of_bool", Bool, String)]
+        ("string_of_bool", Bool, String);
+        ("make_semaphore", Int, Semaphore)]
   in
   let add_func map fd =
     let built_in_err = "function " ^ fd.fname ^ " may not be defined"
@@ -248,23 +249,27 @@ let check (tdecls, fdecls) =
         in let sargs = List.fold_left2 check_call [] fd.formals args
         in (fd.ret_type, SCall (fname, List.rev sargs))
       | Binop(e1, op, e2) as e ->
-          let (t1, e1') = check_expr envs e1 in
-          let (t2, e2') = check_expr envs e2 in
-          (* All binary operators require operands of the same type *)
-          let same = t1 = t2 in
-          (* Determine expression type based on operator and operand types *)
-          let ty = match op with
-            Add | Sub | Mult | Div | Mod | Pow when same && t1 = Int -> Int
-          | Add | Sub | Mult | Div | Pow       when same && t1 = Float -> Float
-          | Equality | Neq                     when same               -> Bool
-          | Less | Leq | Greater | Geq
-                                               when same && (t1 = Int || t1 = Float) -> Bool
-          | And | Or                           when same && t1 = Bool -> Bool
-          | Add                                when same && t1 = String -> String
-          | _ -> raise (Failure ("illegal binary operator " ^
-                          string_of_typ t1 ^ string_of_op op ^
-                          string_of_typ t2 ^ " in " ^ string_of_expr e))
-          in (ty, SBinop((t1, e1'), op, (t2, e2')))
+          let (t1, _) as lsexpr = check_expr envs e1 in
+          let (t2, _) as rsexpr = check_expr envs e2 in
+
+          if t1 = Semaphore then
+            raise (Failure ("Expected postfix operators for semaphore " ^ string_of_expr e1 ^ " but found " ^ string_of_expr e2))
+          else
+            (* All binary operators, except semaphore, require operands of the same type *)
+            let same = t1 = t2 in
+            (* Determine expression type based on operator and operand types *)
+            let ty = match op with
+              Add | Sub | Mult | Div | Mod | Pow when same && t1 = Int -> Int
+            | Add | Sub | Mult | Div | Pow       when same && t1 = Float -> Float
+            | Equality | Neq                     when same               -> Bool
+            | Less | Leq | Greater | Geq
+                                                when same && (t1 = Int || t1 = Float) -> Bool
+            | And | Or                           when same && t1 = Bool -> Bool
+            | Add                                when same && t1 = String -> String
+            | _ -> raise (Failure ("illegal binary operator " ^
+                            string_of_typ t1 ^ string_of_op op ^
+                            string_of_typ t2 ^ " in " ^ string_of_expr e))
+            in (ty, SBinop(lsexpr, op, rsexpr))
       | Id s -> let t = (lookup s envs) in (t, SId s)
       | Spawn t -> let _ = find_thread_def t in (Thread, SSpawn t)
       | Assign (id, expr) ->
@@ -284,19 +289,19 @@ let check (tdecls, fdecls) =
                 check_expr envs (Binop (expr, Mult, operand))
             | Not -> ((check_assign Bool t expr), SPreUnop (op, e'))
             | _ -> raise (Failure "Parsing bug"))
-      | PostfixUnop (op, expr) ->
-          let (t, e') = check_expr envs expr in
+      | PostfixUnop (unop, expr) ->
+          let (t, e') as sexpr = check_expr envs expr in
           let id = match e' with
               SId id -> id
             | _ -> raise (Failure "Expected ID in postfix operation") in
-          let op = match op with
+          let binop = match unop with
               Plusplus -> Add
             | Minmin -> Sub
             | _ -> raise (Failure "Parsing bug")
           in (match t with
-            Int -> check_expr envs (Assign (id, Binop (expr, op, IntLit 1)))
-            | Float -> check_expr envs (Assign (id, Binop (expr, op, FloatLit "1.0")))
-            | Semaphore -> raise (Failure "semaphore")
+            Int -> check_expr envs (Assign (id, Binop (expr, binop, IntLit 1)))
+            | Float -> check_expr envs (Assign (id, Binop (expr, binop, FloatLit "1.0")))
+            | Semaphore -> (t, SPostUnop (unop, sexpr))
             | typ -> raise (Failure (string_of_typ typ ^ " can't be assigned to postfix operation")))
       | AssignIndex (arr_expr, index, expr) ->
           let (typ, _) as arr_sexpr = check_expr envs arr_expr and
