@@ -1229,38 +1229,16 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let main_func = L.define_function "main" main_t the_module in
     let builder = L.builder_at_end context (L.entry_block main_func) in
     let (main_thread, _) = StringMap.find "Main" thread_decls in
-    let arg_malloc = L.build_malloc arg_t "arg_malloc" builder and
-        arg_alloca = L.build_alloca arg_ptr "arg_alloca" builder and
-        parent_queue_alloca = L.build_alloca queue_ptr "parent_queue_alloca" builder and
-        child_queue_alloca = L.build_alloca queue_ptr "child_queue_alloca" builder and
-        parent_queue = L.build_call queue_init_func [| |] "init_parent_queue" builder and
-        child_queue = L.build_call queue_init_func [| |] "init_child_queue" builder in
 
-    let _ = L.build_store parent_queue parent_queue_alloca builder in
-    let _ = L.build_store child_queue child_queue_alloca builder in
-    let _ = L.build_store arg_malloc arg_alloca builder in
+    let arg_malloc = L.build_malloc arg_t "arg_malloc" builder in
+    let parent_queue = L.build_call queue_init_func [| |] "init_parent_queue" builder in
+    let child_queue = L.build_call queue_init_func [| |] "init_child_queue" builder in
 
-    (* TODO - mutex_init is for some reason giving segfault *)
-    let arg = L.build_load arg_alloca "arg_load" builder in
-    let { parent_queue = parent_queue_ptr; child_queue = child_queue_ptr; _ }
-      = build_arg_gep arg builder in
+    let { parent_queue = parent_queue_ptr; child_queue = child_queue_ptr }
+      = build_arg_gep arg_malloc builder in
     let _ = L.build_store parent_queue parent_queue_ptr builder in
     let _ = L.build_store child_queue child_queue_ptr builder in
 
-    let arg = L.build_bitcast arg pointer_t "cast_arg" builder in
-    let _ = L.build_call main_thread [| arg |] "start_main_thread" builder in
-    let _ = add_terminal builder (L.build_ret (L.const_int i32_t 0)) in
-    let _ = L.build_store parent_queue parent_queue_alloca builder in
-    let _ = L.build_store child_queue child_queue_alloca builder in
-    let _ = L.build_store arg_malloc arg_alloca builder in
-
-    (* TODO - mutex_init is for some reason giving segfault *)
-    let arg = L.build_load arg_alloca "arg_load" builder in
-    let { parent_queue = parent_queue_ptr; child_queue = child_queue_ptr; _ }
-      = build_arg_gep arg builder in
-    let _ = L.build_store parent_queue parent_queue_ptr builder in
-    let _ = L.build_store child_queue child_queue_ptr builder in
-
-    let arg = L.build_bitcast arg pointer_t "cast_arg" builder in
-    let _ = L.build_call main_thread [| arg |] "start_main_thread" builder in
+    let arg = L.build_bitcast arg_malloc pointer_t "cast_arg" builder in
+    let _ = L.build_call main_thread [| arg |] "star_main_thread" builder in
     let _ = add_terminal builder (L.build_ret (L.const_int i32_t 0)) in the_module
