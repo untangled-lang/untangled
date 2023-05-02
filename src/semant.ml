@@ -131,7 +131,6 @@ let check (tdecls, fdecls) =
           let sexpr = check_expr envs expr in
           (envs, SSend (id, sexpr))
       | Decl (BaseDecl (lt, id, expr)) ->
-          let _ = check_binds "local" [(lt, id)] in
           (match envs with
             env :: _ ->
               if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
@@ -305,6 +304,7 @@ let check (tdecls, fdecls) =
               (expr_typ, _) as assign_sexpr = check_expr envs expr in
           (match typ with
               Array (array_typ, _) ->
+                let _ = check_assign Int index_typ index in
                 let _ = check_assign array_typ expr_typ expr in
                 (expr_typ, SAssignIndex (arr_sexpr, index_sexpr, assign_sexpr))
             | _ -> raise (Failure ("Expected an array for assign index but found " ^ string_of_typ typ)))
