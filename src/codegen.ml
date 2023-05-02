@@ -5,7 +5,7 @@ open Sast
 module StringMap = Map.Make(String)
 
 type sem_gep = {
-  lock : L.llvalue;
+  mutex : L.llvalue;
   count : L.llvalue;
 }
 
@@ -140,6 +140,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let size = L.build_in_bounds_gep array_struct [| gep_index 0; gep_index 0 |] "gep_array_size" builder and
         array = L.build_in_bounds_gep array_struct [| gep_index 0; gep_index 1 |] "gep_array_array" builder in
     { size = size; data_array = array }
+  and build_sem_gep sem builder =
+    let count = L.build_in_bounds_gep sem [| gep_index 0; gep_index 0 |] "gep_count" builder and
+        mutex = L.build_in_bounds_gep sem [| gep_index 0; gep_index 1 |] "gep_mutex" builder in
+    { mutex = mutex; count = count}
   in
 
   let mutex_init_t : L.lltype = L.function_type void_t [| double_ptr |] in
@@ -215,6 +219,96 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     match L.block_terminator (L.insertion_block builder) with
         Some _ -> ()
       | None -> ignore (instr builder)
+
+  (* Semaphore implementation *)
+  (*
+   * Initialize a semaphore and return a pointer to it
+   *
+   * @param i32_t The initial value of the semaphore
+   * @return sem_ptr
+   *)
+  in let sem_init_func =
+    let sem_init_t = L.function_type sem_ptr [| i32_t |] in
+    let sem_init_func = L.define_function "Sem_init" sem_init_t the_module in
+
+    let builder = L.builder_at_end context (L.entry_block sem_init_func) in
+
+    let sem_malloc = L.build_malloc sem_t "sem_malloc" builder in
+    let mutex_alloca = L.build_alloca pointer_t "mutex_alloca" builder in
+    let count = L.param sem_init_func 0 in
+
+    let { mutex = mutex_ptr; count = count_ptr } = build_sem_gep sem_malloc builder in
+    let _ = L.build_call mutex_init_func [| mutex_alloca |] "" builder in
+    let mutex = L.build_load mutex_alloca "mutex_load" builder in
+    let _ = L.build_store mutex mutex_ptr builder in
+    let _ = L.build_store count count_ptr builder in
+    let _ = L.build_ret sem_malloc builder in
+    sem_init_func
+
+  (*
+   * Acquire a lock or spin-wait
+   *
+   * @param sem_ptr
+   * @return None
+   *)
+  in let sem_wait_func =
+    let sem_wait_t = L.function_type void_t [| sem_ptr |] in
+    let sem_wait_func = L.define_function "Sem_wait" sem_wait_t the_module in
+
+    let wait_bb = L.append_block context "wait" sem_wait_func in
+    let test_bb = L.append_block context "test_count" sem_wait_func in
+    let unlock_bb = L.append_block context "unlock_mutex" sem_wait_func in
+    let decrement_bb = L.append_block context "decrement_count" sem_wait_func in
+
+    let builder = L.builder_at_end context (L.entry_block sem_wait_func) in
+    let wait_builder = L.builder_at_end context wait_bb in
+    let test_builder = L.builder_at_end context test_bb in
+    let unlock_builder = L.builder_at_end context unlock_bb in
+    let decrement_builder = L.builder_at_end context decrement_bb in
+
+    (* Load mutex and jump to wait block *)
+    let { mutex = mutex_ptr; count = count_ptr } = build_sem_gep (L.param sem_wait_func 0) builder in
+    let mutex = L.build_load mutex_ptr "mutex_load" builder in
+    let _ = L.build_br wait_bb builder in
+
+    (* Lock the mutex and jump to test block *)
+    let _ = L.build_call mutex_lock_func [| mutex |] "" wait_builder in
+    let _ = L.build_br test_bb wait_builder in
+
+    (* Test value count *)
+    let count = L.build_load count_ptr "count_load" test_builder in
+    let available = L.build_icmp L.Icmp.Sgt count (L.const_int i32_t 0) "test_count" test_builder in
+    let _ = L.build_cond_br available decrement_bb unlock_bb test_builder in
+
+    (* Unlock mutex and retry *)
+    let _ = L.build_call mutex_unlock_func [| mutex |] "" unlock_builder in
+    let _ = L.build_br wait_bb unlock_builder in
+
+    (* Decrement count and unlock mutex *)
+    let count = L.build_load count_ptr "count_load" decrement_builder in
+    let count_decrement = L.build_sub count (L.const_int i32_t 1) "count_decrement" decrement_builder in
+    let _ = L.build_store count_decrement count_ptr decrement_builder in
+    let _ = L.build_call mutex_unlock_func [| mutex |] "" decrement_builder in
+    let _ = add_terminal decrement_builder L.build_ret_void in
+    sem_wait_func
+
+  (*
+   * Release the semaphore
+   *)
+  in let sem_post_func =
+    let sem_post_t = L.function_type void_t [| sem_ptr |] in
+    let sem_post_func = L.define_function "Sem_post" sem_post_t the_module in
+
+    let builder = L.builder_at_end context (L.entry_block sem_post_func) in
+    let { mutex = mutex_ptr; count = count_ptr } = build_sem_gep (L.param sem_post_func 0) builder in
+    let mutex = L.build_load mutex_ptr "mutex_load" builder in
+    let _ = L.build_call mutex_lock_func [| mutex |] "" builder in
+    let count = L.build_load count_ptr "count_load" builder in
+    let count_increment = L.build_add count (L.const_int i32_t 1) "count_increment" builder in
+    let _ = L.build_store count_increment count_ptr builder in
+    let _ = L.build_call mutex_unlock_func [| mutex |] "" builder in
+    let _ = add_terminal builder L.build_ret_void in
+    sem_post_func
 
   (* Message queue implementation *)
   (*
@@ -1011,6 +1105,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let receiver_queue = L.build_load receiver_queue_ptr "receiver_queue_load" builder in
             let (llvalue, env') = expr (builder, env) sexpr in
             (match typ with
+                (* @TODO - Make a copy? *)
                 A.Tuple _ ->
                   let _ = L.build_call queue_push_func [| receiver_queue; llvalue |] "" builder in
                   (builder, env')
