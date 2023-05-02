@@ -370,6 +370,13 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let _ = L.build_call mutex_unlock_func [| mutex |] "" builder in
     let _ = add_terminal builder (L.build_ret empty) in queue_empty_func in
 
+  (*
+   * Push a data_ptr onto the queue
+   *
+   * @param queue_ptr
+   * @param data_ptr
+   * @return None
+   *)
   let queue_push_func =
     let queue_push_t = L.function_type void_t [| queue_ptr; data_ptr |] in
     let queue_push_func = L.define_function "Queue_push" queue_push_t the_module in
@@ -443,6 +450,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let _ = L.build_call mutex_unlock_func [| mutex |] "" push_builder in
     let _ = add_terminal push_builder L.build_ret_void in queue_push_func
 
+  (*
+   * Pop data from the queue. The function assume that the queue is not empty
+   *
+   * @param queue_ptr
+   * @return None
+   *)
   in let queue_pop_func =
     let queue_pop_t = L.function_type data_ptr [| queue_ptr |] in
     let queue_pop_func = L.define_function "Queue_pop" queue_pop_t the_module in
