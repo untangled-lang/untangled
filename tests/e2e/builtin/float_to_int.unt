@@ -3,4 +3,5 @@ thread_def Main {
   print(string_of_int(ceil(3.5)) + "\n");
   print(string_of_int(round(3.5)) + "\n");
   print(string_of_int(round(3.4)) + "\n");
+  print(string_of_int(int_of_float(3.4)) + "\n");
 }

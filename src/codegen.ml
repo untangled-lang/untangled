@@ -1029,6 +1029,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (llvalue, env') = expr (builder, env) sexpr in
             let float_round = L.build_call float_round_func [| llvalue |] "int_round" builder in
             L.build_fptosi float_round i32_t "int_round_cast" builder, env'
+        | SCall ("int_of_float", [sexpr]) -> expr (builder, env) (typ, SCall ("floor", [sexpr])) (* int_of_float is an alias of floor *)
+        | SCall("float_of_int", [sexpr]) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+            L.build_sitofp llvalue float_t "float_of_int" builder, env'
         | SCall ("make_semaphore", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
             let sem = L.build_call sem_init_func [| llvalue |] "sem_init" builder in

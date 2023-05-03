@@ -44,6 +44,8 @@ let check (tdecls, fdecls) =
         ("floor", [(Float, "x")], Int);
         ("ceil", [(Float, "x")], Int);
         ("round", [(Float, "x")], Int);
+        ("int_of_float", [(Float, "x")], Int); (* alias for floor *)
+        ("float_of_int", [(Int, "x")], Float);
         ("make_semaphore", [(Int, "x")], Semaphore);
         ("exit", [(Int, "x")], Void);
         ("end", [], Void)];
