@@ -5,7 +5,7 @@ thread_def Child {
     }
     _ -> {}
   }
-  parent << "done";
+parent << "done";
 }
 
 thread_def Main {

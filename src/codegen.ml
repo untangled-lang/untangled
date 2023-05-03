@@ -702,10 +702,105 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     tag_compare_func
   in
 
-  let int_pow_func =
+  (*
+   * Raise float base to exponent
+   *
+   * @param float_t Base value
+   * @param i32_t Exponent
+   * @param float_t Result
+   *)
+  let float_pow_func =
+    let float_pow_t = L.function_type float_t [| float_t; i32_t |] in
+    let float_pow_func = L.define_function "float_pow" float_pow_t the_module in
+
+    let check_bb = L.append_block context "operand_test" float_pow_func in
+    let zero_bb = L.append_block context "zero_test" float_pow_func in
+    let neg_bb = L.append_block context "neg_test" float_pow_func in
+    let neg_1_bb = L.append_block context "neg_1_test" float_pow_func in
+    let set_0_bb = L.append_block context "set_0" float_pow_func in
+    let pow_bb = L.append_block context "power" float_pow_func in
+    let ret_bb = L.append_block context "return" float_pow_func in
+
+    let builder = L.builder_at_end context (L.entry_block float_pow_func) in
+    let check_builder = L.builder_at_end context check_bb in
+    let zero_builder = L.builder_at_end context zero_bb in
+    let neg_builder = L.builder_at_end context neg_bb in
+    let neg_1_builder = L.builder_at_end context neg_1_bb in
+    let set_0_builder = L.builder_at_end context set_0_bb in
+    let pow_builder = L.builder_at_end context pow_bb in
+    let ret_builder = L.builder_at_end context ret_bb in
+
+    (* Allocation *)
+    let base_alloca = L.build_alloca float_t "base_alloca" builder in
+    let expo_alloca = L.build_alloca i32_t "expo_alloca" builder in
+    let res_alloca = L.build_alloca float_t "res_alloca" builder in
+
+    let _ = L.build_store (L.param float_pow_func 0) base_alloca builder in
+    let _ = L.build_store (L.param float_pow_func 1) expo_alloca builder in
+    (* Result is 1 if exponent = 0 *)
+    let _ = L.build_store (L.const_float float_t 1.0) res_alloca builder in
+    let _ = L.build_br check_bb builder in
+
+    (* Check that base is not 0 and exponent is non-negative *)
+    let msg = L.build_global_stringptr "0.0 can't be raised to negative power" "pow_msg" check_builder in
+    let base = L.build_load base_alloca "base_load" check_builder in
+    let expo = L.build_load expo_alloca "expo_load" check_builder in
+    let zero = L.build_fcmp L.Fcmp.Oeq base (L.const_float float_t 0.0) "base_is_zero" check_builder in
+    let negative = L.build_icmp L.Icmp.Slt expo (L.const_int i32_t 0) "expo_is_negative" check_builder in
+    let error = L.build_and zero negative "pow_error" check_builder in
+    let valid = L.build_not error "negate_error" check_builder in
+    let valid_cast = L.build_intcast valid i32_t "valid_cast" check_builder in
+    let _ = L.build_call assert_func [| valid_cast; msg |] "" check_builder in
+    let _ = L.build_br zero_bb check_builder in
+
+    (* Test if exponent = 0 *)
+    let expo = L.build_load expo_alloca "expo_load" zero_builder in
+    let zero = L.build_icmp L.Icmp.Eq expo (L.const_int i32_t 0) "expo_is_zero" zero_builder in
+    let _ = L.build_cond_br zero ret_bb neg_bb zero_builder in
+
+    (* Test if exponent < 0 *)
+    let expo = L.build_load expo_alloca "expo_load" neg_builder in
+    let negative = L.build_icmp L.Icmp.Slt expo (L.const_int i32_t 0) "expo_is_negative" neg_builder in
+    let _ = L.build_cond_br negative neg_1_bb pow_bb neg_builder in
+
+    (* Test if exponent = -1 and base = 1 *)
+    let base = L.build_load base_alloca "base_load" neg_1_builder in
+    let expo = L.build_load expo_alloca "expo_load" neg_1_builder in
+    let negative_1 = L.build_icmp L.Icmp.Eq expo (L.const_int i32_t (-1)) "expo_is_-1" neg_1_builder in
+    let base_1 = L.build_fcmp L.Fcmp.Oeq base (L.const_float float_t 1.0) "base_is_1" neg_1_builder in
+    let both_1 = L.build_and base_1 negative_1 "both_1" neg_1_builder in
+    (* If it's -1, return because res_alloca is currently 1 *)
+    let _ = L.build_cond_br both_1 ret_bb set_0_bb neg_1_builder in
+
+    (* Set result to 0 if exponent < - 1 *)
+    let _ = L.build_store (L.const_float float_t 0.0) res_alloca set_0_builder in
+    let _ = L.build_br ret_bb set_0_builder in
+
+    (* Take power and decrement exponent *)
+    let base = L.build_load base_alloca "base_load" pow_builder in
+    let expo = L.build_load expo_alloca "expo_load" pow_builder in
+    let res = L.build_load res_alloca "res_load" pow_builder in
+    let pow = L.build_fmul base res "raise_res" pow_builder in
+    let expo_decrement = L.build_sub expo (L.const_int i32_t 1) "expo_sub" pow_builder in
+    let _ = L.build_store pow res_alloca pow_builder in
+    let _ = L.build_store expo_decrement expo_alloca pow_builder in
+    let _ = L.build_br zero_bb pow_builder in
+
+    let res = L.build_load res_alloca "res_load" ret_builder in
+    let _ = add_terminal ret_builder (L.build_ret res) in float_pow_func
+
+  (*
+   * Raise int base to exponent
+   *
+   * @param i32_t Base value
+   * @param i32_t Exponent
+   * @param i32_t Result
+   *)
+  in let int_pow_func =
     let int_pow_t = L.function_type i32_t [| i32_t; i32_t |] in
     let int_pow_func = L.define_function "int_pow" int_pow_t the_module in
 
+    let check_bb = L.append_block context "operand_test" int_pow_func in
     let zero_bb = L.append_block context "zero_test" int_pow_func in
     let neg_bb = L.append_block context "neg_test" int_pow_func in
     let neg_1_bb = L.append_block context "neg_1_test" int_pow_func in
@@ -714,6 +809,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let ret_bb = L.append_block context "return" int_pow_func in
 
     let builder = L.builder_at_end context (L.entry_block int_pow_func) in
+    let check_builder = L.builder_at_end context check_bb in
     let zero_builder = L.builder_at_end context zero_bb in
     let neg_builder = L.builder_at_end context neg_bb in
     let neg_1_builder = L.builder_at_end context neg_1_bb in
@@ -728,9 +824,20 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
     let _ = L.build_store (L.param int_pow_func 0) base_alloca builder in
     let _ = L.build_store (L.param int_pow_func 1) expo_alloca builder in
-    (* Result is 1 if exponent = 0 *)
     let _ = L.build_store (L.const_int i32_t 1) res_alloca builder in
-    let _ = L.build_br zero_bb builder in
+    let _ = L.build_br check_bb builder in
+
+    (* Check that base is not 0 and exponent is non-negative *)
+    let msg = L.build_global_stringptr "0 can't be raised to negative power" "pow_msg" check_builder in
+    let base = L.build_load base_alloca "base_load" check_builder in
+    let expo = L.build_load expo_alloca "expo_load" check_builder in
+    let zero = L.build_icmp L.Icmp.Eq base (L.const_int i32_t 0) "base_is_zero" check_builder in
+    let negative = L.build_icmp L.Icmp.Slt expo (L.const_int i32_t 0) "expo_is_negative" check_builder in
+    let error = L.build_and zero negative "pow_error" check_builder in
+    let valid = L.build_not error "negate_error" check_builder in
+    let valid_cast = L.build_intcast valid i32_t "valid_cast" check_builder in
+    let _ = L.build_call assert_func [| valid_cast; msg |] "" check_builder in
+    let _ = L.build_br zero_bb check_builder in
 
     (* Test if exponent = 0 *)
     let expo = L.build_load expo_alloca "expo_load" zero_builder in
@@ -742,11 +849,14 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let negative = L.build_icmp L.Icmp.Slt expo (L.const_int i32_t 0) "expo_is_negative" neg_builder in
     let _ = L.build_cond_br negative neg_1_bb pow_bb neg_builder in
 
-    (* Test if exponent = -1 *)
+    (* Test if exponent = -1 and base = 1 *)
+    let base = L.build_load base_alloca "base_load" neg_1_builder in
     let expo = L.build_load expo_alloca "expo_load" neg_1_builder in
     let negative_1 = L.build_icmp L.Icmp.Eq expo (L.const_int i32_t (-1)) "expo_is_-1" neg_1_builder in
+    let base_1 = L.build_icmp L.Icmp.Eq base (L.const_int i32_t 1) "base_is_1" neg_1_builder in
+    let both_1 = L.build_and negative_1 base_1 "both_1" neg_1_builder in
     (* If it's -1, return because res_alloca is currently 1 *)
-    let _ = L.build_cond_br negative_1 ret_bb set_0_bb neg_1_builder in
+    let _ = L.build_cond_br both_1 ret_bb set_0_bb neg_1_builder in
 
     (* Set result to 0 if exponent < - 1 *)
     let _ = L.build_store (L.const_int i32_t 0) res_alloca set_0_builder in
@@ -919,7 +1029,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                     | A.Mult             -> L.build_fmul
                     | A.Div              -> L.build_fdiv
                     | A.Equality         -> L.build_fcmp L.Fcmp.Oeq
-                    | A.Pow              -> raise (Failure "Implement power on float")
+                    | A.Pow              -> bin_op_wrapper float_pow_func
                     | A.Neq              -> L.build_fcmp L.Fcmp.One
                     | A.Less             -> L.build_fcmp L.Fcmp.Olt
                     | A.Leq              -> L.build_fcmp L.Fcmp.Ole
@@ -1052,15 +1162,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                 | Minmin -> sem_wait_func
                 | _ -> raise (Failure ("Parsing bug: " ^ string_of_unop op sexpr ^ " should not be postfix")) in
             (L.build_call fn [| sem |] "" builder, env')
-            (* (match sexpr with
-              (_, SId id) ->
-                let sem = StringMap.find id env in
-                let fn = match op with
-                    Plusplus -> sem_post_func
-                  | Minmin -> sem_wait_func
-                  | _ -> raise (Failure ("Parsing bug: " ^ string_of_unop op sexpr ^ " should not be postfix")) in
-                (L.build_call fn [| sem |] "" builder, env)
-              | _ -> raise (Failure ("Semantic bug: " ^ string_of_sexpr sexpr ^ " should be a variable"))) *)
     and stmt ((builder: L.llbuilder), env, (ctx : stmt_context)) sstmt =
       match sstmt with
           SBlock sblock ->

@@ -1,0 +1,19 @@
+thread_def Main {
+  string newline = "
+";
+
+  float base = 5.0;
+  print(string_of_float(base ** 0) + newline); // 1
+  print(string_of_float(base ** 1) + newline); // 5.0
+  print(string_of_float(base ** 3) + newline); // 125.0
+  print(string_of_float(base ** -1) + newline); // 0.0
+  print(string_of_float(base ** -3) + newline); // 0.0
+  print(string_of_float(1.0 ** -1) + newline); // 1
+
+  float neg = -3.0;
+  print(string_of_float(neg ** 0) + newline); // 1
+  print(string_of_float(neg ** 1) + newline); // -3
+  print(string_of_float(neg ** 3) + newline); // -27
+  print(string_of_float(neg ** 4) + newline); // 81
+  print(string_of_float(neg ** -1) + newline); // 0
+}

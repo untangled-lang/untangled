@@ -2,6 +2,7 @@
 
 - Types
   - [x] int
+    - [x] Power
   - [x] float
   - [x] string
   - [x] tuples
