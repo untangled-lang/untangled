@@ -154,7 +154,13 @@
         {
           "name": "string.quoted.double.untangled",
           "begin": "\"",
-          "end": "\""
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.untangled",
+              "match": "\\\\."
+            }
+          ]
         },
         {
           "name": "constant.numeric.untangled",
