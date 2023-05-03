@@ -1,13 +1,10 @@
 thread_def Main {
-  string newline = "
-";
-
   ((int, string), (int, int)) b =  ((1, "hello"), (2, 3));
   ((int x, string a), (int y, int z)) = b;
 
 
-  print(a + newline);
-  print(string_of_int(x) + newline);
-  print(string_of_int(y) + newline);
-  print(string_of_int(z) + newline);
+  print(a + "\n");
+  print(string_of_int(x) + "\n");
+  print(string_of_int(y) + "\n");
+  print(string_of_int(z) + "\n");
 }

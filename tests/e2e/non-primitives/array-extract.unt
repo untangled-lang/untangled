@@ -1,17 +1,15 @@
 thread_def Main {
-  string newline = "
-";
   int[1][10] arr;
   int[1] tmp = arr[0];
   tmp[0] = 10;
   int[1] hello = arr[0];
-  print(string_of_int(hello[0]) + newline);
+  print(string_of_int(hello[0]) + "\n");
   hello[0] = 20;
-  print(string_of_int(tmp[0]) + newline);
-  print(string_of_int(arr[0][0]) + newline);
+  print(string_of_int(tmp[0]) + "\n");
+  print(string_of_int(arr[0][0]) + "\n");
   arr[0][0] = 30;
-  print(string_of_int(hello[0]) + newline);
+  print(string_of_int(hello[0]) + "\n");
   int[5][10] arr2;
   arr2[2][3] = 69;
-  print(string_of_int(arr2[2][3]) + newline);
+  print(string_of_int(arr2[2][3]) + "\n");
 }

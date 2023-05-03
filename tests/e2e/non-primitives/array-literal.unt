@@ -1,10 +1,8 @@
 thread_def Main {
-  string newline = "
-";
   int[5] x = [1, 2, 3, 4, 5];
-  print(string_of_int(x[0]) + " " + string_of_int(x[3]) + newline);
+  print(string_of_int(x[0]) + " " + string_of_int(x[3]) + "\n");
   string[2] y = ["hello", "world"];
-  print(y[0] + " " + y[1] + newline);
+  print(y[0] + " " + y[1] + "\n");
   y[0] = "goodbye";
-  print(y[0] + newline);
+  print(y[0] + "\n");
 }

@@ -2,29 +2,22 @@ thread_def Main {
   int i = 6;
   i++;
   print(string_of_int(i));
-  print("
-");
+  print("\n");
   i--;
   print(string_of_int(i));
-  print("
-");
+  print("\n");
 
   print(string_of_int(-i));
-  print("
-");
+  print("\n");
   print(string_of_int(-10));
-  print("
-");
+  print("\n");
   print(string_of_float(-5.02));
-  print("
-");
+  print("\n");
 
 
   bool b = false;
   print(string_of_bool(!b));
-  print("
-");
+  print("\n");
   print(string_of_bool(!true));
-  print("
-");
+  print("\n");
 }

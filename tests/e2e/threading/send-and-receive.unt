@@ -1,17 +1,15 @@
 thread_def Child {
-  string newline = "
-";
   int i = 0;
   while (i < 7) {
     i += 1;
     receive {
-      string x -> print("string " + x + newline);
-      int x -> print("int " + string_of_int(x) + newline);
-      bool x -> print("bool " + string_of_bool(x) + newline);
-      float x -> print("float " + string_of_float(x) + newline);
-      (string x, (int y, bool z)) -> print("tuple 1 " + x + " " + string_of_int(y) + " " + string_of_bool(z) + newline);
-      ((string x, int y), bool z) -> print("tuple 2 " + x + " " + string_of_int(y) + " " + string_of_bool(z) + newline);
-      _ -> print("wildcard" + newline);
+      string x -> print("string " + x + "\n");
+      int x -> print("int " + string_of_int(x) + "\n");
+      bool x -> print("bool " + string_of_bool(x) + "\n");
+      float x -> print("float " + string_of_float(x) + "\n");
+      (string x, (int y, bool z)) -> print("tuple 1 " + x + " " + string_of_int(y) + " " + string_of_bool(z) + "\n");
+      ((string x, int y), bool z) -> print("tuple 2 " + x + " " + string_of_int(y) + " " + string_of_bool(z) + "\n");
+      _ -> print("wildcard" + "\n");
     }
   }
   parent << "done";

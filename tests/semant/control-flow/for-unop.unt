@@ -1,13 +1,11 @@
 thread_def Main {
   for (int i = 0; i < 5; i++) {
     print(string_of_int(i));
-    print("
-");
+    print("\n");
   }
 
   for (int i = 5; i > 0; i--) {
     print(string_of_int(i));
-    print("
-");
+    print("\n");
   }
 }

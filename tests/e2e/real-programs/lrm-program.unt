@@ -17,13 +17,11 @@ thread_def Main {
   // worker_1 starts before worker_2, but we expect it to exit after worker_2, since it has much
   // more computation to do.
 
-  string newline = "
-";
-  print("hello" + newline);
+  print("hello\n");
 
   for (int i = 0; i < 2; i++) {
     int result = 0;
     receive { int x -> result = x; _ -> {} }
-    print(string_of_int(result) + newline);
+    print(string_of_int(result) + "\n");
   }
 }
