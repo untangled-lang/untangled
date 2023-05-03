@@ -46,6 +46,7 @@
   - [x] Mutex lock on queue operations
   - [x] Passing queue to functions
   - [x] Passing self as message
+  - [ ] Send semaphore
 
 <!-- - [x] Variable Declaration
   - [ ] Blocks/Scopes

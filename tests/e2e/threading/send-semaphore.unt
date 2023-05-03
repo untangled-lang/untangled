@@ -1,0 +1,22 @@
+thread_def Child {
+  receive {
+    semaphore s -> {
+      s++;
+      s--;
+    }
+    _ -> {}
+  }
+  parent << "done";
+}
+
+thread_def Main {
+  semaphore s = make_semaphore(2);
+  thread child = spawn Child;
+  child << s;
+  receive {
+    _ -> {
+      print("Done
+");
+    }
+  }
+}

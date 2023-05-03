@@ -91,10 +91,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
       | A.String -> [2]
       | A.Bool -> [3]
       | A.Array _ -> [5]
-      | A.Semaphore -> [6]
       | A.Thread -> [6]
+      | A.Semaphore -> [7]
       | A.Void -> raise (Failure "Semantic bug: Void should not be tagged in pattern generation")
-      | A.Tuple _ -> raise (Failure "Codegen bug: Tuple should not be tagged in pattern generator") in
+      | A.Tuple _ -> raise (Failure "Codegen bug: Tuple should not be tagged in pattern generation") in
   let rec tag_pattern = function
       | SBasePattern (typ, _) -> ocaml_tag typ
       | STuplePattern (pattern1, pattern2) ->
