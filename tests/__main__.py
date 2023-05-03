@@ -85,12 +85,12 @@ COMPILER_STEPS = {
 }
 
 parser = ArgumentParser()
-group = parser.add_mutually_exclusive_group(required=False)
-group.add_argument("-f", "--filter", nargs="*",
-                   help="Limits tests to those with the specified prefix",
-                   default=[])
-group.add_argument("-gt", "--record-ground-truths", nargs="*", required=False,
-                   help="Regenerate ground truths from test outputs for the specified tests. Leave list blank to regenerate all.")  # noqa: E501
+parser.add_argument("-f", "--filter", nargs="*",
+                    help="Limits tests to those with the specified prefix",
+                    default=[])
+parser.add_argument("-gt", "--record-ground-truths", nargs="*", required=False,
+                    help="Regenerate ground truths from test outputs for the specified tests. Leave list blank to regenerate all.",  # noqa: E501
+                    default=None)
 args = parser.parse_args()
 
 # Set flags based on the command line arguments we get
