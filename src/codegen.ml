@@ -230,6 +230,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let float_round_t = L.function_type float_t [| float_t |] in
   let float_round_func : L.llvalue = L.declare_function "round" float_round_t the_module in
 
+  let sqrt_t = L.function_type float_t [| float_t |] in
+  let sqrt_func : L.llvalue = L.declare_function "sqrt" sqrt_t the_module in
+
 
   let add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
@@ -1033,6 +1036,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | SCall("float_of_int", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
             L.build_sitofp llvalue float_t "float_of_int" builder, env'
+        | SCall("sqrt", [sexpr]) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+            L.build_call sqrt_func [| llvalue |] "sqrt" builder, env'
         | SCall ("make_semaphore", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
             let sem = L.build_call sem_init_func [| llvalue |] "sem_init" builder in
