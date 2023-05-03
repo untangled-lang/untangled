@@ -83,7 +83,7 @@ rule token = parse
   (* end keywords *)
 
   | digits as lxm { ILIT(int_of_string lxm) }
-  | digits '.'  digit* as lxm { FLIT(lxm) }
+  | digits '.' digit* as lxm { FLIT(lxm) }
   | ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
   | '"' { string_scanner [] lexbuf }
 
@@ -101,5 +101,17 @@ and line_comment_scanner = parse
 
 and string_scanner s_list = parse
   '"' { SLIT(String.concat "" (List.rev s_list)) }
-  (* '\\' (escaped_key as c) { TODO: interpret the next character as an escape character } *)
+  | '\\' (_ as c) {
+    if c = '\n' then string_scanner s_list lexbuf (* Ignore escaped newlines in strings *)
+    else string_scanner ((String.make 1 (
+      match c with
+        | 'n' -> '\010'
+        | 'r' -> '\013'
+        | 'b' -> '\008'
+        | 't' -> '\009'
+        | '\\' -> '\\'
+        | '"' -> '"'
+        | _   -> raise (Failure("Unrecognized escape character \\" ^ Char.escaped c))
+    )) :: s_list) lexbuf
+  }
   | _ as new_char { string_scanner ((String.make 1 new_char) :: s_list) lexbuf }

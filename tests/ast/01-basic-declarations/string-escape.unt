@@ -1,0 +1,12 @@
+thread_def Main {
+  string a = "\\";
+  string b = "\r";
+  string c = "\n";
+  string d = "\b";
+  string e = "\t";
+  string h = "\"";
+  string f = "abc
+def";
+  string g = "abc\
+def";
+}
