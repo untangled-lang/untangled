@@ -3,9 +3,13 @@ thread_def Child {
     string x -> print(x);
     _ -> {}
   }
+  parent << "done";
 }
 
 thread_def Main {
   thread t = spawn Child;
   t << "hello world!";
+  receive {
+    _ -> {}
+  }
 }

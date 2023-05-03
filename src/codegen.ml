@@ -702,7 +702,74 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     tag_compare_func
   in
 
-  let function_decls : (L.llvalue * sfunc_decl) StringMap.t =
+  let int_pow_func =
+    let int_pow_t = L.function_type i32_t [| i32_t; i32_t |] in
+    let int_pow_func = L.define_function "int_pow" int_pow_t the_module in
+
+    let zero_bb = L.append_block context "zero_test" int_pow_func in
+    let neg_bb = L.append_block context "neg_test" int_pow_func in
+    let neg_1_bb = L.append_block context "neg_1_test" int_pow_func in
+    let set_0_bb = L.append_block context "set_0" int_pow_func in
+    let pow_bb = L.append_block context "power" int_pow_func in
+    let ret_bb = L.append_block context "return" int_pow_func in
+
+    let builder = L.builder_at_end context (L.entry_block int_pow_func) in
+    let zero_builder = L.builder_at_end context zero_bb in
+    let neg_builder = L.builder_at_end context neg_bb in
+    let neg_1_builder = L.builder_at_end context neg_1_bb in
+    let set_0_builder = L.builder_at_end context set_0_bb in
+    let pow_builder = L.builder_at_end context pow_bb in
+    let ret_builder = L.builder_at_end context ret_bb in
+
+    (* Allocation *)
+    let base_alloca = L.build_alloca i32_t "base_alloca" builder in
+    let expo_alloca = L.build_alloca i32_t "expo_alloca" builder in
+    let res_alloca = L.build_alloca i32_t "res_alloca" builder in
+
+    let _ = L.build_store (L.param int_pow_func 0) base_alloca builder in
+    let _ = L.build_store (L.param int_pow_func 1) expo_alloca builder in
+    (* Result is 1 if exponent = 0 *)
+    let _ = L.build_store (L.const_int i32_t 1) res_alloca builder in
+    let _ = L.build_br zero_bb builder in
+
+    (* Test if exponent = 0 *)
+    let expo = L.build_load expo_alloca "expo_load" zero_builder in
+    let zero = L.build_icmp L.Icmp.Eq expo (L.const_int i32_t 0) "expo_is_zero" zero_builder in
+    let _ = L.build_cond_br zero ret_bb neg_bb zero_builder in
+
+    (* Test if exponent < 0 *)
+    let expo = L.build_load expo_alloca "expo_load" neg_builder in
+    let negative = L.build_icmp L.Icmp.Slt expo (L.const_int i32_t 0) "expo_is_negative" neg_builder in
+    let _ = L.build_cond_br negative neg_1_bb pow_bb neg_builder in
+
+    (* Test if exponent = -1 *)
+    let expo = L.build_load expo_alloca "expo_load" neg_1_builder in
+    let negative_1 = L.build_icmp L.Icmp.Eq expo (L.const_int i32_t (-1)) "expo_is_-1" neg_1_builder in
+    (* If it's -1, return because res_alloca is currently 1 *)
+    let _ = L.build_cond_br negative_1 ret_bb set_0_bb neg_1_builder in
+
+    (* Set result to 0 if exponent < - 1 *)
+    let _ = L.build_store (L.const_int i32_t 0) res_alloca set_0_builder in
+    let _ = L.build_br ret_bb set_0_builder in
+
+    (* Take power and decrement exponent *)
+    let base = L.build_load base_alloca "base_load" pow_builder in
+    let expo = L.build_load expo_alloca "expo_load" pow_builder in
+    let res = L.build_load res_alloca "res_load" pow_builder in
+    let pow = L.build_mul base res "raise_res" pow_builder in
+    let expo_decrement = L.build_sub expo (L.const_int i32_t 1) "expo_sub" pow_builder in
+    let _ = L.build_store pow res_alloca pow_builder in
+    let _ = L.build_store expo_decrement expo_alloca pow_builder in
+    let _ = L.build_br zero_bb pow_builder in
+
+    let res = L.build_load res_alloca "res_load" ret_builder in
+    let _ = add_terminal ret_builder (L.build_ret res) in int_pow_func
+
+  (* Wrapper around binop function for compatibility *)
+  in let bin_op_wrapper fn =
+    let wrapper e1 e2 name builder = L.build_call fn [| e1; e2 |] name builder in wrapper
+
+  in let function_decls : (L.llvalue * sfunc_decl) StringMap.t =
     let function_decl m fdecl =
       let name = fdecl.sfname
       and formal_types =
@@ -725,7 +792,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let int_format_str = L.build_global_stringptr "%d" "fmt" builder in
     let float_format_str = L.build_global_stringptr "%f" "fmt" builder in
     let index_oob_str = L.build_global_stringptr "Index out of bounds" "fmt" builder in
-    let pthread_ts = ref [] in
 
     let rec expr ((builder: L.llbuilder), env) ((typ, sexpr : sexpr)) =
       match sexpr with
@@ -877,7 +943,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                     | A.Leq       -> L.build_icmp L.Icmp.Sle
                     | A.Greater   -> L.build_icmp L.Icmp.Sgt
                     | A.Geq       -> L.build_icmp L.Icmp.Sge
-                    | A.Pow       -> raise (Failure "Implement power on int"))
+                    | A.Pow       -> bin_op_wrapper int_pow_func)
                 | A.String ->
                   (match op with
                     | A.Add -> build_strcat
@@ -952,7 +1018,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
           let arg = L.build_bitcast arg pointer_t "cast_arg" builder in
           let _ = L.build_call pthread_create_func [| id; (L.const_null i8_t); thread; arg|] "create" builder in
-          pthread_ts := id :: !pthread_ts;
           (child_queue, env);
         | SAssign (var_name, v) ->
             let (value_to_assign, env') = expr (builder, env) v in
@@ -1311,11 +1376,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
             (* Check if tags match and if so, pass that index to the switch block *)
             (end_builder, env) in
-    let (builder, env') = stmt (builder, env, { continue_target_block = None; break_target_block = None}) sstmt in
-    let join pthread =
-      let id = L.build_load pthread "pthread_t" builder in
-      ignore (L.build_call pthread_join_func [| id; (L.const_null i8_t) |] "join" builder) in
-    let _ = List.iter join !pthread_ts in (builder, env') in
+    stmt (builder, env, { continue_target_block = None; break_target_block = None}) sstmt in
 
   let build_thread_body tdecl =
     let (the_thread, _) = StringMap.find tdecl.stname thread_decls in

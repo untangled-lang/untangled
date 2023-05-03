@@ -10,7 +10,8 @@
   - [x] arrays
     - [x] assignment /
     - [x] access
-  - [ ] semaphores
+    - [ ] Test math operations on array
+  - [x] semaphores
 
 - [x] Conditionals
 
@@ -26,24 +27,24 @@
 - Binop
   - [x] Regular operations on ints/floats, **excluding** power
   - [x] String binary operations
-  - [ ] Add / subtract on semaphores
+  - [x] Add / subtract on semaphores
   - [x] Boolean operands && and ||
 
 - Unop
   - [x] ++ and -- on ints and floats
-  - [ ] ++ and -- on semaphores
+  - [x] ++ and -- on semaphores
   - [x] Not and Negate
 
 - Functions
   - [X] Regular function calls without passing threads
-  - [ ] Passing threads to function calls
+  - [x] Passing threads to function calls
   - [ ] Passing an array in arguments
 
 - Threading
   - [x] Message queue
-  - [ ] Mutex lock on queue operations
-  - [ ] Passing queue to functions
-  - [ ] Passing self as message
+  - [x] Mutex lock on queue operations
+  - [x] Passing queue to functions
+  - [x] Passing self as message
 
 <!-- - [x] Variable Declaration
   - [ ] Blocks/Scopes

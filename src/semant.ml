@@ -260,10 +260,10 @@ let check (tdecls, fdecls) =
             (* Determine expression type based on operator and operand types *)
             let ty = match op with
               Add | Sub | Mult | Div | Mod | Pow when same && t1 = Int -> Int
-            | Add | Sub | Mult | Div | Pow       when same && t1 = Float -> Float
+            | Add | Sub | Mult | Div             when same && t1 = Float -> Float
+            | Pow                                when t1 = Float && t2 = Int -> Float
             | Equality | Neq                     when same               -> Bool
-            | Less | Leq | Greater | Geq
-                                                when same && (t1 = Int || t1 = Float) -> Bool
+            | Less | Leq | Greater | Geq         when same && (t1 = Int || t1 = Float) -> Bool
             | And | Or                           when same && t1 = Bool -> Bool
             | Add                                when same && t1 = String -> String
             | _ -> raise (Failure ("illegal binary operator " ^
