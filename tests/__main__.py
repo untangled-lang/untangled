@@ -33,7 +33,7 @@ def report_status(diff_exit_code, test_display, test_exit_code, expect_fail):
 
     if test_exit_code != 0 and not expect_fail:
         print(
-            f"{Format.cursor_up}"
+            f"{Format.cursor_up}" if diff_exit_code else ""
             f"{Format.red}{Format.bold}\u2717{Format.reset} "
             f"Test {test_display} "
             f"{Format.red}failed with status {test_exit_code}{Format.reset}"
@@ -180,9 +180,12 @@ for step_name in COMPILER_STEPS:
                 f" < {input_path}"
                 f" -o {exe_path} > {output_path} 2>&1"
             )
-            # Run the generated program
-            exit_code = os.system(f"{exe_path} >> {output_path} 2>&1") \
-                + compile_return_code
+            if path.exists(exe_path):
+                # Run the generated program
+                exit_code = os.system(f"{exe_path} >> {output_path} 2>&1") \
+                    + compile_return_code
+            else:
+                exit_code = compile_return_code
 
         # Record a new ground truth for this test if that was requested
         if REGENERATE_ALL_GTS or test_matches_filter(test, REGENERATE_GTS):
