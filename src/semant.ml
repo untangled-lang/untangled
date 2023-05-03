@@ -30,19 +30,20 @@ let check (tdecls, fdecls) =
     let _ = List.fold_left check_name [] (List.sort name_compare to_check) in
     let _ = List.iter (fun (typ, id) -> check_typ id typ) to_check in to_check
   in let fmap =
-    let add_bind map (name, formal_type, return_type) = StringMap.add name
+    let add_bind map (name, formals, return_type) = StringMap.add name
       { fname = name;
-        formals = [(formal_type, "x")];
+        formals = formals;
         body = [];
         ret_type = return_type } map
     (* TODO: - Add more builtin functions *)
     in List.fold_left add_bind StringMap.empty
-       [("print", String, Void);
-        ("string_of_int", Int, String);
-        ("string_of_float", Float, String);
-        ("string_of_bool", Bool, String);
-        ("make_semaphore", Int, Semaphore);
-        ("exit", Int, Void)]
+       [("print", [(String, "x")], Void);
+        ("string_of_int", [(Int, "x")], String);
+        ("string_of_float", [(Float, "x")], String);
+        ("string_of_bool", [(Bool, "x")], String);
+        ("make_semaphore", [(Int, "x")], Semaphore);
+        ("exit", [(Int, "x")], Void);
+        ("end", [], Void)];
   in
   let add_func map fd =
     let built_in_err = "function " ^ fd.fname ^ " may not be defined"

@@ -1,0 +1,13 @@
+thread_def Child {
+  print("hi from child\n");
+  end();
+  print("hi again from child");
+}
+
+thread_def Main {
+  print("hi 1\n");
+  thread t = spawn Child;
+  for (int i = 0; i < 1000000; i++) {} // waste time
+  // the thread should exit the program before we get here, so we should not see this printed
+  print("hi 2\n");
+}

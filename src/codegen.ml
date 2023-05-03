@@ -1011,9 +1011,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (llvalue, env') = expr (builder, env) sexpr in
             let sem = L.build_call sem_init_func [| llvalue |] "sem_init" builder in
             (sem, env')
-        | SCall ("exit", [sexpr]) ->
+        | SCall ("exit", [sexpr]) -> (* “exit” exits the program *)
             let (llvalue, env') = expr (builder, env) sexpr in
             (L.build_call exit_func [| llvalue |] "" builder, env')
+        | SCall ("end", []) -> (* “end” exits the thread *)
+            (L.build_ret (L.const_null pointer_t) builder, env)
         | SCall (func_name, arg_list) ->
             let (fdef, fdecl) = StringMap.find func_name function_decls in
             let llargs = List.map (fun e -> let (llvalue, _) = expr (builder, env) e in llvalue) arg_list in
