@@ -205,7 +205,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let sprintf_func : L.llvalue =
     L.declare_function "sprintf" sprintf_t the_module in
 
-
   let strlen_t : L.lltype =
     L.function_type i32_t [| L.pointer_type i8_t |] in
   let strlen_func : L.llvalue =
@@ -218,6 +217,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
   let assert_t : L.lltype = L.function_type void_t [| i32_t; pointer_t |] in
   let assert_func : L.llvalue = L.declare_function "assert_func" assert_t the_module in
+
+  let exit_t : L.lltype = L.function_type void_t [| i32_t |] in
+  let exit_func : L.llvalue = L.declare_function "exit" exit_t the_module in
 
   let add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
@@ -1009,6 +1011,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (llvalue, env') = expr (builder, env) sexpr in
             let sem = L.build_call sem_init_func [| llvalue |] "sem_init" builder in
             (sem, env')
+        | SCall ("exit", [sexpr]) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+            (L.build_call exit_func [| llvalue |] "" builder, env')
         | SCall (func_name, arg_list) ->
             let (fdef, fdecl) = StringMap.find func_name function_decls in
             let llargs = List.map (fun e -> let (llvalue, _) = expr (builder, env) e in llvalue) arg_list in

@@ -1,0 +1,5 @@
+thread_def Main {
+  print("hi 1\n");
+  exit(1);
+  print("hi 2\n");
+}

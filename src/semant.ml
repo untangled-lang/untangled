@@ -41,7 +41,8 @@ let check (tdecls, fdecls) =
         ("string_of_int", Int, String);
         ("string_of_float", Float, String);
         ("string_of_bool", Bool, String);
-        ("make_semaphore", Int, Semaphore)]
+        ("make_semaphore", Int, Semaphore);
+        ("exit", Int, Void)]
   in
   let add_func map fd =
     let built_in_err = "function " ^ fd.fname ^ " may not be defined"
