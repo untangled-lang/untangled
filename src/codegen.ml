@@ -221,6 +221,16 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let exit_t : L.lltype = L.function_type void_t [| i32_t |] in
   let exit_func : L.llvalue = L.declare_function "exit" exit_t the_module in
 
+  let float_floor_t = L.function_type float_t [| float_t |] in
+  let float_floor_func : L.llvalue = L.declare_function "floor" float_floor_t the_module in
+
+  let float_ceil_t = L.function_type float_t [| float_t |] in
+  let float_ceil_func : L.llvalue = L.declare_function "ceil" float_ceil_t the_module in
+
+  let float_round_t = L.function_type float_t [| float_t |] in
+  let float_round_func : L.llvalue = L.declare_function "round" float_round_t the_module in
+
+
   let add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
         Some _ -> ()
@@ -1007,6 +1017,18 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let _ = (L.build_call sprintf_func [| buf ; float_format_str; llvalue |]
                                                 "string_of_float" builder)
             in (buf, env')
+        | SCall ("floor", [sexpr]) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+            let float_floor = L.build_call float_floor_func [| llvalue |] "int_floor" builder in
+            L.build_fptosi float_floor i32_t "int_floor_cast" builder, env'
+        | SCall ("ceil", [sexpr]) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+            let float_ceil = L.build_call float_ceil_func [| llvalue |] "int_ceil" builder in
+            L.build_fptosi float_ceil i32_t "int_ceil_cast" builder, env'
+        | SCall ("round", [sexpr]) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+            let float_round = L.build_call float_round_func [| llvalue |] "int_round" builder in
+            L.build_fptosi float_round i32_t "int_round_cast" builder, env'
         | SCall ("make_semaphore", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
             let sem = L.build_call sem_init_func [| llvalue |] "sem_init" builder in

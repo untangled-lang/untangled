@@ -41,6 +41,9 @@ let check (tdecls, fdecls) =
         ("string_of_int", [(Int, "x")], String);
         ("string_of_float", [(Float, "x")], String);
         ("string_of_bool", [(Bool, "x")], String);
+        ("floor", [(Float, "x")], Int);
+        ("ceil", [(Float, "x")], Int);
+        ("round", [(Float, "x")], Int);
         ("make_semaphore", [(Int, "x")], Semaphore);
         ("exit", [(Int, "x")], Void);
         ("end", [], Void)];

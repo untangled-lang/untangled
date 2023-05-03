@@ -1,0 +1,6 @@
+thread_def Main {
+  print(string_of_int(floor(3.5)) + "\n");
+  print(string_of_int(ceil(3.5)) + "\n");
+  print(string_of_int(round(3.5)) + "\n");
+  print(string_of_int(round(3.4)) + "\n");
+}
