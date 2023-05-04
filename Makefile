@@ -18,13 +18,15 @@ $(LIB)/%.o: src/c/%.cpp
 untangled.exe: src/untangled.ml src/ast.ml src/parser.mly src/scanner.mll src/sast.ml src/c/libraries.o
 	dune build
 
-clean-untangled:
-	dune clean
-	rm -f untangled.exe
+clean-tests:
 	find tests | grep "\\.output$$" | xargs rm -f
 	find tests | grep "\\.ll$$" | xargs rm -f
 	find tests | grep "\\.s$$" | xargs rm -f
 	find tests/e2e | grep "\\.unt$$" | sed s/\\.unt$$// | xargs rm -f
+
+clean-untangled: clean-tests
+	dune clean
+	rm -f untangled.exe
 
 test: clean-untangled untangled.exe
 	python3 tests
