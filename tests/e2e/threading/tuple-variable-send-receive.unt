@@ -1,0 +1,31 @@
+thread_def Child {
+  receive {
+    (string a, (int b, bool c)) -> {print(a + "\n");}
+    _ -> {print("wrong case 1");}
+  }
+
+  receive {
+    (string a, (int b, bool c)) -> {print(string_of_int(b) + "\n");}
+    _ -> {print("wrong case 2");}
+  }
+
+  receive {
+    (string a, (int b, bool c)) -> {print(a + "\n");}
+    _ -> {print("wrong case 3");}
+  }
+
+  parent << "Done";
+}
+
+
+thread_def Main {
+  (string, (int, bool)) a = ("first tuple", (4, true));
+  (string, (int, bool)) b;
+  thread t = spawn Child;
+  t << a;
+  t << b;
+  t << ("hi", (4, true));
+  receive {
+      _ -> {}
+  }
+}

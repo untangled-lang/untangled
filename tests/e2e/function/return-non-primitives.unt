@@ -1,0 +1,23 @@
+int[5] array_func() {
+  int[5] a = [1, 2, 3, 4, 5];
+  for (int i = 0; i < 5; i++) {
+    a[i] = a[i] * 2;
+  }
+  return a;
+}
+
+((bool[2], int[3]), string) tup_func() {
+  ((bool[2], int[3]), string) res = (([true, false], [3, 4, 5]), "test");
+  return res;
+}
+
+
+thread_def Main {
+  int[5] value = array_func();
+  print(string_of_int(value[2]) + "\n");
+
+  ((bool[2] b_arr, int[3] i_arr), string s) = tup_func();
+  print(string_of_bool(b_arr[0]) + "\n");
+  print(string_of_int(i_arr[1]) + "\n");
+  print(s + "\n");
+}

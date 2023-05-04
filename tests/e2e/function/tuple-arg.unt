@@ -1,0 +1,10 @@
+void foo((int, float) tup) {
+  (int x, float f) = tup;
+  print(string_of_int(x) + " " + string_of_float(f) + "\n");
+  return;
+}
+
+thread_def Main {
+  (int, float) tup = (5, 3.0);
+  foo(tup);
+}

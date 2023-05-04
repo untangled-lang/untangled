@@ -19,7 +19,6 @@ and sx =
 | SCall of string * sexpr list
 | SIndex of sexpr * sexpr
 | SNoexpr
-| SUnit
 
 type sstmt =
   SBlock of sstmt list
@@ -95,8 +94,7 @@ and string_of_sexpr (t, expr) =
       s ^ "(" ^ String.concat ", " expressionStrings ^ ")")
     | SNoexpr -> ""
     | SIndex(s, e) -> string_of_sexpr s ^ "[" ^ string_of_sexpr e ^ "]"
-    | SAssignIndex(s, e1, e2) -> string_of_sexpr s ^ "[" ^ string_of_sexpr e1 ^ "] = " ^ string_of_sexpr e2
-    | SUnit -> "()" )
+    | SAssignIndex(s, e1, e2) -> string_of_sexpr s ^ "[" ^ string_of_sexpr e1 ^ "] = " ^ string_of_sexpr e2)
   ^ ")"
 
 

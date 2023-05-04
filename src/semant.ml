@@ -86,10 +86,15 @@ let check (tdecls, fdecls) =
 
   let _ = find_thread_def "Main" in
 
+  let rec eq_type lvaluet rvaluet = match (lvaluet, rvaluet) with
+      (Array (lt, left_len), Array (rt, right_len)) -> eq_type lt rt && left_len = right_len
+    | (Tuple (lt1, lt2), Tuple(rt1, rt2)) -> eq_type lt1 rt1 && eq_type lt2 rt2
+    | (t1, t2) -> t1 = t2 in
+
   let check_assign lvaluet rvaluet e =
     let err = "illegal argument found " ^ string_of_typ rvaluet ^ " expected " ^
               string_of_typ lvaluet ^ " in " ^ string_of_expr e
-    in if lvaluet = rvaluet then lvaluet else raise (Failure err)
+    in if eq_type lvaluet rvaluet then lvaluet else raise (Failure err)
   in let rec lookup id envs =
     match envs with
       [] -> raise (Failure ("variable " ^ id ^ " not found"))
@@ -140,19 +145,41 @@ let check (tdecls, fdecls) =
           let sexpr = check_expr envs expr in
           (envs, SSend (id, sexpr))
       | Decl (BaseDecl (lt, id, expr)) ->
+          let rec repeat ele len =
+            match len with
+              | 0 -> []
+              | _ -> ele :: repeat ele (len - 1) in
+          let rec default = function
+              Int -> SIntLit 0
+            | Float -> SFloatLit "0.0"
+            | String -> SStringLit ""
+            | Bool -> SBoolLit false
+            | Array (typ, len) -> SArrayLit (repeat (typ, (default typ)) len)
+            | Tuple (t1, t2) -> STupleLit ((t1, default t1), (t2, default t2))
+            | Semaphore -> SCall ("make_semaphore", [(Int, SIntLit 0)])
+            | Void -> raise (Failure "Can't have void declaration")
+            | Thread -> raise (Failure "Can't have empty thread in tuple/array") in
           (match envs with
             env :: _ ->
               if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
               else let (rt, e') as sexpr = check_expr envs expr in
               let _ = check_binds "decl" [(lt, id)] in
               (match e' with
-                | SNoexpr -> (bind id lt envs, SDecl (SBaseDecl (lt, id, sexpr)))
+                | SNoexpr ->
+                    let sexpr1 =
+                      (match lt with
+                        | Array _ as arr_t -> (arr_t, default arr_t)
+                        | Tuple _ as tup_t -> (tup_t, default tup_t)
+                        |  _ -> sexpr) in
+                    (bind id lt envs, SDecl (SBaseDecl (lt, id, sexpr1)))
                 | _ -> (bind id lt envs, SDecl (SBaseDecl (check_assign lt rt expr, id, (lt, e')))))
             | [] -> raise (Failure "Implementation bug: empty environments"))
       | Decl (TupleDecl (leftTup, rightTup, expr) as tupDecl) ->
           let (res_type, _) as sexpr = check_expr envs expr in
           let rec check_tuple_assign declType ty = match declType with
-            | BaseDecl (t, _, _) -> if t != ty then raise (Failure ("Tuple type mismatch, expected a " ^ string_of_typ t ^ " but got a " ^ string_of_typ ty))
+            | BaseDecl (t, _, _) ->
+                if eq_type t ty then ()
+                else raise (Failure ("Tuple type mismatch, expected a " ^ string_of_typ t ^ " but got a " ^ string_of_typ ty))
             | TupleDecl (leftTup, rightTup, _) ->
                 (match ty with
                   | Tuple (t1, t2) ->
@@ -289,7 +316,6 @@ let check (tdecls, fdecls) =
           and (rt, sexpr) = check_expr envs expr
           in (check_assign lt rt expr, SAssign (id, (lt, sexpr)))
       | Noexpr -> (Void, SNoexpr)
-      | Unit -> raise (Failure "semantic unit")
       | PrefixUnop (op, expr) ->
           let (t, _) as e' = check_expr envs expr in
           (match op with

@@ -1,5 +1,4 @@
 thread_def Main {
   semaphore s = make_semaphore(10);
-  print("Semaphore initialized
-");
+  print("Semaphore initialized\n");
 }

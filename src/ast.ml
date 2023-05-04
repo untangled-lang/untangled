@@ -46,7 +46,6 @@ type expr =
 | Call of string * expr list
 | Index of expr * expr
 | Noexpr
-| Unit
 
 type stmt =
   Block of stmt list
@@ -158,7 +157,6 @@ and string_of_expr expr =
   | Noexpr -> ""
   | Index(s, e) -> string_of_expr s ^ "[" ^ string_of_expr e ^ "]"
   | AssignIndex(s, e1, e2) -> string_of_expr s ^ "[" ^ string_of_expr e1 ^ "] = " ^ string_of_expr e2
-  | Unit -> "()"
 
 
 let rec string_of_pattern pat =

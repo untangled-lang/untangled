@@ -1,0 +1,32 @@
+thread_def Child {
+  receive {
+    int[3] a -> {print("correct case 1\b");}
+    _ -> {print("wrong case 1\n");}
+  }
+
+  receive {
+    int[3] a -> {print("correct case 2\n");}
+    _ -> {print("wrong case 2\n");}
+  }
+
+  receive {
+    int[3] a -> {print("correct case 3\n");}
+    _ -> {print("wrong case 3\n");}
+  }
+
+  parent << "Done";
+}
+
+
+thread_def Main {
+  int[3] a = [1, 2, 3];
+  int[3] b;
+  thread t = spawn Child;
+  t << a;
+  t << b;
+  t << [1, 2, 3];
+
+  receive {
+    _ -> {}
+  }
+}

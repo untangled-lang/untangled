@@ -1,0 +1,55 @@
+void sorter(int start, int end, int[1000] arr) {
+  if (start >= end) {
+    return;
+  } else {
+    int mid = (start + end) / 2;
+    sorter(start, mid, arr);
+    sorter(mid + 1, end, arr);
+    // Merge
+    int[1000] tmp;
+    int counter = 0;
+    (int i, int j) = (start, mid + 1);
+    while ((i <= mid) && (j <= end)) {
+      if (arr[i] <= arr[j]) {
+        tmp[counter] = arr[i];
+        i++;
+      } else {
+        tmp[counter] = arr[j];
+        j++;
+      }
+      counter++;
+    }
+    while (i <= mid) {
+      tmp[counter] = arr[i];
+      i++;
+      counter++;
+    }
+    while (j <= end) {
+      tmp[counter] = arr[j];
+      j++;
+      counter++;
+    }
+    for (int z = 0; z < counter; z++) {
+      arr[start + z] = tmp[z];
+    }
+    return;
+  }
+  return;
+}
+
+thread_def Main {
+  int SIZE = 1000;
+  int[1000] arr;
+
+  for (int i = 0; i < SIZE; i++) {
+    arr[i] = SIZE - i;
+  }
+
+  sorter(0, 999, arr);
+
+  // bool valid = true;
+  for (int i = 0; i < SIZE; i++) {
+    // valid = valid && arr[i] == i + 1
+    print(string_of_int(arr[i]) + "\n");
+  }
+}

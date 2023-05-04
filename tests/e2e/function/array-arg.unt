@@ -1,0 +1,9 @@
+void foo(int[3] arr) {
+  print(string_of_int(arr[0]) + "\n");
+  return;
+}
+
+thread_def Main {
+  int[3] arr = [1, 2, 3];
+  foo(arr);
+}

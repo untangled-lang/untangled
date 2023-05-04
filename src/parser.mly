@@ -69,8 +69,6 @@ expr:
   | SLIT             { StringLit($1)          }
   | LPAREN expr COMMA expr RPAREN { TupleLit($2, $4) }
   | LBRACKET array_elements RBRACKET { ArrayLit(List.rev $2) }
-  // TODO - Double check about our semantics for this
-  | LPAREN RPAREN    { Unit }
   // Names
   | ID               { Id($1)                 }
   // Binary operators

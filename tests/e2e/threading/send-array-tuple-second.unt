@@ -1,0 +1,32 @@
+thread_def Child {
+  receive {
+    ((int[3] arr, int y), (int x, float f)) -> {
+      print("Expected case hello");
+    }
+
+    int[3] arr -> {
+      print("Matched on int arrays");
+    }
+
+    ((int s, int e), int[3] arr) -> {
+      print("Matched on tuple with array second");
+    }
+
+    _ -> {
+      print("Wrong case");
+    }
+  }
+  parent << "DONE";
+}
+
+thread_def Main {
+  thread t = spawn Child;
+  int[3] arr;
+  // t << (([0, 1, 2], 0), (0, 0.0));
+  // t << [1, 2, 3];
+  t << ((0, 1000), arr);
+  // t << arr;
+  receive {
+    _ -> {}
+  }
+}

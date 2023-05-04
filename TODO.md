@@ -6,12 +6,12 @@
   - [x] float
   - [x] string
   - [x] tuples
-    - [ ] Make copy of tuple when send message
+    <!-- - [ ] Make copy of tuple when send message (whateve) -->
     - [x] Destructuring tuple in declaration assignment?
   - [x] arrays
     - [x] assignment /
     - [x] access
-    - [ ] Test math operations on array
+    - [x] Test math operations on array
   - [x] semaphores
 
 - [x] Conditionals
@@ -39,14 +39,25 @@
 - Functions
   - [X] Regular function calls without passing threads
   - [x] Passing threads to function calls
-  - [ ] Passing an array in arguments
+  - [x] Passing an array in arguments
 
 - Threading
   - [x] Message queue
   - [x] Mutex lock on queue operations
   - [x] Passing queue to functions
   - [x] Passing self as message
-  - [ ] Send semaphore
+  - [x] Send semaphore
+
+# Testing
+
+- Functions
+  - [x] Recursion works
+  - [x] Passing arrays and tuples as args
+  - [x] Returning arrays and tuples from functions
+
+- Threads
+  - [x] Message passing/sending
+  - [ ] Mutex
 
 <!-- - [x] Variable Declaration
   - [ ] Blocks/Scopes
