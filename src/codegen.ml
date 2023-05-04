@@ -1314,7 +1314,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let pred = L.build_and pred (L.build_icmp L.Icmp.Sge ll_index (L.const_int i32_t 0) "index_pred" builder) "index_pred" builder in
             let pred = L.build_intcast pred i64_t "index_pred" builder in
             let _ = L.build_call assert_func [| pred; index_oob_str |] "" builder in
-
             let array = L.build_load array_ptr "array_load" builder in
             (* let _ = print_endline (A.string_of_typ typ) in *)
             let array = L.build_bitcast array (L.pointer_type (lltype_of_typ typ)) "array_cast" builder in
@@ -1531,12 +1530,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                 (* @TODO - Make a copy? *)
                 A.Tuple _ -> llvalue
               | A.Array _ ->
-                  let debug = L.build_global_stringptr "Send arr[%d] with %d tags\n" "debug" builder in
-                  let { size = size_ptr; tags_size = tags_size_ptr; _ } = build_array_gep llvalue builder in
-                  let size = L.build_load size_ptr "size_load" builder in
-                  let tag_size = L.build_load tags_size_ptr "tags_load" builder in
-                  let _ = L.build_call printf_func [| debug; size; tag_size |] "" builder in
-
                   let data_alloca = L.build_alloca data_ptr "data_alloca" builder and
                       data_malloc = L.build_malloc data_t "data_malloc" builder in
 
@@ -1686,7 +1679,14 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let switch = L.build_switch index_loaded else_bb (List.length receive_cases) switch_builder in
 
             let rec extend_env data_ptr_o builder env = function
-              SBasePattern (typ, id) ->
+              | SBasePattern (A.Array _, id ) ->
+                let { head = head_ptr; _ } = build_data_gep data_ptr_o builder in
+                let head_load = L.build_load head_ptr "head_load" builder in
+                let head_cast = L.build_pointercast head_load array_ptr "head_cast" builder in
+                let array_alloca = L.build_alloca array_ptr "array_alloca" builder in
+                let _ = L.build_store head_cast array_alloca builder in
+                StringMap.add id array_alloca env
+              | SBasePattern (typ, id) ->
                 let { head = head_ptr; _ } = build_data_gep data_ptr_o builder in
                 let value_alloca = L.build_alloca (lltype_of_typ typ) "value_alloca" builder in
                 let value_ptr = L.build_load head_ptr "value_ptr_load" builder in
