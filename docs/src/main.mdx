@@ -430,9 +430,9 @@ same type.
 
 **For integer and floating-point operands**, <T>+</T>, <T>-</T>, <T>*</T>, and <T>/</T> perform
 standard arithmetic operations (addition, subtraction, multiplication, and division, respectively).
-Additionally, <T>%</T> performs the “modulo” operation, and <T>**</T> raises the left operand to the
-power of the right operand. The comparison operators <T>&lt;</T>, <T>&lt;=</T>, <T>&gt;</T>, and
-<T>&gt;=</T> compare their operands and evaluate to a boolean value.
+Additionally, <T>**</T> raises the left operand to the power of the right operand. The comparison
+operators <T>&lt;</T>, <T>&lt;=</T>, <T>&gt;</T>, and <T>&gt;=</T> compare their operands and
+evaluate to a boolean value. For integers, <T>%</T> performs the “modulo” operation.
 
 **For string operands**, the <T>+</T> operator does string concatenation.
 
@@ -679,14 +679,14 @@ if (my_boolean_1)
 if (my_boolean_2) print("1");
 else print("2");
 
-// Should the above be interpreted like this...
+// Should the above be interpreted like this (1)...
 if (my_boolean_1) {
   if (my_boolean_2) { print("1"); }
 } else {
   print("2");
 }
 
-// ...or like this?
+// ...or like this (2)?
 if (my_boolean_1) {
   if (my_boolean_2) { print("1"); }
   else { print("2"); }
@@ -694,7 +694,7 @@ if (my_boolean_1) {
 ```
 
 Untangled resolves this ambiguity by associating each <T>else</T> with the closest/most recent
-<T>if</T> statement.
+<T>if</T> statement (example 2 above).
 
 ##### Loops
 
