@@ -1,3 +1,0 @@
-thread_def Main {
-  (string, float)[3] x = [("a", 0.0), ("a", 0.0), ("a", 0.0)];
-}
