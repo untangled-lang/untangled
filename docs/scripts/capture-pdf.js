@@ -1,6 +1,7 @@
 import puppeteer from 'puppeteer';
 import { preview } from 'vite';
 import fs from 'fs/promises';
+import { stdout } from 'process';
 
 // Check the app has been built
 const hasDist = await fs.access('dist').then(() => true).catch(() => false);
@@ -29,18 +30,34 @@ console.log('Loaded page');
 
 await page.emulateMediaType('print');
 await new Promise((resolve) => setTimeout(resolve, 1000));
+const zoom = 0.66;
 // @ts-ignore
-await page.evaluate(() => document.documentElement.style.zoom = 0.66);
-const contentHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+await page.evaluate((z) => document.documentElement.style.zoom = z, zoom);
+
+const pageHeights = await page.evaluate((z) => {
+  // Collapse all pages besides the current one
+  const pages = [...document.getElementsByClassName('page')];
+  // Return the height of the current page
+  return pages.map((page) => Math.ceil(page.clientHeight * z) + 1)
+}, zoom);
+
+
+// Capture the page
+
+stdout.write('Capturing pdf...');
+const inch = 96;
+
 await page.pdf({
   width: '8.5in',
-  height: contentHeight + 96 * 1, // add extra padding to prevent wrapping
+  height: Math.max(...pageHeights) + (0.5 * inch), // add extra padding to prevent wrapping
   printBackground: true,
-  path: 'untangled.pdf',
+  path: 'export/uncropped.pdf',
 });
 
-console.log('Captured PDF');
+stdout.write(' done\n');
+
 
 // Clean up
+
 await browser.close();
 previewServer.httpServer.close();
