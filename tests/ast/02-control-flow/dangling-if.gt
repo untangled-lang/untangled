@@ -1,0 +1,9 @@
+thread_def Main {
+  if (true) {
+    if (true) {
+
+    } else {
+      print("HI");
+    }
+  }
+}
