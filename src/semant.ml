@@ -115,7 +115,7 @@ let check (tdecls, fdecls) =
                 let (envs', sstmt) = check_stmt envs stmt in
                 let sstmts = check_stmt_list envs' stmts in (sstmt :: sstmts)
             | [] -> []
-        in (envs, SBlock (check_stmt_list envs stmts))
+        in (envs, SBlock (check_stmt_list (StringMap.empty :: envs) stmts))
       | Expr expr -> let sexpr = check_expr envs expr in (envs, SExpr sexpr)
       | If (expr, stmt1, stmt2) ->
           let (typ, _) as sexpr = check_expr envs expr in
