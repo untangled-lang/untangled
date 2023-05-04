@@ -1,0 +1,7 @@
+void foo() {
+  spawn Main;
+}
+
+thread_def Main {
+
+}

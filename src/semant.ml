@@ -55,8 +55,8 @@ let check (tdecls, fdecls) =
     let built_in_err = "function " ^ fd.fname ^ " may not be defined"
       and dup_err = "duplicate function " ^ fd.fname
       and make_err er = raise (Failure er)
-      and n = fd.fname
-      and _ = check_binds "fdecl" fd.formals
+      and n = fd.fname in
+    let _ = check_binds ("formals in function " ^ n) fd.formals
     in match fd with
       _ when StringMap.mem n map -> make_err built_in_err
     | _ when StringMap.mem n map -> make_err dup_err

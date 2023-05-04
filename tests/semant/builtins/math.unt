@@ -1,0 +1,7 @@
+thread_def Main {
+  floor(1.0);
+  ceil(1.5);
+  round(1.5);
+  int_of_float(2.3);
+  sqrt(4.0);
+}

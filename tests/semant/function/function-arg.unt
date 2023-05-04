@@ -1,0 +1,7 @@
+void foo(thread t, int a, float b, int[1][1] x, string y, (int, string) tup, semaphore s) {
+  return;
+}
+
+thread_def Main {
+  foo(self, 0, 0.0, [[0]], "a", (1, "b"), make_semaphore(1));
+}

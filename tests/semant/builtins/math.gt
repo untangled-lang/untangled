@@ -1,0 +1,7 @@
+thread_def Main {
+  (int : floor((float : 1.0)));
+  (int : ceil((float : 1.5)));
+  (int : round((float : 1.5)));
+  (int : int_of_float((float : 2.3)));
+  (float : sqrt((float : 4.0)));
+}

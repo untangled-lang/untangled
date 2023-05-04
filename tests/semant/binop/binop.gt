@@ -4,4 +4,5 @@ thread_def Main {
   (int : ((int : x) + (int : y)));
   float a = (float : 3.0);
   (float : ((float : a) + (float : 4.2)));
+  (string : ((string : "b") + (string : "c")));
 }

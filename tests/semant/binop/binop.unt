@@ -6,4 +6,6 @@ thread_def Main {
 
   float a = 3.0;
   a + 4.2;
+
+  "b" + "c";
 }

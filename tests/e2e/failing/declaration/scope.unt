@@ -1,4 +1,0 @@
-thread_def Main {
-  int x = 0;
-  string x = "hello";
-}

@@ -1,0 +1,5 @@
+void foo(int a, float a) {
+
+}
+
+thread_def Main {}

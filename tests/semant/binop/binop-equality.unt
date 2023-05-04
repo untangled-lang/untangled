@@ -1,0 +1,7 @@
+thread_def Main {
+  5 < 3;
+  true && false;
+  true == true;
+  true != false;
+  4.3 >= 5.2 || 4.0 == 1.0;
+}
