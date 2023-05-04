@@ -3,7 +3,7 @@ thread_def SumWorker {
   receive { int x -> target = x; _ -> {} }
   // Compute the sum of the first `target` integers
   int sum = 0;
-  for (int i = 0; i < target; i++) sum += i;
+  for (int i = 1; i <= target; i++) sum += i;
   // Send the result back
   parent << sum;
 }
@@ -12,7 +12,7 @@ thread_def SumWorker {
 thread_def Main {
   thread my_worker_1 = spawn SumWorker;
   thread my_worker_2 = spawn SumWorker;
-  my_worker_1 << 100000000000;
+  my_worker_1 << 1000000;
   my_worker_2 << 42;
   // worker_1 starts before worker_2, but we expect it to exit after worker_2, since it has much
   // more computation to do.

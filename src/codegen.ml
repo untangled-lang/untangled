@@ -47,6 +47,7 @@ let deep_copy_stringmap map =
 let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let context = L.global_context () in
   let i32_t      = L.i32_type    context
+  and i64_t      = L.i64_type    context
   and i8_t       = L.i8_type     context
   and i1_t       = L.i1_type     context
   and float_t    = L.double_type context
@@ -55,6 +56,14 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let double_ptr = L.pointer_type pointer_t in
   let the_module = L.create_module context "Untangled" in
 
+  let lltype_of_primitive = function
+      A.Int   -> i64_t
+    | A.Bool  -> i1_t
+    | A.Float -> float_t
+    | A.Void  -> void_t
+    | A.String -> pointer_t
+    | _ -> raise (Failure "Not a primitive type")
+  in
   (* For array type in Untangled *)
   let array_t = L.struct_type context [| i32_t; pointer_t |] in
   let array_ptr = L.pointer_type array_t in
@@ -64,7 +73,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
    * @field 1 pthread_mutex_t*
    * @field 2 Count value
    *)
-  let sem_t = L.struct_type context [| i32_t; pointer_t |] in
+  let sem_t = L.struct_type context [| (lltype_of_primitive Int); pointer_t |] in
   let sem_ptr = L.pointer_type sem_t in
 
   let data_t = L.struct_type context [| i32_t; pointer_t; pointer_t |] in
@@ -113,11 +122,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | A.Semaphore -> (L.const_int i32_t 7)
         | _ -> raise (Failure "Semantic bug: Void should not be tagged") in
   let lltype_of_typ = function
-          A.Int   -> i32_t
-        | A.Bool  -> i1_t
-        | A.Float -> float_t
-        | A.Void  -> void_t
-        | A.String -> pointer_t
+          A.Int -> lltype_of_primitive A.Int
+        | A.Bool  -> lltype_of_primitive A.Bool
+        | A.Float -> lltype_of_primitive A.Float
+        | A.Void  -> lltype_of_primitive A.Void
+        | A.String -> lltype_of_primitive A.String
         | A.Thread -> queue_ptr
         | A.Array _ -> array_ptr
         | A.Tuple _ -> data_ptr
@@ -196,7 +205,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
    * C util functions
    *)
   let printf_t : L.lltype =
-    L.var_arg_function_type i32_t [| L.pointer_type i8_t |] in
+    L.var_arg_function_type (lltype_of_typ Int) [| L.pointer_type i8_t |] in
   let printf_func : L.llvalue =
     L.declare_function "printf" printf_t the_module in
 
@@ -215,10 +224,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let strcat_func : L.llvalue =
     L.declare_function "strcat" strcat_t the_module in
 
-  let assert_t : L.lltype = L.function_type void_t [| i32_t; pointer_t |] in
+  let assert_t : L.lltype = L.function_type void_t [| (lltype_of_typ Int); pointer_t |] in
   let assert_func : L.llvalue = L.declare_function "assert_func" assert_t the_module in
 
-  let exit_t : L.lltype = L.function_type void_t [| i32_t |] in
+  let exit_t : L.lltype = L.function_type void_t [| (lltype_of_typ Int) |] in
   let exit_func : L.llvalue = L.declare_function "exit" exit_t the_module in
 
   let float_floor_t = L.function_type float_t [| float_t |] in
@@ -247,7 +256,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
    * @return sem_ptr
    *)
   in let sem_init_func =
-    let sem_init_t = L.function_type sem_ptr [| i32_t |] in
+    let sem_init_t = L.function_type sem_ptr [| (lltype_of_typ Int) |] in
     let sem_init_func = L.define_function "Sem_init" sem_init_t the_module in
 
     let builder = L.builder_at_end context (L.entry_block sem_init_func) in
@@ -296,7 +305,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
     (* Test value count *)
     let count = L.build_load count_ptr "count_load" test_builder in
-    let available = L.build_icmp L.Icmp.Sgt count (L.const_int i32_t 0) "test_count" test_builder in
+    let available = L.build_icmp L.Icmp.Sgt count (L.const_int (lltype_of_typ Int) 0) "test_count" test_builder in
     let _ = L.build_cond_br available decrement_bb unlock_bb test_builder in
 
     (* Unlock mutex and retry *)
@@ -305,7 +314,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
     (* Decrement count and unlock mutex *)
     let count = L.build_load count_ptr "count_load" decrement_builder in
-    let count_decrement = L.build_sub count (L.const_int i32_t 1) "count_decrement" decrement_builder in
+    let count_decrement = L.build_sub count (L.const_int (lltype_of_typ Int) 1) "count_decrement" decrement_builder in
     let _ = L.build_store count_decrement count_ptr decrement_builder in
     let _ = L.build_call mutex_unlock_func [| mutex |] "" decrement_builder in
     let _ = add_terminal decrement_builder L.build_ret_void in
@@ -323,7 +332,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let mutex = L.build_load mutex_ptr "mutex_load" builder in
     let _ = L.build_call mutex_lock_func [| mutex |] "" builder in
     let count = L.build_load count_ptr "count_load" builder in
-    let count_increment = L.build_add count (L.const_int i32_t 1) "count_increment" builder in
+    let count_increment = L.build_add count (L.const_int (lltype_of_typ Int) 1) "count_increment" builder in
     let _ = L.build_store count_increment count_ptr builder in
     let _ = L.build_call mutex_unlock_func [| mutex |] "" builder in
     let _ = add_terminal builder L.build_ret_void in
@@ -721,11 +730,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
    * Raise float base to exponent
    *
    * @param float_t Base value
-   * @param i32_t Exponent
+   * @param Int Exponent
    * @param float_t Result
    *)
   let float_pow_func =
-    let float_pow_t = L.function_type float_t [| float_t; i32_t |] in
+    let float_pow_t = L.function_type float_t [| float_t; (lltype_of_typ Int) |] in
     let float_pow_func = L.define_function "float_pow" float_pow_t the_module in
 
     let check_bb = L.append_block context "operand_test" float_pow_func in
@@ -747,7 +756,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
     (* Allocation *)
     let base_alloca = L.build_alloca float_t "base_alloca" builder in
-    let expo_alloca = L.build_alloca i32_t "expo_alloca" builder in
+    let expo_alloca = L.build_alloca (lltype_of_typ Int) "expo_alloca" builder in
     let res_alloca = L.build_alloca float_t "res_alloca" builder in
 
     let _ = L.build_store (L.param float_pow_func 0) base_alloca builder in
@@ -761,27 +770,27 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let base = L.build_load base_alloca "base_load" check_builder in
     let expo = L.build_load expo_alloca "expo_load" check_builder in
     let zero = L.build_fcmp L.Fcmp.Oeq base (L.const_float float_t 0.0) "base_is_zero" check_builder in
-    let negative = L.build_icmp L.Icmp.Slt expo (L.const_int i32_t 0) "expo_is_negative" check_builder in
+    let negative = L.build_icmp L.Icmp.Slt expo (L.const_int (lltype_of_typ Int) 0) "expo_is_negative" check_builder in
     let error = L.build_and zero negative "pow_error" check_builder in
     let valid = L.build_not error "negate_error" check_builder in
-    let valid_cast = L.build_intcast valid i32_t "valid_cast" check_builder in
+    let valid_cast = L.build_intcast valid (lltype_of_typ Int) "valid_cast" check_builder in
     let _ = L.build_call assert_func [| valid_cast; msg |] "" check_builder in
     let _ = L.build_br zero_bb check_builder in
 
     (* Test if exponent = 0 *)
     let expo = L.build_load expo_alloca "expo_load" zero_builder in
-    let zero = L.build_icmp L.Icmp.Eq expo (L.const_int i32_t 0) "expo_is_zero" zero_builder in
+    let zero = L.build_icmp L.Icmp.Eq expo (L.const_int (lltype_of_typ Int) 0) "expo_is_zero" zero_builder in
     let _ = L.build_cond_br zero ret_bb neg_bb zero_builder in
 
     (* Test if exponent < 0 *)
     let expo = L.build_load expo_alloca "expo_load" neg_builder in
-    let negative = L.build_icmp L.Icmp.Slt expo (L.const_int i32_t 0) "expo_is_negative" neg_builder in
+    let negative = L.build_icmp L.Icmp.Slt expo (L.const_int (lltype_of_typ Int) 0) "expo_is_negative" neg_builder in
     let _ = L.build_cond_br negative neg_1_bb pow_bb neg_builder in
 
     (* Test if exponent = -1 and base = 1 *)
     let base = L.build_load base_alloca "base_load" neg_1_builder in
     let expo = L.build_load expo_alloca "expo_load" neg_1_builder in
-    let negative_1 = L.build_icmp L.Icmp.Eq expo (L.const_int i32_t (-1)) "expo_is_-1" neg_1_builder in
+    let negative_1 = L.build_icmp L.Icmp.Eq expo (L.const_int (lltype_of_typ Int) (-1)) "expo_is_-1" neg_1_builder in
     let base_1 = L.build_fcmp L.Fcmp.Oeq base (L.const_float float_t 1.0) "base_is_1" neg_1_builder in
     let both_1 = L.build_and base_1 negative_1 "both_1" neg_1_builder in
     (* If it's -1, return because res_alloca is currently 1 *)
@@ -796,7 +805,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let expo = L.build_load expo_alloca "expo_load" pow_builder in
     let res = L.build_load res_alloca "res_load" pow_builder in
     let pow = L.build_fmul base res "raise_res" pow_builder in
-    let expo_decrement = L.build_sub expo (L.const_int i32_t 1) "expo_sub" pow_builder in
+    let expo_decrement = L.build_sub expo (L.const_int (lltype_of_typ Int) 1) "expo_sub" pow_builder in
     let _ = L.build_store pow res_alloca pow_builder in
     let _ = L.build_store expo_decrement expo_alloca pow_builder in
     let _ = L.build_br zero_bb pow_builder in
@@ -807,12 +816,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   (*
    * Raise int base to exponent
    *
-   * @param i32_t Base value
-   * @param i32_t Exponent
-   * @param i32_t Result
+   * @param Int Base value
+   * @param Int Exponent
+   * @param Int Result
    *)
   in let int_pow_func =
-    let int_pow_t = L.function_type i32_t [| i32_t; i32_t |] in
+    let int_pow_t = L.function_type (lltype_of_typ Int) [| (lltype_of_typ Int); (lltype_of_typ Int) |] in
     let int_pow_func = L.define_function "int_pow" int_pow_t the_module in
 
     let check_bb = L.append_block context "operand_test" int_pow_func in
@@ -833,48 +842,48 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let ret_builder = L.builder_at_end context ret_bb in
 
     (* Allocation *)
-    let base_alloca = L.build_alloca i32_t "base_alloca" builder in
-    let expo_alloca = L.build_alloca i32_t "expo_alloca" builder in
-    let res_alloca = L.build_alloca i32_t "res_alloca" builder in
+    let base_alloca = L.build_alloca (lltype_of_typ Int) "base_alloca" builder in
+    let expo_alloca = L.build_alloca (lltype_of_typ Int) "expo_alloca" builder in
+    let res_alloca = L.build_alloca (lltype_of_typ Int) "res_alloca" builder in
 
     let _ = L.build_store (L.param int_pow_func 0) base_alloca builder in
     let _ = L.build_store (L.param int_pow_func 1) expo_alloca builder in
-    let _ = L.build_store (L.const_int i32_t 1) res_alloca builder in
+    let _ = L.build_store (L.const_int (lltype_of_typ Int) 1) res_alloca builder in
     let _ = L.build_br check_bb builder in
 
     (* Check that base is not 0 and exponent is non-negative *)
     let msg = L.build_global_stringptr "0 can't be raised to negative power" "pow_msg" check_builder in
     let base = L.build_load base_alloca "base_load" check_builder in
     let expo = L.build_load expo_alloca "expo_load" check_builder in
-    let zero = L.build_icmp L.Icmp.Eq base (L.const_int i32_t 0) "base_is_zero" check_builder in
-    let negative = L.build_icmp L.Icmp.Slt expo (L.const_int i32_t 0) "expo_is_negative" check_builder in
+    let zero = L.build_icmp L.Icmp.Eq base (L.const_int (lltype_of_typ Int) 0) "base_is_zero" check_builder in
+    let negative = L.build_icmp L.Icmp.Slt expo (L.const_int (lltype_of_typ Int) 0) "expo_is_negative" check_builder in
     let error = L.build_and zero negative "pow_error" check_builder in
     let valid = L.build_not error "negate_error" check_builder in
-    let valid_cast = L.build_intcast valid i32_t "valid_cast" check_builder in
+    let valid_cast = L.build_intcast valid (lltype_of_typ Int) "valid_cast" check_builder in
     let _ = L.build_call assert_func [| valid_cast; msg |] "" check_builder in
     let _ = L.build_br zero_bb check_builder in
 
     (* Test if exponent = 0 *)
     let expo = L.build_load expo_alloca "expo_load" zero_builder in
-    let zero = L.build_icmp L.Icmp.Eq expo (L.const_int i32_t 0) "expo_is_zero" zero_builder in
+    let zero = L.build_icmp L.Icmp.Eq expo (L.const_int (lltype_of_typ Int) 0) "expo_is_zero" zero_builder in
     let _ = L.build_cond_br zero ret_bb neg_bb zero_builder in
 
     (* Test if exponent < 0 *)
     let expo = L.build_load expo_alloca "expo_load" neg_builder in
-    let negative = L.build_icmp L.Icmp.Slt expo (L.const_int i32_t 0) "expo_is_negative" neg_builder in
+    let negative = L.build_icmp L.Icmp.Slt expo (L.const_int (lltype_of_typ Int) 0) "expo_is_negative" neg_builder in
     let _ = L.build_cond_br negative neg_1_bb pow_bb neg_builder in
 
     (* Test if exponent = -1 and base = 1 *)
     let base = L.build_load base_alloca "base_load" neg_1_builder in
     let expo = L.build_load expo_alloca "expo_load" neg_1_builder in
-    let negative_1 = L.build_icmp L.Icmp.Eq expo (L.const_int i32_t (-1)) "expo_is_-1" neg_1_builder in
-    let base_1 = L.build_icmp L.Icmp.Eq base (L.const_int i32_t 1) "base_is_1" neg_1_builder in
+    let negative_1 = L.build_icmp L.Icmp.Eq expo (L.const_int (lltype_of_typ Int) (-1)) "expo_is_-1" neg_1_builder in
+    let base_1 = L.build_icmp L.Icmp.Eq base (L.const_int (lltype_of_typ Int) 1) "base_is_1" neg_1_builder in
     let both_1 = L.build_and negative_1 base_1 "both_1" neg_1_builder in
     (* If it's -1, return because res_alloca is currently 1 *)
     let _ = L.build_cond_br both_1 ret_bb set_0_bb neg_1_builder in
 
     (* Set result to 0 if exponent < - 1 *)
-    let _ = L.build_store (L.const_int i32_t 0) res_alloca set_0_builder in
+    let _ = L.build_store (L.const_int (lltype_of_typ Int) 0) res_alloca set_0_builder in
     let _ = L.build_br ret_bb set_0_builder in
 
     (* Take power and decrement exponent *)
@@ -882,7 +891,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let expo = L.build_load expo_alloca "expo_load" pow_builder in
     let res = L.build_load res_alloca "res_load" pow_builder in
     let pow = L.build_mul base res "raise_res" pow_builder in
-    let expo_decrement = L.build_sub expo (L.const_int i32_t 1) "expo_sub" pow_builder in
+    let expo_decrement = L.build_sub expo (L.const_int (lltype_of_typ Int) 1) "expo_sub" pow_builder in
     let _ = L.build_store pow res_alloca pow_builder in
     let _ = L.build_store expo_decrement expo_alloca pow_builder in
     let _ = L.build_br zero_bb pow_builder in
@@ -914,13 +923,13 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
   let build_body ?(arg_gep : arg_gep option) (builder, env) sstmt the_thread =
     let string_format_str = L.build_global_stringptr "%s" "fmt" builder in
-    let int_format_str = L.build_global_stringptr "%d" "fmt" builder in
+    let int_format_str = L.build_global_stringptr "%ld" "fmt" builder in
     let float_format_str = L.build_global_stringptr "%f" "fmt" builder in
     let index_oob_str = L.build_global_stringptr "Index out of bounds" "fmt" builder in
 
     let rec expr ((builder: L.llbuilder), env) ((typ, sexpr : sexpr)) =
       match sexpr with
-        | SIntLit i -> (L.const_int i32_t i, env)
+        | SIntLit i -> (L.const_int (lltype_of_typ Int) i, env)
         | SStringLit s -> (L.build_global_stringptr s "tmp" builder, env)
         | SBoolLit b -> (L.const_int i1_t (if b then 1 else 0), env)
         | SFloatLit l -> (L.const_float_of_string float_t l, env)
@@ -1005,7 +1014,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             (L.build_call string_of_bool_func [| llvalue |] "string_of_bool" builder, env')
         | SCall ("string_of_int", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
-            let buf_malloc = L.build_array_malloc i8_t (L.const_int i32_t 10) "buf_malloc" builder in
+            let buf_malloc = L.build_array_malloc i8_t (L.const_int i32_t 20) "buf_malloc" builder in
             let buf_alloca = L.build_alloca (L.pointer_type i8_t) "buf_alloca" builder in
             let _ = L.build_store buf_malloc buf_alloca builder in
             let buf = L.build_load buf_alloca "buf_load" builder in
@@ -1013,7 +1022,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             in (buf, env')
         | SCall ("string_of_float", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
-            let buf_malloc = L.build_array_malloc i8_t (L.const_int i32_t 10) "buf_malloc" builder in
+            let buf_malloc = L.build_array_malloc i8_t (L.const_int i32_t 40) "buf_malloc" builder in
             let buf_alloca = L.build_alloca (L.pointer_type i8_t) "buf_alloca" builder in
             let _ = L.build_store buf_malloc buf_alloca builder in
             let buf = L.build_load buf_alloca "buf_load" builder in
@@ -1023,15 +1032,15 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | SCall ("floor", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
             let float_floor = L.build_call float_floor_func [| llvalue |] "int_floor" builder in
-            L.build_fptosi float_floor i32_t "int_floor_cast" builder, env'
+            L.build_fptosi float_floor (lltype_of_typ Int) "int_floor_cast" builder, env'
         | SCall ("ceil", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
             let float_ceil = L.build_call float_ceil_func [| llvalue |] "int_ceil" builder in
-            L.build_fptosi float_ceil i32_t "int_ceil_cast" builder, env'
+            L.build_fptosi float_ceil (lltype_of_typ Int) "int_ceil_cast" builder, env'
         | SCall ("round", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
             let float_round = L.build_call float_round_func [| llvalue |] "int_round" builder in
-            L.build_fptosi float_round i32_t "int_round_cast" builder, env'
+            L.build_fptosi float_round (lltype_of_typ Int) "int_round_cast" builder, env'
         | SCall ("int_of_float", [sexpr]) -> expr (builder, env) (typ, SCall ("floor", [sexpr])) (* int_of_float is an alias of floor *)
         | SCall("float_of_int", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
@@ -1120,10 +1129,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let { size = size_ptr; data_array = array_ptr } = build_array_gep array_struct builder in
 
             let (ll_index, _) = expr (builder, env) sexpr in
+            let ll_index = L.build_intcast ll_index i32_t "index_cast" builder in
             let size = L.build_load size_ptr "size_load" builder in
             let pred = L.build_icmp L.Icmp.Slt ll_index size "index_pred" builder in
             let pred = L.build_and pred (L.build_icmp L.Icmp.Sge ll_index (L.const_int i32_t 0) "index_pred" builder) "index_pred" builder in
-            let pred = L.build_intcast pred i32_t "index_pred" builder in
+            let pred = L.build_intcast pred i64_t "index_pred" builder in
             let _ = L.build_call assert_func [| pred; index_oob_str |] "" builder in
 
             let array = L.build_load array_ptr "array_load" builder in
@@ -1177,11 +1187,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (array_loaded, _) = expr (builder, env) array_sx in
             let { size = size_ptr; data_array = data_ptr } = build_array_gep array_loaded builder in
             let (ll_index, env') = expr (builder, env) sindex in
+            let ll_index = L.build_intcast ll_index i32_t "index_cast" builder in
 
             let size = L.build_load size_ptr "size_load" builder in
             let pred = L.build_icmp L.Icmp.Slt ll_index size "index_pred" builder in
             let pred = L.build_and pred (L.build_icmp L.Icmp.Sge ll_index (L.const_int i32_t 0) "index_pred" builder) "index_pred" builder in
-            let pred = L.build_intcast pred i32_t "index_pred" builder in
+            let pred = L.build_intcast pred i64_t "index_pred" builder in
             let _ = L.build_call assert_func [| pred; index_oob_str |] "" builder in
 
             let (value_to_assign, env'') = expr (builder, env') sexpr in

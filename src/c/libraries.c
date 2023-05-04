@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-void assert_func(int run_time_assertion, char* message) {
+void assert_func(int64_t run_time_assertion, char* message) {
   if (run_time_assertion) return;
   printf("%s\n", message);
   exit(1);
