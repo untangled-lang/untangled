@@ -1,8 +1,10 @@
 import { RuleBlock, Rule, NonTerminal as NT, Terminal as T } from './components/Rule';
+import Page from './components/Page';
 import Code from './components/Code';
 import TableOfContents from './components/TableOfContents';
 
 
+<Page>
 # Untangled: Language Reference Manual
 
 <div className="print-only browser-cta">
@@ -55,17 +57,21 @@ and abstractions over multithreading.
 
 This document serves as an authoritative reference for the Untangled language. It fully specifies
 the language, including the syntax and semantics of all language features and built-in functions.
+</Page>
 
 
 
 
+<Page>
 ## Table of contents
 
-<TableOfContents after="#table-of-contents" />
+<TableOfContents afterId="table-of-contents" />
+</Page>
 
 
 
 
+<Page>
 ## Definitions
 
 <a id="threads">
@@ -125,10 +131,12 @@ either “hello” or “world”.
   <><T>hello</T></>
   <><T>world</T></>
 </Rule>
+</Page>
 
 
 
 
+<Page>
 ## Syntax and semantics
 
 ### Blanks
@@ -280,9 +288,11 @@ type).
     </>
   </Rule>
 </RuleBlock>
+</Page>
 
 
 
+<Page>
 ### Expressions
 
 Expressions in Untangled are basic syntactic constructions that can be evaluated to produce a value.
@@ -587,9 +597,11 @@ A thread spawn expression starts a new thread to run a given
 <Rule name="thread-spawn">
   <><T>spawn</T> <NT>ident</NT></>
 </Rule>
+</Page>
 
 
 
+<Page>
 ### Statements
 
 Statements are instructions that are executed in sequence.
@@ -863,9 +875,11 @@ second element matches by the “exact type” rule (#1).
 `(string, int)`, because the “exact match” (#1) and “wildcard” (#3) rules do not apply trivially,
 and the “tuple” rule does not succeed either—although the first element matches by the “wildcard”
 rule (#3), the second element does not match under any of the three rules.
+</Page>
 
 
 
+<Page>
 ### Programs
 
 The top level of an Untangled program is a set of [function definitions](#function-definitions)
@@ -960,10 +974,12 @@ thread_def Max {
   }
 }
 ```
+</Page>
 
 
 
 
+<Page>
 ## Additional semantics
 
 This section describes the semantics of Untangled features that are not discussed above as part of
@@ -1209,10 +1225,12 @@ receive {
   _ -> print(x);
 }
 ```
+</Page>
 
 
 
 
+<Page>
 ## Standard library
 
 ### Built-in identifiers
@@ -1313,3 +1331,4 @@ receive {
     </tr>
   </tbody>
 </table>
+</Page>

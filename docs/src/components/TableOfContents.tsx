@@ -23,7 +23,7 @@ function parseSection(heading: HTMLHeadingElement) {
 
 
 /** Create a Section encapsulating nested structure from a list of HTMLHeadingElements */
-function makeStructure(headings: NodeListOf<HTMLHeadingElement>): Section {
+function makeStructure(headings: Iterable<HTMLHeadingElement>): Section {
   const headingsQueue = [...headings];
 
   function makeStructureInner(workingSection: Section): Section {
@@ -51,13 +51,20 @@ function makeStructure(headings: NodeListOf<HTMLHeadingElement>): Section {
  * Return a list of nested Sections
  * @param after A selector to find headings *after*
  */
-function useHeadingSections(after?: string): Section[] | null {
+function useHeadingSections(afterId?: string): Section[] | null {
   const [structure, setStructure] = useState<Section | null>(null);
 
   const update = useCallback(() => {
-    const headings = document.querySelectorAll(`${after ? `${after} ~ ` : ''} :is(h1, h2, h3, h4, h5, h6)`);
-    setStructure(makeStructure(headings as NodeListOf<HTMLHeadingElement>));
-  }, [after]);
+    const headings = [...document.querySelectorAll('h1, h2, h3, h4, h5, h6')] as HTMLHeadingElement[];
+    if (afterId) {
+      const afterIdx = headings.findIndex((heading) => heading.id === afterId);
+      console.log(afterId, afterIdx + 1);
+      if (afterIdx !== -1) {
+        headings.splice(0, afterIdx + 1);
+      }
+    }
+    setStructure(makeStructure(headings));
+  }, [afterId]);
 
   useEffect(() => {
     update();
@@ -89,7 +96,7 @@ function TOCList({ sections }: { sections: Section[] }) {
 }
 
 
-export default function TableOfContents({ after }: { after?: string }) {
-  const sections = useHeadingSections(after);
+export default function TableOfContents({ afterId }: { afterId?: string }) {
+  const sections = useHeadingSections(afterId);
   return <TOCList sections={sections ?? []} />;
 }
