@@ -1055,16 +1055,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                   let _ = L.build_store array_cast head_ptr builder in
                   let _ = L.build_store (L.const_null pointer_t) tail_ptr builder in
                   ()
-                    (* let tag_value = tag_of_type ty in
-                    let head_malloc = L.build_malloc (lltype_of_typ ty) "head_malloc" builder and
-                        head_alloca = L.build_alloca (L.pointer_type (lltype_of_typ ty)) "head_alloca" builder in
-                    let (llvalue, _) = expr (builder, env) sexpr in
-                    let _ = L.build_store tag_value tag_ptr builder in
-                    let _ = L.build_store llvalue head_malloc builder in
-                    let _ = L.build_store head_malloc head_alloca builder in
-                    let head_load = L.build_load head_alloca "head_load" builder in
-                    let head_cast = cast_llvalue_to_ptr ty head_load builder in
-                    let _ = L.build_store head_cast head_ptr builder in () *)
                 | (ty, _) ->
                   let tag_value = tag_of_type ty in
                   let head_malloc = L.build_malloc (lltype_of_typ ty) "head_malloc" builder and
