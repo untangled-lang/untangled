@@ -24,7 +24,7 @@ thread_def Sorter {
     // Wait for both to be done
     for (int i = 0; i < 2; i++) receive { _ -> {} }
     // Merge
-    int[10000] tmp;
+    int[100] tmp;
     int counter = 0;
     (int i, int j) = (start, mid + 1);
     while ((i <= mid) && (j <= end)) {

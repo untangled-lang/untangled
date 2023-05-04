@@ -38,6 +38,10 @@ let check (tdecls, fdecls) =
     (* TODO: - Add more builtin functions *)
     in List.fold_left add_bind StringMap.empty
        [("print", [(String, "x")], Void);
+        ("input", [], String);
+        ("int_of_string", [(String, "x")], Int);
+        ("float_of_string", [(String, "x")], Float);
+        ("bool_of_string", [(String, "x")], Bool);
         ("string_of_int", [(Int, "x")], String);
         ("string_of_float", [(Float, "x")], String);
         ("string_of_bool", [(Bool, "x")], String);

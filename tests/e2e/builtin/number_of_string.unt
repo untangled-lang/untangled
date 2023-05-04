@@ -1,0 +1,8 @@
+thread_def Main {
+  string s = "123";
+  string s1 = "123.123";
+  int i = int_of_string(s);
+  float f = float_of_string(s1);
+  print(string_of_int(i) + "\n");
+  print(string_of_float(f) + "\n");
+}

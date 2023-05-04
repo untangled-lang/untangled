@@ -231,6 +231,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let sqrt_t = L.function_type float_t [| float_t |] in
   let sqrt_func : L.llvalue = L.declare_function "sqrt" sqrt_t the_module in
 
+  let scanf_t = L.var_arg_function_type i32_t [| pointer_t |] in
+  let scanf_func : L.llvalue = L.declare_function "scanf" scanf_t the_module in
+
+  let sscanf_t = L.var_arg_function_type i32_t [| pointer_t; pointer_t |] in
+  let sscanf_func : L.llvalue = L.declare_function "sscanf" sscanf_t the_module in
 
   let add_terminal builder instr =
     match L.block_terminator (L.insertion_block builder) with
@@ -970,6 +975,32 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let res = L.build_load res_alloca "res_load" ret_builder in
     let _ = add_terminal ret_builder (L.build_ret res) in int_pow_func
 
+  in let bool_of_string_func =
+    let bool_of_string_t = L.function_type i1_t [| pointer_t |] in
+    let bool_of_string_func = L.define_function "bool_of_string" bool_of_string_t the_module in
+
+    let true_bb = L.append_block context "true_bb" bool_of_string_func in
+    let false_bb = L.append_block context "false_bb" bool_of_string_func in
+
+    let builder = L.builder_at_end context (L.entry_block bool_of_string_func) in
+    let true_builder = L.builder_at_end context true_bb in
+    let false_builder = L.builder_at_end context false_bb in
+
+    let llvalue = L.param bool_of_string_func 0 in
+    let err_msg = L.build_global_stringptr "bool_of_string expects true or false" "err_ msg" builder and
+        true_value = L.build_global_stringptr "true" "#t" builder and
+        false_value = L.build_global_stringptr "false" "#f" builder in
+    let true_pred =  L.build_call string_equiv_func [| true_value; llvalue |] "true_cmp" builder in
+    let false_pred = L.build_call string_equiv_func [| false_value; llvalue |] "false_cmp" builder in
+    let valid = L.build_or true_pred false_pred "true_or_false" builder in
+    let valid_cast = L.build_intcast valid i64_t "valid_cast" builder in
+    let _ = L.build_call assert_func [| valid_cast; err_msg |] "" builder in
+    let _ = L.build_cond_br true_pred true_bb false_bb builder in
+
+    let _ = add_terminal true_builder (L.build_ret (L.const_int i1_t 1)) in
+    let _ = add_terminal false_builder (L.build_ret (L.const_int i1_t 0)) in bool_of_string_func
+
+
   (* Wrapper around binop function for compatibility *)
   in let bin_op_wrapper fn =
     let wrapper e1 e2 name builder = L.build_call fn [| e1; e2 |] name builder in wrapper
@@ -995,7 +1026,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let build_body ?(arg_gep : arg_gep option) (builder, env) sstmt the_thread =
     let string_format_str = L.build_global_stringptr "%s" "fmt" builder in
     let int_format_str = L.build_global_stringptr "%ld" "fmt" builder in
-    let float_format_str = L.build_global_stringptr "%f" "fmt" builder in
+    let float_format_str = L.build_global_stringptr "%lf" "fmt" builder in
     let index_oob_str = L.build_global_stringptr "Index out of bounds" "fmt" builder in
 
     let rec expr ((builder: L.llbuilder), env) ((typ, sexpr : sexpr)) =
@@ -1127,6 +1158,30 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let _ = (L.build_call sprintf_func [| buf ; float_format_str; llvalue |]
                                                 "string_of_float" builder)
             in (buf, env')
+        | SCall ("int_of_string", [sexpr]) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+            let int_alloca = L.build_alloca i64_t "int_alloca" builder in
+            let _ = L.build_call sscanf_func [| llvalue; int_format_str; int_alloca |] "num_matched" builder in
+            let int_loaded = L.build_load int_alloca "int_loaded" builder in
+            let buf_malloc = L.build_array_malloc i8_t (L.const_int i32_t 40) "buf_malloc" builder in
+            let buf_alloca = L.build_alloca (L.pointer_type i8_t) "buf_alloca" builder in
+            let _ = L.build_store buf_malloc buf_alloca builder in
+            let buf = L.build_load buf_alloca "buf_load" builder in
+            let _ = L.build_call sprintf_func [| buf; int_format_str; int_loaded |] "string_of_int" builder in
+            let err_msg = L.build_global_stringptr "int_of_string could not parse int string" "err_msg" builder in
+            let pred = L.build_call string_equiv_func [| buf; llvalue |] "string_eq" builder in
+            let pred_cast = L.build_intcast pred i64_t "pred_cast" builder in
+            let _ = L.build_call assert_func [| pred_cast; err_msg |] "" builder in
+            let int_loaded = L.build_load int_alloca "int_loaded" builder in
+            (int_loaded, env')
+        | SCall ("float_of_string", [sexpr]) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+            let float_alloca = L.build_alloca float_t "float_alloca" builder in
+            let _ = L.build_call sscanf_func [| llvalue; float_format_str; float_alloca |] "num_matched" builder in
+            let float_loaded = L.build_load float_alloca "float_loaded" builder in (float_loaded, env')
+        | SCall ("bool_of_string", [sexpr]) ->
+            let (llvalue, env') = expr (builder, env) sexpr in
+            (L.build_call bool_of_string_func [| llvalue |] "string_of_bool" builder, env')
         | SCall ("floor", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
             let float_floor = L.build_call float_floor_func [| llvalue |] "int_floor" builder in
@@ -1155,6 +1210,10 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             (L.build_call exit_func [| llvalue |] "" builder, env')
         | SCall ("end", []) -> (* “end” exits the thread *)
             (L.build_ret (L.const_null pointer_t) builder, env)
+        | SCall ("input", []) ->
+            let buffer = L.build_array_malloc i8_t (L.const_int i32_t 1024) "buffer" builder in
+            let _ = L.build_call scanf_func [| string_format_str; buffer |] "input" builder in
+            (buffer, env)
         | SCall (func_name, arg_list) ->
             let (fdef, fdecl) = StringMap.find func_name function_decls in
             let llargs = List.map (fun e -> let (llvalue, _) = expr (builder, env) e in llvalue) arg_list in

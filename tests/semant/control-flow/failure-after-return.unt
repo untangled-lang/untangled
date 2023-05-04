@@ -1,0 +1,8 @@
+void fun() {
+  return;
+  print("I'm not supposed to be here\n");
+}
+
+thread_def Main {
+  fun();
+}

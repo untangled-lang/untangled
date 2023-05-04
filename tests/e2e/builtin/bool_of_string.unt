@@ -1,0 +1,6 @@
+thread_def Main {
+  bool b = bool_of_string("true");
+  print(string_of_bool(b) + "\n");
+  b = bool_of_string("false");
+  print(string_of_bool(b) + "\n");
+}

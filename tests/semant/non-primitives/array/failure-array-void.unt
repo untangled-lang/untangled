@@ -5,3 +5,4 @@ void foo() {
 thread_def Main {
   [foo()];
 }
+
