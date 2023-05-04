@@ -650,10 +650,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
     let builder = L.builder_at_end context (L.entry_block compare_array_tag_func) in
 
-    (* let debug = L.build_global_stringptr "Index %d" "debug" builder in
-    let index_ptr = L.param compare_array_tag_func 1 in
-    let index = L.build_load index_ptr "index_load" builder in *)
-    (* let _ = L.build_call printf_func [| debug; index|]  "" builder in *)
     let tag_ptr = L.param compare_array_tag_func 0 in
     let index_ptr = L.param compare_array_tag_func 1 in
     let tag_length = L.param compare_array_tag_func 2 in
@@ -690,56 +686,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let _ = L.build_store array_index_increment array_index_alloca increment_builder in
     let _ = L.build_br pred_bb increment_builder in
 
-    (* let _ = L.build_ret (L.const_int i1_t 1) pred_builder in *)
-    (* let _ = L.build_ret (L.const_int i1_t 1) cmp_builder in *)
-    (* let _ = L.build_ret (L.const_int i1_t 1) increment_builder in *)
-
     let array_index = L.build_load array_index_alloca "array_index_load" ret_builder in
     let matched = L.build_icmp L.Icmp.Eq array_index array_tags_size "array_match" ret_builder in
-    let _ = add_terminal ret_builder (L.build_ret matched) in
-    (* let _ = L.build_ret (L.const_int i1_t 1) builder in *)
-    (* let array_tag_ptr = L.param compare_array_tag_func 3 in
-
-    (* let array_tag_loaded = L.build_load array_tag_ptr "array_tag_loaded" builder in *)
-    let { size = size_ptr; data_array = array_ptr } = build_array_gep array_tag_ptr builder in
-    let identifier_array_load = L.build_load array_ptr "identifier_array_load" builder in
-    let identifier_array = L.build_bitcast identifier_array_load (L.pointer_type i32_t) "array_cast" builder in
-
-
-    let tail_index = L.build_alloca i32_t "index_i" builder in
-    let _ = L.build_store (L.const_int i32_t 1) tail_index builder in
-    let _ = L.build_br pred_bb builder in
-
-    let tail_length = L.build_load size_ptr "tail_length_load" pred_builder in
-    let tail_index_loaded = L.build_load tail_index "tail_index_loaded" pred_builder in
-    let tail_index_inbound = L.build_icmp L.Icmp.Slt tail_index_loaded tail_length  "cmp_tail_index" pred_builder in
-    let index_loaded = L.build_load index_ptr "index_loaded" pred_builder in
-    let index_inbound = L.build_icmp L.Icmp.Slt index_loaded tag_length "cmp_index" pred_builder in
-    let anded_inbounds = L.build_and tail_index_inbound index_inbound "anded_inbounds" pred_builder in
-    let _ = L.build_cond_br anded_inbounds cmp_bb ret_bb pred_builder in
-
-    let debug = L.build_global_stringptr "Cmp %d to %d" "debug" cmp_builder in
-    let curr_tail = L.build_in_bounds_gep identifier_array [| tail_index_loaded |] "curr_tail_index" cmp_builder in
-    let curr_tail_loaded = L.build_load curr_tail "curr_tail_loaded" cmp_builder in
-    let curr_tag = L.build_in_bounds_gep tag_ptr [| index_loaded |] "curr_tag_index" cmp_builder in
-    let curr_tag_loaded = L.build_load curr_tag "curr_tag_loaded" cmp_builder in
-    let _ = L.build_call printf_func [| debug; curr_tag_loaded; curr_tail_loaded |] "" cmp_builder in
-    let pred = L.build_icmp L.Icmp.Eq curr_tail_loaded curr_tag_loaded "cmp_pred" cmp_builder in
-    let _ = L.build_cond_br pred increment_bb ret_bb cmp_builder in
-    (* let _ = L.build_br increment_bb cmp_builder in *)
-
-    let tail_incremented = L.build_add tail_index_loaded (L.const_int i32_t 1) "tail_incremented" increment_builder in
-    let index_incremented = L.build_add index_loaded (L.const_int i32_t 1) "index_incremented" increment_builder in
-    let _ = L.build_store tail_incremented tail_index increment_builder in
-    let _ = L.build_store index_incremented index_ptr increment_builder in
-    let _ = L.build_br pred_bb increment_builder in
-
-
-    let tail_index_loaded = L.build_load tail_index "tail_index_loaded" ret_builder in
-    let matched = L.build_icmp L.Icmp.Eq tail_index_loaded tail_length "cmp_tail_index" ret_builder in
-    let _ = add_terminal ret_builder (L.build_ret matched) in *)
-
-    compare_array_tag_func
+    let _ = add_terminal ret_builder (L.build_ret matched) in compare_array_tag_func
   in
 
   (*

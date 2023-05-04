@@ -33,5 +33,5 @@ thread_def Main {
     receive { _ -> {} }
   }
 
-  print(string_of_int(arr[0]));
+  print(string_of_int(arr[0]) + "\n");
 }
