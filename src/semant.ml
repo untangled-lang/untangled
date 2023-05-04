@@ -207,7 +207,10 @@ let check (tdecls, fdecls) =
                 let env' = extend_env env pattern1 in extend_env env' pattern2
           (* Convert AST pattern to SAST pattern *)
           in let rec get_sast_pattern = function
-              BasePattern (typ, id) -> SBasePattern (typ, id)
+              BasePattern (typ, id) ->
+                (match typ with
+                  Tuple _ -> raise (Failure ("Tuple must be unpacked in receive statement"))
+                  | _ -> SBasePattern (typ, id))
             | WildcardPattern -> SWildcardPattern
             | TuplePattern (p1, p2) -> STuplePattern (get_sast_pattern p1, get_sast_pattern p2)
           (* For each case block, extends the environment and perform semantic check *)
