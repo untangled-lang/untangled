@@ -125,7 +125,10 @@ for step_name in COMPILER_STEPS:
     step_display = f"{Format.bold}{step.name}{Format.reset} tests"
 
     # Identify tests to run
-    test_files = glob.glob(f"{step_dir}/**/*.unt")
+    test_files = [
+        y for x in os.walk(step_dir)
+        for y in glob.glob(os.path.join(x[0], '*.unt'))
+    ]
     test_ids = [
         path.splitext(path.relpath(test_file, TESTS_DIR))[0]
         for test_file in test_files
