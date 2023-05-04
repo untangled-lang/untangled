@@ -1,0 +1,20 @@
+thread_def Child {
+  parent << (1, "hello");
+}
+
+thread_def Main {
+  thread child = spawn Child;
+
+  receive {
+    (int, string) res -> {
+      string newline = "
+";
+      (int x, string y) = res;
+      print(string_of_int(x) + newline);
+      print(y + newline);
+    }
+    _ -> {
+      print("This case");
+    }
+  }
+}

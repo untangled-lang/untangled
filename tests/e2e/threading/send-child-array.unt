@@ -1,0 +1,36 @@
+thread_def Child {
+  // parent << ([0, 8, 0array_tags_size_ptr], true);
+  parent << ([1, 2, 3], true);
+}
+
+thread_def Main {
+  thread c = spawn Child;
+  receive {
+    int[3][1] x -> {}
+
+    int[1][3] x -> {print("heyyy");}
+
+    (int[3] x, bool b) -> {
+      print("In expected case");
+    }
+
+    _ -> {print("yooo");}
+  }
+  // receive {
+  //   (int, int)[3] x -> {
+  //     (int a, int b) = x[0];
+  //     print(string_of_int(a) + newline);
+  //   }
+  //   _ -> {print("hello");}
+  // }
+
+  // receive {
+  //   (int a, (int b, int[1] c)) -> {
+  //     print(string_of_int(a) + newline);
+  //     print(string_of_int(b) + newline);
+  //     print(string_of_int(c[0]) + newline);
+  //   }
+  //   _ -> {}
+  // }
+}
+

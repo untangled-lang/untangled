@@ -1,0 +1,37 @@
+thread_def Incrementor {
+  semaphore sem;
+  int[1] arr;
+
+  receive {
+    semaphore s -> sem = s;
+    _ -> {}
+  }
+  receive {
+    int[1] a -> arr = a;
+    _ -> {}
+  }
+
+  sem--;
+  arr[0] += 1;
+  sem++;
+
+  parent << "Done";
+}
+
+thread_def Main {
+  semaphore s = make_semaphore(1);
+  int[1] arr = [0];
+  int NUM_THREADS = 30000;
+
+  for (int i = 0; i < NUM_THREADS; i++) {
+    thread t = spawn Incrementor;
+    t << s;
+    t << arr;
+  }
+
+  for (int i = 0; i < NUM_THREADS; i++) {
+    receive { _ -> {} }
+  }
+
+  print(string_of_int(arr[0]));
+}
