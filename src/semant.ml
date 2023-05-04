@@ -354,6 +354,15 @@ let check (tdecls, fdecls) =
           raise (Failure ("return has " ^ string_of_typ typ ^ " but expected " ^ string_of_typ fdecl.ret_type))
       | _ -> ()
     in checker
+
+  (*
+   * Check that a function can't spawn thread
+   *)
+  in let rec spawn_check = function
+    | SBlock sl -> List.iter spawn_check sl
+    | SExpr (_, SSpawn _) -> raise (Failure ("function can't spawn thread"))
+    | _ -> ()
+
   (*
    * Check that a function has a return statement
    *)
@@ -361,11 +370,19 @@ let check (tdecls, fdecls) =
     | SBlock sl -> List.exists return_exist sl
     | SReturn _ -> true
     | _ -> false
+
   (*
-   * Check that parent / self is not redeclared
+   * Check that parent / self is not redeclared / reassigned
    *)
   in let rec keyword_check = function
     | SBlock sl -> List.iter keyword_check sl
+    | SExpr (_, sexpr) ->
+        (match sexpr with
+          SAssign (id, _) ->
+            if id = "parent" || id = "self"
+            then raise (Failure "parent/self can't be reassigned in thread")
+            else ()
+          | _ -> ())
     | SDecl (SBaseDecl (_, id, _)) ->
         (match id with
           "parent" | "self" -> raise (Failure "parent/self can't be declared in thread")
@@ -385,6 +402,7 @@ let check (tdecls, fdecls) =
          *)
         let _ = List.iter loop_check sl in
         let _ = List.iter (fun sstmt -> return_check false fdecl.fname sstmt) sl in
+        let _ = List.iter spawn_check sl in
         if return_exist sstmt then
           { sfname = fdecl.fname; sformals = fdecl.formals; sbody = sl; sret_type = fdecl.ret_type }
         else raise (Failure ("Function " ^ fdecl.fname ^ " does not have a return statement"))
