@@ -26,3 +26,98 @@ and abstractions over multithreading.
 
 Untangled is very useful for writing any kind of program that performs any CPU-heavy work that
 doesn’t need to run strictly sequentially.
+
+
+
+
+## Language tutorial
+
+***Note:** this tutorial assumes basic familiarity with programming in a C-style language.*
+
+
+
+### 0. Installation
+Before we start coding, first we need to make sure that we have everything we need installed!
+
+First, clone the Untangled source from GitHub:
+```bash
+git clone https://github.com/untangled-lang/untangled
+cd untangled
+```
+
+Next, make sure you have `llvm@14.0.6`, and [`opam`](https://opam.ocaml.org/), and a recent version
+of OCaml installed on your system.
+
+Then, use `opam` to install Untangled’s dependencies:
+```bash
+opam install dune
+opam install llvm.14.0.6
+```
+
+Finally, run `make` to build the Untangled compiler for your system.
+
+If all goes well, you’ll see a file called `untangled.exe` appear in the repository root.
+
+
+
+### 1. Hello, world!
+
+Let’s write our first program with Untangled!
+
+To get started, we’ll define a “thread definition” called `Main`. A `Main` thread definition is
+the starting point of all Untangled programs (without it, your program would be invalid).
+
+```untangled
+thread_def Main {
+  print("Hello, world!");
+}
+```
+Save your file as `hello.unt` (“.unt” is the standard file extension for Untangled programs). To
+compile this program, we’ll need to use the executable we built earlier:
+```bash
+./untangled.exe hello.unt -o hello
+```
+If all goes well, you should see an executable file called `hello` in your working directory. Just
+run the file to run your program!
+```bash
+./hello
+# you should see “Hello, world!”
+```
+Congrats on running your first Untangled program!
+
+
+
+### 2. A more complex program
+
+Untangled includes many of the language features you’re used to from other programming languages,
+including loops, variables, and functions. To show them off, let’s write a program that computes
+the first 50 Fibonacci numbers.
+
+```untangled
+thread_def Main {
+  // Variables are statically typed and mutable.
+  int a = 0;
+  int b = 1;
+
+  // For loops follow C-style syntax
+  for (int i = 0; i < 50; i++) {
+    // The built-in print function accepts strings.
+    // Strings support concatenation with “+”
+    // The standard library includes many functions for converting
+    // different types of values to strings.
+    print(string_of_int(a) + " ");
+
+    int tmp = a; // Variables defined within a block are scoped to that block
+    a = b;
+    b = tmp + b;
+  }
+}
+```
+
+If you compile and run this program as before, you should see the first 50 Fibonacci numbers printed
+to the console:
+```bash
+./untangled.exe fib.unt -o fib
+./fib
+# you should see “0 1 1 2 3 5 8 13 21 34 55 89 144 233 377 ... 7778742049”
+```
