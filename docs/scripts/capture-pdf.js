@@ -17,7 +17,7 @@ const previewServer = await preview({
 console.log('Started server');
 
 // Load the page
-const browser = await puppeteer.launch({ headless: true });
+const browser = await puppeteer.launch({ headless: 'new' });
 const page = await browser.newPage();
 await page.goto(previewServer.resolvedUrls.local[0]);
 console.log('Launched browser');

@@ -10,7 +10,7 @@ export default defineConfig({
   base: process.env.DOCS_BASE_PATH ?? '/',
   plugins: [
     { enforce: 'pre', ...mdx({ rehypePlugins: [rehypeSlug] }) },
-    react(),
+    react({ include: /\.(mdx|js|jsx|ts|tsx)$/ }),
     viteStaticCopy({
       targets: [
         // Languages

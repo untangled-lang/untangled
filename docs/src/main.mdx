@@ -99,11 +99,13 @@ Terminals and nonterminals are combined as follows:
   the given order.
 - Square brackets indicate **character sets**. A character set contains several single-character
   literals, and matches any one of those characters. For example,
-  <nobr>[<T>a</T> <T>b</T> <T>c</T>]</nobr> matches exactly one of <T>a</T>, <T>b</T>, or <T>c</T>.
+  <span style={{ whiteSpace: 'nowrap' }}>[<T>a</T> <T>b</T> <T>c</T>]</span> matches exactly one of
+  <T>a</T>, <T>b</T>, or <T>c</T>.
   - Within a character set, a hyphen indicates an ASCII range. For example,
-    <nobr>[<T>a</T>-<T>z</T>]</nobr> matches any lowercase letter.
+    <span style={{ whiteSpace: 'nowrap' }}>[<T>a</T>-<T>z</T>]</span> matches any lowercase letter.
   - A caret after the opening square brace of a character set indicates negation. For example,
-    <nobr>[^<T>a</T>-<T>z</T>]</nobr> matches any character that is *not* a lowercase letter.
+    <span style={{ whiteSpace: 'nowrap' }}>[^<T>a</T>-<T>z</T>]</span> matches any character that is
+    *not* a lowercase letter.
 - Parentheses (<span className="hint">...</span>) indicate grouping.
 - An asterisk <span className="hint">...</span>* indicates that the preceding component may be
   repeated zero or more times.
@@ -204,17 +206,17 @@ The following are also keywords in Untangled:
 - <T>\*\*=</T>
 - <T>==</T>
 - <T>!=</T>
-- <T>\<</T>
-- <T>\<=</T>
-- <T>\></T>
-- <T>\>=</T>
+- <T>&lt;</T>
+- <T>&lt;=</T>
+- <T>&gt;</T>
+- <T>&gt;=</T>
 - <T>&&</T>
 - <T>||</T>
 - <T>!</T>
 
 {/* Thread specific */}
-- <T>-\></T>
-- <T>\<\<</T>
+- <T>-&gt;</T>
+- <T>&lt;&lt;</T>
 - <T>_</T>
 </div>
 
@@ -473,7 +475,9 @@ Operators in the same row have the same precedence.
       <td>Right</td>
     </tr>
     <tr>
-      <td><T>||</T> <T>&&</T> <T>==</T> <T>!=</T> <T>&lt;</T> <T>&gt;</T> <T>&lt;=</T> <T>&gt;=</T></td>
+      <td>
+        <T>||</T> <T>&&</T> <T>==</T> <T>!=</T> <T>&lt;</T> <T>&gt;</T> <T>&lt;=</T> <T>&gt;=</T>
+      </td>
       <td>Left</td>
     </tr>
     <tr>
@@ -595,7 +599,7 @@ discards the evaluated value of the expression.
 
 #### Blocks
 <Rule name="block">
-  <T>{'{'}</T> <NT>stmt</NT>* <T>}</T>
+  <T>{'{'}</T> <NT>stmt</NT>* <T>{'}'}</T>
 </Rule>
 
 A block is a sequence of statements enclosed in curly braces. A block always defines its own
@@ -781,7 +785,7 @@ A [thread](#threads) receives messages from other threads using a <T>receive</T>
 
   <Rule name="receive-pattern">
     <>
-      <NT>pattern</NT> <T>-></T> <NT>stmt</NT>
+      <NT>pattern</NT> <T>-&gt;</T> <NT>stmt</NT>
     </>
   </Rule>
 
@@ -1178,7 +1182,7 @@ for (; i < 10; i += 2) print(i % 2 == 0);
 
 Each identifier declared as part of a <NT>pattern</NT> in a [receive statement](#receive-statements)
 belongs to the context created by the pattern matching case, which encapsulates the
-[statement](#nonterminal-stmt) immediately following the <T>-></T> terminal.
+[statement](#nonterminal-stmt) immediately following the <T>-&gt;</T> terminal.
 
 ```untangled
 receive {
@@ -1202,7 +1206,8 @@ receive {
 - Within each thread, the <a id="parent-keyword"><T>parent</T> keyword</a> holds a thread handle to
   the thread that invoked <T>spawn</T> to create the current thread. In the top-level instance of
   the <T>Main</T> thread, the <T>parent</T> keyword instead refers to the [current
-  thread](#current-thread), i.e. <Code highlight className="language-untangled">self == parent</Code>.
+  thread](#current-thread), i.e.
+  <Code highlight className="language-untangled">self == parent</Code>.
 
 
 
@@ -1222,13 +1227,18 @@ receive {
       <td>`print`</td>
       <td>Any value that is not a thread</td>
       <td><T.void/></td>
-      <td>Prints out a human-readable representation of the data provided, followed by a newline.</td>
+      <td>
+        Prints out a human-readable representation of the data provided, followed by a newline.
+      </td>
     </tr>
     <tr>
       <td>`input`</td>
       <td></td>
       <td><T.string/></td>
-      <td>Blocks the program until a string is provided via standard input and the return keyboard is pressed, at which point it returns that entry</td>
+      <td>
+        Blocks the program until a string is provided via standard input and the return keyboard is
+        pressed, at which point it returns that entry
+      </td>
     </tr>
     <tr>
       <td>`make_semaphore`</td>
@@ -1255,7 +1265,10 @@ receive {
       <td>`float_of_string`</td>
       <td>A string</td>
       <td><T.float/></td>
-      <td>Returns the floating point representation of the string. If the string cannot be parsed as a floating point number, throws a runtime error.</td>
+      <td>
+        Returns the floating point representation of the string. If the string cannot be parsed as a
+        floating point number, throws a runtime error.
+      </td>
     </tr>
     <tr>
       <td>`sqrt`</td>
