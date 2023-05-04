@@ -9,7 +9,7 @@ const UNTANGLED_LANGUAGE_DEFINITION = {
   path: './languages/untangled.tmLanguage.json',
 } as const;
 
-const LOAD_LANGUAGES = ['ocaml', 'python', UNTANGLED_LANGUAGE_DEFINITION] as const;
+const LOAD_LANGUAGES = ['ocaml', 'python', 'bash', UNTANGLED_LANGUAGE_DEFINITION] as const;
 const LOAD_THEMES = [
   'poimandres',
   'nord',
