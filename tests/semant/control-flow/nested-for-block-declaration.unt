@@ -1,0 +1,10 @@
+thread_def Child {
+
+}
+
+thread_def Main {
+  thread child;
+  for (int i = 0; i < 1000; i++) {
+    thread child = spawn Child;
+  }
+}

@@ -1,0 +1,8 @@
+thread_def Child {}
+
+thread_def Main {
+  thread child;
+  for (int i = (int : 0); (bool : ((int : i) < (int : 1000))); (int : (i = (int : ((int : i) + (int : 1)))))) {
+    thread child = (thread : spawn Child);
+  }
+}
