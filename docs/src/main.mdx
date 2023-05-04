@@ -76,10 +76,12 @@ the language, including the syntax and semantics of all language features and bu
 A [**thread procedure definition**](#thread-procedure-definitions) refers to a predefined sequence
 of statements that can be executed in one or more threads.
 
+{/* TODO: “This definition is pretty difficult to read, would love if this was broken down a bit simpler.” */}
 <a id="thread-handles">A **thread handle**</a> refers to a value of [type](#types) <T>thread</T>; it
 is an opaque [resource handle](https://en.wikipedia.org/wiki/Handle_(computing)) to a single running
 thread.
 
+{/* TODO: This definition is not given in context. At this point, I don't know what an expression or statement is in your language, so this semantic detail could definitely wait until those things are defined. */}
 <a id="current-thread">
   Every statement or expression evaluated in an Untangled program belongs to a single thread, which
   is called the **current thread**.
@@ -242,6 +244,7 @@ identifier that has the same name as one of the [keywords](#keywords).
 
 ### Types
 
+{/* TODO: “These [booleans, integers, floats, strings] should have been explained in this section. I don't know how any of these types function, or what restrictions they have on them” */}
 Untangled includes first-class types for booleans, integers, floats, strings,
 [thread handles](#thread-handles), [semaphores](#semaphores), tuples, and arrays (as well as a void
 type).
@@ -301,6 +304,7 @@ There are several forms of expressions:
 
 
 #### Literal expressions
+{/* TODO: “This definitely could have been broken down further. It's a bit hard to tease out the different sections” */}
 
 In Untangled, boolean, integer, float, string, tuple, and array values can be constructed using
 <NT>literal</NT> expressions. Literals are syntactic constructions that expand in place to a
@@ -375,6 +379,7 @@ literal must have the same type.
 
 Identifier expressions refer to variables. An identifier expression returns the value of the
 variable it refers to.
+{/* TODO: “The identifier syntax would have been good to include here, rather than before. It's a bit jarring to have in two places, when you need both sections to fully understand” */}
 
 Some [keywords](#keywords) are also [built-in identifiers](#built-in-identifiers) given special
 values in identifier expressions.
@@ -430,6 +435,7 @@ same type.
 
 **For integer and floating-point operands**, <T>+</T>, <T>-</T>, <T>*</T>, and <T>/</T> perform
 standard arithmetic operations (addition, subtraction, multiplication, and division, respectively).
+{/* TODO: “How do these differ between integer and floating-point operands? For instance, what does `3 / 2` do?” */}
 Additionally, <T>**</T> raises the left operand to the power of the right operand. The comparison
 operators <T>&lt;</T>, <T>&lt;=</T>, <T>&gt;</T>, and <T>&gt;=</T> compare their operands and
 evaluate to a boolean value. For integers, <T>%</T> performs the “modulo” operation.
@@ -439,6 +445,7 @@ evaluate to a boolean value. For integers, <T>%</T> performs the “modulo” op
 **For boolean operands**, the <T>&&</T> and <T>||</T> operators are the logical “and” and “or”
 operations, respectively.
 
+{/* TODO: “it would have been good to call out specifically which types fall into which categories in this location” */}
 The <T>==</T> and <T>!=</T> perform *value equality* comparisons for [operands that are passed by
 value](#passing-by-value--reference) (like strings, integers, and booleans), and perform *reference
 equality* comparisons between [operands that are passed by reference](#passing-by-value--reference)
@@ -453,6 +460,7 @@ The <T>!</T> prefix operator is the logical “not” operator; it applies to bo
 ##### Postfix operators
 The <T>++</T> and <T>--</T> postfix operators are increment and decrement operators. They apply to
 integer and floating-point operands as you would expect.
+{/* TODO: “Spell this out specifically” */}
 
 The <T>++</T> and <T>--</T> postfix operators also apply to semaphores; see
 [Semaphores](#semaphores) for the semantics of these operations.
@@ -553,6 +561,7 @@ evaluates to the return value of the function.
   </Rule>
 
   <Rule name="call-args">
+    {/* TODO: “This feels like unnecessary granularity. You could have captured the same idea with `function-call ::= ident ( (expr (, expr)* )? )` (or just one definition for call-args).” */}
     <NT>expr</NT>
     <><NT>call-args</NT> <T>,</T> <NT>expr</NT></>
   </Rule>
@@ -566,6 +575,8 @@ Calling a function executes the sequence of statements in the function body dire
 execution sequence of the calling thread. The “current thread” is still the thread that is executing
 the function, for the purpose of features like the [<T>parent</T> and <T>self</T>
 identifiers](#built-in-identifiers) and the [`receive` statement](#receive-statements).
+
+{/* TODO: ^ “These semantics lack a lot of context... We don't even know what statements are yet. ” */}
 
 
 #### Thread spawn expressions
@@ -751,6 +762,7 @@ for (int a = 0; a < 10; a++) { // loop A
 </Rule>
 
 The <T>return</T> keyword can only be used within a function definition.
+{/* TODO: “This explanation would be better suited to be in the discussion of function definition” */}
 
 The <T>return</T> keyword is used to return a value from a function. The expression on the right
 side of the <T>return</T> keyword becomes the return value of the function, and the function exits
@@ -763,6 +775,7 @@ function has a non-void return type. Additionally, all non-void functions must i
 
 A [thread](#threads) can send messages to any [thread handle](#thread-handles) it has, including the
 built-in [<T>parent</T> keyword](#parent-keyword).
+{/* TODO: “This explanation requires the context of how threads work, so that should come before” */}
 
 The expression to the right of the <T>&lt;&lt;</T> operator is the “message” to be sent. A message
 can be a value of any type. See [Message passing](#message-passing) for an explanation of the
@@ -877,6 +890,7 @@ run on the main thread when the program starts.
     </>
   </Rule>
   <Rule name="function-def-parameters">
+    {/* TODO: “This also could have been simplified with regex, we do not have to act like ocamlyacc” */}
     <><NT>type</NT> <NT>ident</NT></>
     <><NT>function-def-parameters</NT> <T>,</T> <NT>type</NT> <NT>ident</NT></>
   </Rule>
@@ -922,6 +936,7 @@ A thread procedure definition has two parts:
 1. The **name** of the thread procedure uniquely identifies it for use with the
    [spawn](#thread-spawn-expressions) keyword.
 2. The **body** is a list of statements that a newly spawned thread will run.
+{/* TODO: ^ “You already define semantics for a block! You should rely on that here, since they are the same” */}
 
 ```untangled
 /* The Max thread procedure expects to receive two numbers, and then sends a
@@ -983,6 +998,7 @@ new thread will simply begin executing another copy of the program.
 
 ### Message passing
 
+{/* TODO: “I have no idea what context is up to this point” */}
 Each thread in Untangled has an independent [context](#context) and limited access to shared memory.
 Untangled’s **Message passing** system is the primary means of communication between threads.
 
@@ -1209,6 +1225,7 @@ receive {
   thread](#current-thread), i.e.
   <Code highlight className="language-untangled">self == parent</Code>.
 
+{/* TODO: ^ “These semantics belong with other thread semantics” */}
 
 
 ### Built-in functions
