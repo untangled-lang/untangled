@@ -1840,12 +1840,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
     let arg_malloc = L.build_malloc arg_t "arg_malloc" builder in
     let parent_queue = L.build_call queue_init_func [| |] "init_parent_queue" builder in
-    let child_queue = L.build_call queue_init_func [| |] "init_child_queue" builder in
 
     let { parent_queue = parent_queue_ptr; child_queue = child_queue_ptr }
       = build_arg_gep arg_malloc builder in
     let _ = L.build_store parent_queue parent_queue_ptr builder in
-    let _ = L.build_store child_queue child_queue_ptr builder in
+    let _ = L.build_store parent_queue child_queue_ptr builder in
 
     let arg = L.build_bitcast arg_malloc pointer_t "cast_arg" builder in
     let _ = L.build_call main_thread [| arg |] "star_main_thread" builder in
