@@ -1,1 +1,100 @@
 # Untangled: Project Plan
+
+### Planning process
+
+We planned our tasks and timeline around the the class’s assignment deadlines throughout the
+semester.
+
+We tracked incomplete tasks using markdown to-do lists checked in to our codebase.
+
+Throughout the project, in order to identify areas we needed to work on, we attempted to run
+programs from our original proposal (and other example programs, e.g. from the draft of the Language
+Reference Manual). Observing what functionality was missing or broken showed us what we still needed
+to work on!
+
+
+### Implementation timeline
+
+- Feb 13: **First commit**
+- Feb 21: **Scanner/Parser/AST implemented**
+- Feb 28: **Language Reference Manual draft finished**
+- Mar 26: **First “hello world” program runs**
+- April 10: **First Untangled thread spawned**
+- April 11: **Basic control flow (if, while, etc.)**
+- April 18: **First message passing between threads**
+- April 27: **Arrays and tuples initial implementation**
+- May 2: **Semaphores**
+- May 3: **String escape sequences**
+- May 5: **Docs completed**
+- May 5: **Final commit**
+
+
+### Team member responsibilities & contributions
+
+Each team member contributed to all parts of the project; we didn’t delineate specific roles. Key
+contributions to call out are as follows:
+
+**Nick**
+- Major contributions to code generation
+- Significant contributions to every phase of compiler implementation (scanner, parser, AST,
+  semantic checking)
+- Authored first draft of test script
+- Led development of multithreading features
+  - Semaphores
+  - Message passing
+  - Thread spawning
+- Contributed to build system (makefiles, compiler CLI, etc.)
+
+**Caleb**
+- Major contributions to code generation
+- Significant contributions to every phase of compiler implementation (scanner, parser, AST,
+  semantic checking)
+- Led development for arrays
+- Led development for tuples
+- Contributions to test script
+
+**Luke**
+- Significant contributions to every phase of compiler implementation (scanner, parser, AST,
+  code generation)
+- Built docs system (visual design, front-end implementation, PDF build script)
+- Major contributor to docs content (language reference manual, tutorial, etc.)
+- Authored test script
+- Wrote `.tmlanguage` grammar (and VS Code extension) for Untangled language syntax highlighting
+- Contributed to build system (makefiles, compiler CLI, etc.)
+
+**Duru**
+- Major contributor to docs content (tutorial, language reference manual)
+- Major contributions to code generation
+- Significant contributions to every phase of compiler implementation (scanner, parser, AST,
+  semantic checking)
+
+**Chloe**
+- Contributions to scanner and parser
+- Contributions to language reference manual
+
+
+### Tools, languages, and technologies
+- The compiler is written in [OCaml](https://ocaml.org/)
+  - We use `ocamllex` to generate the scanner
+  - We use `ocamlyacc` to generate the parser
+  - We use the [official OCaml LLVM bindings](https://llvm.moe/) to generate LLVM IR
+  - We use [Dune](https://dune.build/) as our build system
+  - We use the `clang` compiler to generate executables from LLVM IR
+- The syntax highlighter is implemented using a
+  [TextMate grammar](https://macromates.com/manual/en/language_grammars), which is the standard
+  used by VS Code and other editors.
+- The docs are written in [MDX](https://mdxjs.com/) (a markdown dialect that supports
+  [React](https://reactjs.org/) components).
+  - For development and production builds of the docs website, we use [Vite](https://vitejs.dev/)
+  - Syntax highlighting in the docs comes from [Shiki](https://shiki.matsu.io/), which adapts VS
+    Code’s syntax highlighting engine to run in the browser.
+  - The docs PDF is generated using [Puppeteer](https://pptr.dev/), a headless controller for the
+    Chrome browser.
+- We pair-programmed during our work sessions using Microsoft’s VS Code
+  [Live Share](https://marketplace.visualstudio.com/items?itemName=MS-vsliveshare.vsliveshare)
+  extension.
+- We used [GitHub](https://github.com/) for version control and for asynchronous collaboration.
+
+### Contribution history
+
+TODO: add image of GitHub insights graph
