@@ -8,7 +8,11 @@ thread_def Main {
   thread t3 = t1;
 
   print(string_of_bool(self == self) + "\n");
-  print(string_of_bool(self != parent) + "\n");
+  print(string_of_bool(self == parent) + "\n");
   print(string_of_bool(t1 == t2) + "\n");
   print(string_of_bool(t1 == t3) + "\n");
+
+  if (self == parent) {
+    spawn Main;
+  }
 }
