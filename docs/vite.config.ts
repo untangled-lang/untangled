@@ -14,7 +14,6 @@ export default defineConfig({
         index: fileURLToPath(new URL('./index.html', import.meta.url)),
         lrm: fileURLToPath(new URL('./lrm.html', import.meta.url)),
         tutorial: fileURLToPath(new URL('./tutorial.html', import.meta.url)),
-        finalReport: fileURLToPath(new URL('./final-report.html', import.meta.url)),
       },
     }
   },
