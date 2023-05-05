@@ -19,8 +19,10 @@ export default defineConfig({
         architecturalDesign: fileURLToPath(new URL('./architectural-design.html', import.meta.url)),
         testing: fileURLToPath(new URL('./testing.html', import.meta.url)),
         lessonsLearned: fileURLToPath(new URL('./lessons.html', import.meta.url)),
+
+        highlightedCodeTemplate: fileURLToPath(new URL('./highlighted-code-template.html', import.meta.url)),
       },
-    }
+    },
   },
   base: process.env.DOCS_BASE_PATH ?? '/',
   plugins: [

@@ -1,10 +1,12 @@
 import fs from 'fs/promises';
+import { dirname } from 'path';
 import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { stdout } from 'process';
 
 import puppeteer from 'puppeteer';
 import { preview } from 'vite';
+import renderHighlighted from './render-code.js';
 
 
 const cropScriptPath = fileURLToPath(new URL('./crop-pdf.py', import.meta.url));
@@ -32,25 +34,26 @@ const previewServer = await preview({
   base: process.env.DOCS_BASE_PATH ?? '/',
   preview: { port: 5174 },
 });
+const localServerBase = previewServer.resolvedUrls.local[0];
 console.log('Started server');
 
 
-const browser = await puppeteer.launch({ headless: 'new' });
+const browser = await puppeteer.launch({ headless: false });
 console.log('Launched browser');
 
 
 const inch = 96;
 /**
  * Capture a webpage to a piece of the PDF
- * @param {string} path The path on the website to capture
+ * @param {string | URL} path The path on the website to capture
  */
 async function pageToPdf(path) {
-  console.log(`Capturing page ${path}...`)
+  console.log(`Capturing page ${path}...`);
   // Load the web page
   const page = await browser.newPage();
-  const url = new URL(path, previewServer.resolvedUrls.local[0]);
+  const url = new URL(path, localServerBase);
   await page.goto(url.href);
-  await page.waitForSelector('h1');
+  await page.waitForSelector('#root-container *');
   console.log(`Loaded ${path}`);
 
   // Set up the page
@@ -76,6 +79,8 @@ async function pageToPdf(path) {
   console.log(`Capturing PDF for ${path}...`);
   const uncroppedPdfPath = getOutputPath(`${path}-uncropped.pdf`);
   const croppedPdfPath = getOutputPath(`${path}.pdf`);
+  console.log('mkdir 1', dirname(uncroppedPdfPath));
+  await fs.mkdir(dirname(uncroppedPdfPath), { recursive: true });
   await page.pdf({
     width: '8.5in',
     // add extra padding to make sure we’re not wrapping. note we’re going to crop it away later
@@ -112,7 +117,35 @@ const items = [
   'tutorial.html',
   'lrm.html',
 ];
-const componentPdfPaths = await Promise.all(items.map(pageToPdf));
+const componentPdfPaths = await Promise.all(items.map((path) => pageToPdf(path)));
+
+
+
+/**
+ * Capture a source code file to a PDF
+ * @param {string | URL} path The path (from the repository root) to the source code file to capture
+ */
+async function codeToPdf(path) {
+  const pagePath = fileURLToPath(new URL(`${path}.html`, new URL('../dist/source/', import.meta.url)));
+  const sourcePath = new URL(path, new URL('../../', import.meta.url));
+  console.log('mkdir 2', dirname(pagePath));
+  await fs.mkdir(dirname(pagePath), { recursive: true });
+
+  // Create the page file
+  await renderHighlighted(
+    sourcePath,
+    pagePath,
+    'ocaml', // TODO: be flexible
+  );
+
+  return pageToPdf(new URL(path, 'http://example.com/source/').pathname.slice(1));
+}
+
+// Generate PDFs of code
+
+
+const a = await codeToPdf('src/ast.ml');
+console.log(a);
 
 
 // Merge the “component” PDFs into the big final report

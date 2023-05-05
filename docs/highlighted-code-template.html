@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="./src/styles/main.scss">
+  <style>
+    /* expand to full width */
+    body {
+      grid-template-columns: 3rem minmax(0, 1fr) 3rem !important;
+      padding: 0 !important;
+    }
+    #root-container {
+      padding: 3rem 0 !important;
+    }
+    pre {
+      margin: 0 !important;
+      overflow: hidden !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="language" style="display: none;">{{LANGUAGE}}</div>
+  <div id="source" style="display: none;">{{SOURCE}}</div>
+  <div id="root-container"></div>
+  <script type="module" src="./highlighted-code-entry.tsx"></script>
+</body>
+</html>

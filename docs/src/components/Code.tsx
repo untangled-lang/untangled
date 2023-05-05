@@ -2,11 +2,14 @@ import React, { useContext, createContext } from 'react';
 import { FontStyle, getHighlighter, HighlighterOptions } from 'shiki';
 
 
+const BASE = import.meta.env.DOCS_BASE_PATH ?? '/';
+
+
 const UNTANGLED_LANGUAGE_DEFINITION = {
   id: 'untangled',
   scopeName: 'source.untangled',
   aliases: ['untangled'],
-  path: './languages/untangled.tmLanguage.json',
+  path: BASE + 'languages/untangled.tmLanguage.json',
 } as const;
 
 const LOAD_LANGUAGES = ['ocaml', 'python', 'bash', UNTANGLED_LANGUAGE_DEFINITION] as const;
@@ -31,8 +34,9 @@ const options: HighlighterOptions = {
   themes: LOAD_THEMES,
   langs: LOAD_LANGUAGES,
   paths: {
-    themes: './themes',
-    languages: './languages',
+    themes: BASE + 'themes/',
+    languages: BASE + 'languages/',
+    wasm: BASE + 'dist/',
   },
 } satisfies DeepReadonly<HighlighterOptions> as any;
 const highlighter = await getHighlighter(options);
