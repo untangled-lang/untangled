@@ -1,19 +1,21 @@
 import Code from './components/Code';
 import TableOfContents from './components/TableOfContents';
+import PageBreak from './components/PageBreak';
 
 
-# Untangled: Language Tutorial
+
+# A Gentle Introduction to *Untangled*
 
 <div className="print-only browser-cta">
   [View this document in your browser](https://untangled-lang.github.io/untangled/tutorial.html)
 </div>
 
-<TableOfContents afterId="untangled-language-tutorial" />
+<TableOfContents afterId="a-gentle-introduction-to-untangled" />
 
 
 
 
-## Introduction
+<h2 className="print-h3" id="introduction">Introduction</h2>
 
 Most modern processors have multiple CPU cores that can perform concurrent computations;
 parallelizing work across these cores can yield major performance gains. However, many modern
@@ -32,7 +34,8 @@ have a good understanding of how to write multithreaded programs in Untangled.
 
 
 
-## Installation
+<PageBreak />
+<h2 className="print-h3" id="installation">Installation</h2>
 
 Before we start coding, first we need to make sure that we have everything we need installed!
 
@@ -58,9 +61,9 @@ If all goes well, you’ll see a file called `untangled.exe` appear in the repos
 
 
 
-## Tutorial
-
-### Hello, world!
+<PageBreak />
+<h2 className="hide-print" id="tutorial">Tutorial</h2>
+<h3 id="hello-world" style={{ marginTop: '1.5em' }}>Hello, world!</h3>
 
 Let’s write our first program with Untangled!
 
@@ -88,6 +91,7 @@ Congrats on running your first Untangled program!
 
 
 
+<PageBreak />
 ### A more complex program
 
 Untangled includes many of the language features you’re used to from other programming languages,
@@ -135,6 +139,7 @@ If you compile and run this program as before, you should see a report on which 
 
 
 
+<PageBreak />
 ### Introduction to multithreading
 
 Untangled can definitely run single-threaded programs like the ones we’ve seen so far, but it really
@@ -239,6 +244,7 @@ will print `I got an int: 3`.
 
 
 
+<PageBreak />
 ### A multithreaded program
 
 Now, using what we’ve learned, let’s rewrite our “primes” program to take advantage of multithreaded
@@ -298,6 +304,7 @@ unpredictable order.
 
 
 
+<PageBreak />
 ### Tuples
 
 Sometimes, the nondeterministic order of message sends in parallel threads can be problematic.
@@ -369,6 +376,7 @@ PrimeCalculator. This demonstrates the utility of tuples for sending compound me
 
 
 
+<PageBreak />
 ### Arrays
 
 Sometimes, message passing isn’t the most ergonomic way to communicate between threads. While almost
@@ -428,6 +436,7 @@ results—each thread organizes their own result.
 
 
 
+<PageBreak />
 ### Semaphores
 
 Sometimes, operations on shared mutable memory can be subject to unexpected race conditions. For
@@ -565,10 +574,12 @@ The data race is fixed using semaphores!
 
 
 
-## Conclusion
+<PageBreak />
+<h2 className="print-h3" id="conclusion">Conclusion</h2>
 
 You made it! Thanks for following the official Untangled tutorial. We hope you enjoyed it!
 
-For more about the language, consult the Language Reference Manual. {/* TODO: link */}
+For more about the Untangled, consult the
+[Language Reference Manual](https://untangled-lang.github.io/untangled/lrm.html).
 
 Have fun!&nbsp;&nbsp;🪡&nbsp;🧵

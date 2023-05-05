@@ -63,7 +63,6 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: fonts.$heading;
-  font-variation-settings: 'wght' 650;
   line-height: 1.1;
   margin: 1.5em 0 0.5em;
   color: $white;
@@ -73,14 +72,25 @@ $ratio: 1.250;
 @function rem-size($exponent) {
   @return 1rem * math.pow($ratio, $exponent);
 }
-h1 { font-size: rem-size(5); font-variation-settings: 'wght' 700; & + h2 { margin-top: 0; } }
-h2 { font-size: rem-size(4); & + h3 { margin-top: 1em; } }
-h3 { font-size: rem-size(3); & + h4 { margin-top: 1em; } }
-h4 { font-size: rem-size(2); & + h5 { margin-top: 1em; } }
-h5 { font-size: rem-size(1); & + h6 { margin-top: 1em; } }
-h6 {
-  font-size: rem-size(0);
-  font-family: fonts.$body;
+@mixin h1 { font-size: rem-size(5); font-variation-settings: 'wght' 700; & + h2 { margin-top: 0; } }
+h1 { @include h1; }
+@mixin h2 { font-size: rem-size(4); font-variation-settings: 'wght' 650; & + h3 { margin-top: 1em; } }
+h2 { @include h2; }
+@mixin h3 { font-size: rem-size(3); font-variation-settings: 'wght' 650; & + h4 { margin-top: 1em; } }
+h3 { @include h3; }
+@mixin h4 { font-size: rem-size(2); font-variation-settings: 'wght' 650; & + h5 { margin-top: 1em; } }
+h4 { @include h4; }
+@mixin h5 { font-size: rem-size(1); font-variation-settings: 'wght' 650; & + h6 { margin-top: 1em; } }
+h5 { @include h5; }
+@mixin h6 { font-size: rem-size(0); font-variation-settings: 'wght' 650; font-family: fonts.$body; }
+h6 { @include h6; }
+@media print {
+  .print-h1 { @include h1; }
+  .print-h2 { @include h2; }
+  .print-h3 { @include h3; }
+  .print-h4 { @include h4; }
+  .print-h5 { @include h5; }
+  .print-h6 { @include h6; }
 }
 
 a {
@@ -453,6 +463,15 @@ div.authors {
 }
 @media print {
   .print-only { display: block; }
+  .no-print { display: none; }
+  .hide-print {
+    height: 0;
+    margin: 0;
+    padding: 0;
+    clip-path: inset(50%);
+    overflow: hidden;
+    opacity: 0;
+  }
 
   #root-container {
     padding: 0;
