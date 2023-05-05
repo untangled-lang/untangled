@@ -1,0 +1,8 @@
+thread_def Main {
+  self << "Who would do this?\n";
+
+  receive {
+    string x -> print(x);
+    _ -> {}
+  }
+}

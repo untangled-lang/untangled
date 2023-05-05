@@ -1,0 +1,8 @@
+thread_def Main {
+  (int, float) tup1 = (0, 0.0);
+  (int, float) tup2 = (0, 0.0);
+  (int, float) tup3 = tup1;
+
+  print(string_of_bool(tup1 == tup2) + "\n");
+  print(string_of_bool(tup1 == tup3) + "\n");
+}

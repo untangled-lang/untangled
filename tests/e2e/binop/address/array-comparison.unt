@@ -1,0 +1,8 @@
+thread_def Main {
+  int[3] first = [1, 2, 3];
+  int[3] second = [1, 2, 3];
+  int[3] copy = first;
+
+  print(string_of_bool(first == second) + "\n");
+  print(string_of_bool(first == copy) + "\n");
+}

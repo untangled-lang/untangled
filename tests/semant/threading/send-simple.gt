@@ -1,5 +1,5 @@
 thread_def Child {
-  parent << (string : "hi");
+  (thread : parent) << (string : "hi");
 }
 
 thread_def Main {

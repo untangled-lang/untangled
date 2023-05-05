@@ -1,0 +1,8 @@
+void Main() {
+  return;
+}
+
+thread_def Main {
+  Main();
+  print("Done\n");
+}

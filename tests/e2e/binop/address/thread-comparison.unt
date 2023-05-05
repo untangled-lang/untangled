@@ -1,0 +1,14 @@
+thread_def Child {
+
+}
+
+thread_def Main {
+  thread t1 = spawn Child;
+  thread t2 = spawn Child;
+  thread t3 = t1;
+
+  print(string_of_bool(self == self) + "\n");
+  print(string_of_bool(self != parent) + "\n");
+  print(string_of_bool(t1 == t2) + "\n");
+  print(string_of_bool(t1 == t3) + "\n");
+}

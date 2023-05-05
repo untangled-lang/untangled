@@ -1,0 +1,24 @@
+thread_def Child {
+  receive {
+    (int i, float f) -> {
+      print("Received undeclared tuple\n");
+    }
+    _ -> {}
+  }
+
+  receive {
+    int[10] arr -> {
+      print("Received undeclared array\n");
+    }
+    _ -> {}
+  }
+}
+
+thread_def Main {
+  (int, float) tup;
+  int[10] arr;
+
+  thread t = spawn Child;
+  t << tup;
+  t << arr;
+}

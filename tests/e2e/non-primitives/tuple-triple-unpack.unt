@@ -1,0 +1,8 @@
+thread_def Main {
+  // Define a tuple
+  (int, (string, bool)) x = (5, ("hi", true));
+  // Unpack a tuple’s values
+  (int i, (string s, bool b)) = x;
+  // Show the unpacked values
+  print(string_of_int(i) + " " + s + " " + string_of_bool(b) + "\n");
+}

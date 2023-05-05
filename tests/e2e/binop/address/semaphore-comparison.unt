@@ -1,0 +1,8 @@
+thread_def Main {
+  semaphore s1;
+  semaphore s2 = make_semaphore(0);
+  semaphore s3 = s1;
+
+  print(string_of_bool(s1 == s2) + "\n");
+  print(string_of_bool(s1 == s3) + "\n");
+}

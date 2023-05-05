@@ -1,1 +1,1 @@
-Fatal error: exception Failure("Expected postfix operators for semaphore s but found "b"")
+Fatal error: exception Failure("illegal binary operator semaphore + string in (s + "b")")

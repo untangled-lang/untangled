@@ -1,0 +1,7 @@
+void foo() {
+  return;
+}
+
+thread_def Main {
+  self << foo();
+}

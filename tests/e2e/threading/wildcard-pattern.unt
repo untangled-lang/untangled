@@ -1,0 +1,15 @@
+thread_def Child {
+  parent << ((1, 1.0), ("hello world", true));
+}
+
+thread_def Main {
+  spawn Child;
+  receive {
+    ((int i, _), (_, bool b)) -> {
+      print(string_of_int(i) + string_of_bool(b) + "\n");
+    }
+
+    _ -> {}
+  }
+}
+
