@@ -145,3 +145,166 @@ If you compile and run this program as before, you should see a report on which 
 # 19 is prime
 # 20 is not prime
 ```
+
+
+
+### 3. Introduction to multithreading
+
+Untangled can definitely run single-threaded programs like the ones we’ve seen so far, but it really
+shines when we throw multithreading into the mix!
+
+Any `thread_def` in an Untangled program defines a reusable “procedure” that can be made to run on
+any number of independent **threads**. In other words, a thread represents a single “instance” or
+invocation of a predefined thread procedure. The operating system balances all running threads to
+run in parallel.
+
+We can define other thread procedures just as easily as we did with `Main`:
+```untangled
+thread_def MyThread {
+  print("Hello from MyThread\n");
+}
+```
+
+However, only the `Main` thread procedure will automatically be run in a thread (the “main thread”).
+In order to run another thread procedure, we’ll need to “spawn” a thread to run it:
+
+```untangled
+thread_def MyThread {
+  print("Hello from MyThread\n");
+}
+
+thread_def Main {
+  // Spawn a thread to run the MyThread procedure
+!!  spawn MyThread;
+}
+```
+
+The program will continue until all threads have finished running.
+
+Different threads can communicate with each other by passing messages. In Untangled, a message can
+be a value of any type. To send a message to a thread, we need a **reference** to the thread, in the
+form of a “thread” value (returned by the spawn keyword).
+
+```untangled
+thread_def MyThread {
+  print("Hello from MyThread\n");
+}
+
+thread_def Main {
+!!   // "t" is the reference to the thread we spawned
+!!   thread t = spawn MyThread;
+!!   // The << operator is used to send a message to the thread
+!!   t << "Hello from Main\n";
+}
+```
+
+The other half of a “message passing” is for the other thread to **receive** the message.
+
+In the `MyThread` procedure, we need to use a `receive` statement. `receive` will block the thread
+until a message arrives.
+
+```untangled
+thread_def MyThread {
+!!   receive {
+!!     // should be "Hello from Main"
+!!     string msg -> print(msg);
+!!     _ -> exit(1);
+!!   }
+}
+
+thread_def Main {
+  // "t" is the reference to the thread we spawned
+  thread t = spawn MyThread;
+  // The << operator is used to send a message to the thread
+  t << "Hello from Main\n";
+}
+```
+
+If we execute the above program, we should see “Hello from Main” printed to the console!
+
+Inside the “receive” statement, a list of *patterns* allows us to execute different code depending
+on what type of message we receive. This is important to ensure we don’t encounter undefined
+behavior if we receive a message of an unexpected type, but it also gives us the flexibility to
+handle multiple kinds of messages at once!
+
+For example, the following program can handle both integer and string messages at the same time:
+
+```untangled
+thread_def MyThread {
+!!   receive {
+!!     string s -> print("I got a string: " + s + "\n");
+!!     int i -> print("I got an int: " + string_of_int(i) + "\n");
+!!     _ -> exit(1);
+!!   }
+}
+
+thread_def Main {
+  thread t1 = spawn MyThread;
+  thread t2 = spawn MyThread;
+  t1 << "hello";
+  t2 << 3;
+}
+```
+
+Untangled automatically runs the *first* statement in the `receive` block whose pattern matches the
+type of the received message. So, in this example, t1 will print `I got a string: hello` and t2
+will print `I got an int: 3`.
+
+
+
+### 4. A multithreaded program
+
+Now, using what we’ve learned, let’s rewrite our “primes” program to take advantage of multithreaded
+parallelism!
+
+```untangled
+thread_def PrimeCalculator {
+  // A message will tell us which number we should check
+  int num;
+  receive {
+    int n -> num = n;
+    _ -> exit(1);
+  }
+
+  // Do our calculation (checking primality)
+  bool is_prime = true;
+  for (int divisor = 2; divisor < num; divisor++) {
+    if (num % divisor == 0) is_prime = false;
+  }
+
+  // Print the results
+  if (is_prime) {
+    print(string_of_int(num) + " is prime\n");
+  } else {
+    print(string_of_int(num) + " is not prime\n");
+  }
+}
+
+thread_def Main {
+  // Spawn 20 threads to check numbers 1 to 20
+  for (int num = 2; num <= 20; num++) {
+    thread t = spawn PrimeCalculator;
+    t << num;
+  }
+}
+```
+
+Here, instead of checking each of our candidate numbers in a single thread (as before), we spawn a
+separate thread to check each number. As a result, the computer checks all the numbers at the same
+time!
+
+In fact, if you compile and run this program, you might see the results appear out of order:
+```text
+2 is prime
+5 is prime
+4 is not prime
+7 is prime
+3 is prime
+8 is not prime
+9 is not prime
+6 is not prime
+...
+```
+This output demonstrates that the threads run in parallel, because the threads (all working
+simultaneously) finish in an
+unpredictable order.
