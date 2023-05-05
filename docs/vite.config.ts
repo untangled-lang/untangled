@@ -3,6 +3,7 @@ import mdx from '@mdx-js/rollup';
 import rehypeSlug from 'rehype-slug';
 import react from '@vitejs/plugin-react';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
+import svgr from 'vite-plugin-svgr';
 import { fileURLToPath } from 'url';
 
 
@@ -36,5 +37,6 @@ export default defineConfig({
         { src: './node_modules/shiki/dist/*.wasm', dest: './dist' },
       ],
     }),
+    svgr({ exportAsDefault: true }),
   ],
 });
