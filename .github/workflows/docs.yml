@@ -46,10 +46,10 @@ jobs:
         run: npm run build
         env:
           DOCS_BASE_PATH: '/untangled/'
-      - name: Generate PDF
-        run: npm run pdf && mv untangled.pdf dist
-        env:
-          DOCS_BASE_PATH: '/untangled/'
+      # - name: Generate PDF
+      #   run: npm run pdf && mv untangled.pdf dist
+      #   env:
+      #     DOCS_BASE_PATH: '/untangled/'
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
