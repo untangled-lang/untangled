@@ -14,7 +14,7 @@ export default defineConfig({
         index: fileURLToPath(new URL('./index.html', import.meta.url)),
         tutorial: fileURLToPath(new URL('./tutorial.html', import.meta.url)),
         lrm: fileURLToPath(new URL('./lrm.html', import.meta.url)),
-        projectPlan: fileURLToPath(new URL('./project-plan.html', import.meta.url)),
+        project: fileURLToPath(new URL('./project.html', import.meta.url)),
         architecturalDesign: fileURLToPath(new URL('./architectural-design.html', import.meta.url)),
         testing: fileURLToPath(new URL('./testing.html', import.meta.url)),
         lessonsLearned: fileURLToPath(new URL('./lessons.html', import.meta.url)),

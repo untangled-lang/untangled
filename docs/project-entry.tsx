@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import ProjectPlan from './src/project-plan.mdx';
+import ProjectPlan from './src/project.mdx';
 import Code, { CodeConfig, CodeWrapper } from './src/components/Code';
 import Link from './src/components/Link';
 
