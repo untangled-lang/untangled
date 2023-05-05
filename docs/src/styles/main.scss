@@ -172,7 +172,6 @@ code {
 
     &.highlight {
       background: rgb(240 240 255 / 0.1);
-      line-height: 1.4;
     }
     &:not(.highlight) + .highlight {
       padding-top: 0.1rem;
@@ -201,8 +200,14 @@ code {
 }
 pre {
   @include boxed-block;
-  line-height: 1.3;
-  & > code { font-size: rem-size(-0.5); }
+  line-height: 1.4;
+  & > code {
+    font-size: rem-size(-0.5);
+
+    & > .line {
+      display: block;
+    }
+  }
 }
 
 // Inline code

@@ -66,7 +66,7 @@ export default function Code({
   const highlight = highlightProp ?? useContext(PreWrapContext);
   if (typeof children !== 'string' || !highlight) return <code>{children}</code>;
 
-  const splitLines = children.trim().split('\n');
+  const splitLines = children.split('\n');
   const highlightLines = new Array(splitLines.length)
     .fill(0)
     .map((_, i) => i)
@@ -83,7 +83,7 @@ export default function Code({
   return (
     <code>
       {lines.map((tokens, lineIdx) => (
-        <div key={lineIdx} className={highlightLines.includes(lineIdx) ? 'line highlight' : 'line'}>
+        <span key={lineIdx} className={highlightLines.includes(lineIdx) ? 'line highlight' : 'line'}>
           {/* Tokens in this line */}
           {
             tokens.map((token, tokenIdx) => (
@@ -103,7 +103,7 @@ export default function Code({
           }
           {/* Newline between lines */}
           {lineIdx < lines.length - 1 ? '\n' : null}
-        </div>
+        </span>
       ))}
     </code>
   );
