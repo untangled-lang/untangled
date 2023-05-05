@@ -31,7 +31,7 @@ body {
 }
 
 #root-container {
-  padding: 0 0 4.5rem;
+  padding: 4.5rem 0;
   & > :last-child { margin-bottom: 0; }
 }
 
@@ -458,6 +458,20 @@ div.authors {
   margin-bottom: 3rem;
 }
 
+.home-link {
+  display: block;
+  margin-bottom: -2.5rem;
+  margin-top: -2rem;
+  text-decoration: none;
+  font-weight: 600;
+  width: max-content;
+
+  &::before {
+    content: '←';
+    margin-right: 0.5ch;
+  }
+}
+
 .print-only {
   display: none;
 }
@@ -475,9 +489,5 @@ div.authors {
 
   #root-container {
     padding: 0;
-  }
-
-  .page {
-    contain: layout;
   }
 }
