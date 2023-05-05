@@ -42,9 +42,9 @@ html, body {
   -webkit-print-color-adjust: exact;
 }
 
-.page {
+body {
   break-inside: avoid;
-  &:not(:first-child) { break-before: page; }
+  .page-break { break-after: page; }
 }
 
 

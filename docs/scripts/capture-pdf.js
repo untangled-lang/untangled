@@ -51,10 +51,16 @@ await page.evaluate((z) => document.documentElement.style.zoom = z, zoom);
 
 const pageHeights = await page.evaluate((z) => {
   // Collapse all pages besides the current one
-  const pages = [...document.getElementsByClassName('page')];
-  // Return the height of the current page
-  return pages.map((page) => Math.ceil(page.clientHeight * z) + 1)
+
+  const pageBreaks = /** @type {HTMLElement[]} */ ([...document.getElementsByClassName('page-break')]);
+  return [
+    // height of all pages up to the last break
+    ...pageBreaks.map((p, i, arr) => p.offsetTop - (arr[i - 1]?.offsetTop ?? 0)),
+    // height of final page
+    document.body.scrollHeight - pageBreaks[pageBreaks.length - 1].offsetTop,
+  ].map((ph) => ph * z);
 }, zoom);
+console.log(pageHeights);
 
 
 // Capture the page
@@ -78,7 +84,7 @@ await browser.close();
 previewServer.httpServer.close();
 
 
-// Call out to our Python script to crop the PDF
+// Call out to our Python script to crop the PDF pages
 
 const cropScript = spawn('python', [cropScriptPath, uncroppedPdfPath, finalPdfPath]);
 cropScript.stdin.write(JSON.stringify(pageHeights.map((ph) => ph / inch)));
