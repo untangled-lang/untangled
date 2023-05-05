@@ -13,8 +13,6 @@ thread_def Child {
     int[3] a -> {print("correct case 3\n");}
     _ -> {print("wrong case 3\n");}
   }
-
-  parent << "Done";
 }
 
 
@@ -25,8 +23,4 @@ thread_def Main {
   t << a;
   t << b;
   t << [1, 2, 3];
-
-  receive {
-    _ -> {}
-  }
 }

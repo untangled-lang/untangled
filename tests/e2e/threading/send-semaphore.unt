@@ -1,28 +1,23 @@
 thread_def Child {
   receive {
     semaphore s -> {
-      parent << "Received semaphore\n";
-      s--;
+      print("Received semaphore\n");
       s++;
     }
     _ -> {}
   }
-  parent << "done";
+  parent << "2\n";
 }
 
 thread_def Main {
-  semaphore s = make_semaphore(2);
+  semaphore s = make_semaphore(0);
   thread child = spawn Child;
   child << s;
+  s--;
+  print("1\n");
 
   receive {
     string x -> print(x);
     _ -> {}
-  }
-
-  receive {
-    _ -> {
-      print("Done\n");
-    }
   }
 }

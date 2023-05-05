@@ -5,13 +5,9 @@ thread_def Child {
     }
     _ -> {}
   }
-  parent << "done";
 }
 
 thread_def Main {
   thread t = spawn Child;
   t << 100;
-  receive {
-    _ -> {}
-  }
 }

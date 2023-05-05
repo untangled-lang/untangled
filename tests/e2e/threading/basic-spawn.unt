@@ -1,11 +1,7 @@
 thread_def Child {
   print("HELLO");
-  parent << "done";
 }
 
 thread_def Main {
   spawn Child;
-  receive {
-    _ -> {}
-  }
 }

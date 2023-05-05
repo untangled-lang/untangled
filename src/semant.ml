@@ -394,6 +394,7 @@ let check (tdecls, fdecls) =
   in let rec spawn_check = function
     | SBlock sl -> List.iter spawn_check sl
     | SExpr (_, SSpawn _) -> raise (Failure ("function can't spawn thread"))
+    | SReceive _ -> raise (Failure "function can't receive message")
     | _ -> ()
 
   (*

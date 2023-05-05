@@ -16,17 +16,10 @@ thread_def Child {
       print("Wrong case");
     }
   }
-  parent << "DONE";
 }
 
 thread_def Main {
   thread t = spawn Child;
   int[3] arr;
-  // t << (([0, 1, 2], 0), (0, 0.0));
-  // t << [1, 2, 3];
   t << ((0, 1000), arr);
-  // t << arr;
-  receive {
-    _ -> {}
-  }
 }

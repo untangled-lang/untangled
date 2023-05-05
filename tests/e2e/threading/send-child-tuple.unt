@@ -3,13 +3,9 @@ thread_def Child {
     (int x, string y) -> print(string_of_int(x) + " " + y);
     _ -> {}
   }
-  parent << "done";
 }
 
 thread_def Main {
   thread t = spawn Child;
   t << (1, "hello");
-  receive {
-    _ -> {}
-  }
 }

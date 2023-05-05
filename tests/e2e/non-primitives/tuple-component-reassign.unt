@@ -3,17 +3,12 @@ thread_def Child {
     (int x, string y) -> x = 0;
     _ -> {}
   }
-  parent << "Done";
 }
 
 thread_def Main {
   (int, string) tup = (1, "hello");
   thread t = spawn Child;
   t << tup;
-  receive {
-    string s -> {}
-    _ -> exit(1);
-  }
   (int x2, string y2) = tup;
   print(string_of_int(x2) + "\n");
 }

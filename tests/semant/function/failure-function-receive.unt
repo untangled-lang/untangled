@@ -1,0 +1,8 @@
+void foo() {
+  receive {
+    _ -> {}
+  }
+  return;
+}
+
+thread_def Main {}

@@ -12,7 +12,6 @@ thread_def Child {
       _ -> print("wildcard" + "\n");
     }
   }
-  parent << "done";
 }
 
 thread_def Main {
@@ -24,7 +23,4 @@ thread_def Main {
   c << ("hello", (1, true));
   c << (("hello", 1), true);
   c << (true, false);
-  receive {
-    _ -> {}
-  }
 }

@@ -1023,6 +1023,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
       StringMap.add stname (L.define_function tdecl.stname ttype the_module, tdecl) m in
     List.fold_left thread_decl StringMap.empty tdecls in
 
+  let global_counter = L.define_global "global_counter" (L.const_int i64_t 1) the_module in
+  let global_mutex = L.define_global "global_mutex"  (L.const_null pointer_t) the_module in
+
   let build_body ?(arg_gep : arg_gep option) (builder, env) sstmt the_thread =
     let string_format_str = L.build_global_stringptr "%s" "fmt" builder in
     let int_format_str = L.build_global_stringptr "%ld" "fmt" builder in
@@ -1177,7 +1180,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
         | SCall ("float_of_string", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
             let float_alloca = L.build_alloca float_t "float_alloca" builder in
-            let _ = L.build_call sscanf_func [| llvalue; float_format_str; float_alloca |] "num_matched" builder in
+            let num_matched = L.build_call sscanf_func [| llvalue; float_format_str; float_alloca |] "num_matched" builder in
+            let err_msg = L.build_global_stringptr "float_of_string could not parse float string" "err_msg" builder in
+            let pred = L.build_icmp L.Icmp.Eq num_matched (L.const_int i32_t 1) "pred" builder in
+            let pred_cast = L.build_intcast pred i64_t "pred_cast" builder in
+            let _ = L.build_call assert_func [| pred_cast; err_msg |] "" builder in
             let float_loaded = L.build_load float_alloca "float_loaded" builder in (float_loaded, env')
         | SCall ("bool_of_string", [sexpr]) ->
             let (llvalue, env') = expr (builder, env) sexpr in
@@ -1209,6 +1216,12 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (llvalue, env') = expr (builder, env) sexpr in
             (L.build_call exit_func [| llvalue |] "" builder, env')
         | SCall ("end", []) -> (* “end” exits the thread *)
+            let global_mutex_loaded = L.build_load global_mutex "global_mutex_load" builder in
+            let _ = L.build_call mutex_lock_func [| global_mutex_loaded |] "" builder in
+            let global_counter_load = L.build_load global_counter "global_counter_load" builder in
+            let global_counter_load = L.build_sub global_counter_load (L.const_int i64_t 1) "sub_global_counter" builder in
+            let _ = L.build_store global_counter_load global_counter builder in
+            let _ = L.build_call mutex_unlock_func [| global_mutex_loaded |] "" builder in
             (L.build_ret (L.const_null pointer_t) builder, env)
         | SCall ("input", []) ->
             let buffer = L.build_array_malloc i8_t (L.const_int i32_t 1024) "buffer" builder in
@@ -1299,6 +1312,13 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let res_value = L.build_load ptr "array_load" builder in
             (res_value, env)
         | SSpawn tn ->
+          (* Increment thread count *)
+          let global_mutex_loaded = L.build_load global_mutex "global_mutex_load" builder in
+          let _ = L.build_call mutex_lock_func [| global_mutex_loaded |] "" builder in
+          let thread_count = L.build_load global_counter "global_counter_load" builder in
+          let thread_count = L.build_add thread_count (L.const_int i64_t 1) "thread_count" builder in
+          let _ = L.build_store thread_count global_counter builder in
+          let _ = L.build_call mutex_unlock_func [| global_mutex_loaded |] "" builder in
           (*
            * Generate child queue
            * Store parent, child into routine_t
@@ -1735,9 +1755,15 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let env = StringMap.add "parent" parent_queue_alloca env in
     let env = StringMap.add "self" child_queue_alloca env in
     let (final_builder, _) =
-      build_body ~arg_gep:arg_gep (builder, env) (SBlock tdecl.sbody) the_thread
+      build_body ~arg_gep:arg_gep (builder, env) (SBlock tdecl.sbody) the_thread in
     (* thread function follows pthread function type and returns a NULL pointer *)
-    in add_terminal final_builder (L.build_ret (L.const_null pointer_t))
+    let global_mutex_loaded = L.build_load global_mutex "global_mutex_load" final_builder in
+    let _ = L.build_call mutex_lock_func [| global_mutex_loaded |] "" final_builder in
+    let global_counter_load = L.build_load global_counter "global_counter_load" final_builder in
+    let global_counter_load = L.build_sub global_counter_load (L.const_int i64_t 1) "sub_global_counter" final_builder in
+    let _ = L.build_store global_counter_load global_counter final_builder in
+    let _ = L.build_call mutex_unlock_func [| global_mutex_loaded |] "" final_builder in
+    add_terminal final_builder (L.build_ret (L.const_null pointer_t))
   and build_func_body fdecl =
     let (the_func, _) = StringMap.find fdecl.sfname function_decls in
     let builder = L.builder_at_end context (L.entry_block the_func) in
@@ -1753,6 +1779,15 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let main_t = L.function_type i32_t [| |] in
   let main_func = L.define_function "main" main_t the_module in
     let builder = L.builder_at_end context (L.entry_block main_func) in
+
+    let wait_bb = L.append_block context "wait_bb" main_func in
+    let done_bb = L.append_block context "done_bb" main_func in
+    let wait_builder = L.builder_at_end context wait_bb in
+    let done_builder = L.builder_at_end context done_bb in
+
+    (* Initialize mutex *)
+    let _ = L.build_call mutex_init_func [| global_mutex |] "" builder in
+
     let (main_thread, _) = StringMap.find "Main" thread_decls in
 
     let arg_malloc = L.build_malloc arg_t "arg_malloc" builder in
@@ -1766,4 +1801,11 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
 
     let arg = L.build_bitcast arg_malloc pointer_t "cast_arg" builder in
     let _ = L.build_call main_thread [| arg |] "star_main_thread" builder in
-    let _ = add_terminal builder (L.build_ret (L.const_int i32_t 0)) in the_module
+    let _ = L.build_br wait_bb builder in
+
+    let _ = L.build_br wait_bb builder in
+    let global_counter_loaded = L.build_load global_counter "global_counter_loaded" wait_builder in
+    let finished = L.build_icmp L.Icmp.Eq global_counter_loaded (L.const_int i64_t 0) "done" wait_builder in
+    let _ = L.build_cond_br finished done_bb wait_bb wait_builder in
+
+    let _ = add_terminal done_builder (L.build_ret (L.const_int i32_t 0)) in the_module
