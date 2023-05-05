@@ -1,3 +1,3 @@
 # `vscode-untangled`
 
-VSCode syntax highlighting for the Untangled language.
+VS Code syntax highlighting for the Untangled language.

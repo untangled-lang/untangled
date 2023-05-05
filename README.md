@@ -77,7 +77,7 @@ printed output is sufficient to assess the correctness of a given test run.
 The following integration tests are currently included:
 
 #### Basics
-. `tests/e2e/basics/hello-world.unt` - a simple program which prints the string "Hello, World!"
+1. `tests/e2e/basics/hello-world.unt` - a simple program which prints the string "Hello, World!"
     from the main thread
 2. `tests/e2e/basics/reassign.unt` - a simple program that reassigns the value of a variable and
     prints the new value of the variable
