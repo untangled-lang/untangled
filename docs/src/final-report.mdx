@@ -308,3 +308,74 @@ In fact, if you compile and run this program, you might see the results appear o
 This output demonstrates that the threads run in parallel, because the threads (all working
 simultaneously) finish in an
 unpredictable order.
+
+
+
+### 5. Tuples
+
+Sometimes, the nondeterministic order of message sends in parallel threads can be problematic.
+
+Let’s say, for example, we each PrimeCalculator thread to send its results back to the Main thread.
+Since the order in which each result is computed is nondeterministic, we’d need to communicate both
+(**1**) whether the value is prime and (**2**) to which number each boolean result corresponds. We
+might think to send these two pieces of information as separate messages, but we have no guarantee
+that they would arrive together—another thread’s message couldreasonably arrive in between!
+
+In order to address this common problem, we commonly use **tuple** types for messages. A tuple in
+Untangled groups exactly two values together (but to include more values, tuples can be nested).
+
+```untangled
+// Define a tuple
+(int, (string, bool)) x = (5, ("hi", true));
+// Unpack a tuple’s values
+(int i, (string s, bool b)) = x;
+// Show the unpacked values
+print(string_of_int(i) + " " + s + " " + string_of_bool(b));
+// prints “5 hi true”
+```
+
+To see how tuples can solve the problem discussed above, we can modify our parallel prime-checking
+program to send results back to the main thread:
+
+```untangled
+thread_def PrimeCalculator {
+  int num;
+  receive {
+    int n -> num = n;
+    _ -> exit(1);
+  }
+
+  bool is_prime = true;
+  for (int divisor = 2; divisor < num; divisor++) {
+    if (num % divisor == 0) is_prime = false;
+  }
+
+  // the “parent” keyword automatically refers to the thread that spawned
+  // this one
+!!   parent << (num, is_prime);
+}
+
+thread_def Main {
+  // Spawn 20 threads to check numbers 1 to 20
+  for (int num = 2; num <= 20; num++) {
+    thread t = spawn PrimeCalculator;
+    t << num;
+  }
+
+!!   // Receive and print the results
+!!   for (int num = 2; num <= 20; num++) {
+!!     receive {
+!!       (int n, bool is_prime) -> {
+!!         if (is_prime) {
+!!           print(string_of_int(n) + " is prime\n");
+!!         } else {
+!!           print(string_of_int(n) + " is not prime\n");
+!!         }
+!!       }
+!!       _ -> exit(1);
+!!     }
+!!   }
+}
+```
+This program behaves the same as before, but now Main is printing the results instead of
+PrimeCalculator. This demonstrates the utility of tuples for sending compound messages as a unit.
