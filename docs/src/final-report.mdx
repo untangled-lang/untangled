@@ -104,34 +104,44 @@ Congrats on running your first Untangled program!
 ### 2. A more complex program
 
 Untangled includes many of the language features you’re used to from other programming languages,
-including loops, variables, and functions. To show them off, let’s write a program that computes
-the first 50 Fibonacci numbers.
+including loops, variables, and functions. To show them off, let’s write a program that checks
+numbers from 2 to 20 for [primality](https://en.wikipedia.org/wiki/Prime_number).
 
 ```untangled
 thread_def Main {
-  // Variables are statically typed and mutable.
-  int a = 0;
-  int b = 1;
+  // Control flow (for loops, conditionals) look like C/C++
+  for (int num = 2; num <= 20; num++) {
+    // Variables are statically typed and mutable
+    bool is_prime = true;
 
-  // For loops follow C-style syntax
-  for (int i = 0; i < 50; i++) {
-    // The built-in print function accepts strings.
-    // Strings support concatenation with “+”
-    // The standard library includes many functions for converting
-    // different types of values to strings.
-    print(string_of_int(a) + " ");
+    /* Check whether `num` is a prime number:
+     * If any number 2..num-1 divides `num` evenly, then it’s not prime */
+    for (int divisor = 2; divisor < num; divisor++) {
+      if (num % divisor == 0) is_prime = false;
+    }
 
-    int tmp = a; // Variables defined within a block are scoped to that block
-    a = b;
-    b = tmp + b;
+    /* Report our results */
+    if (is_prime) {
+      // “print” only takes strings, but the standard library includes
+      // common type conversion functions
+      print(string_of_int(num) + " is prime\n");
+    } else {
+      // Strings support concatenation using “+”
+      print(string_of_int(num) + " is not prime\n");
+    }
   }
 }
 ```
 
-If you compile and run this program as before, you should see the first 50 Fibonacci numbers printed
-to the console:
+If you compile and run this program as before, you should see a report on which numbers are prime:
 ```bash
 ./untangled.exe fib.unt -o fib
 ./fib
-# you should see “0 1 1 2 3 5 8 13 21 34 55 89 144 233 377 ... 7778742049”
+
+# 2 is prime
+# 3 is prime
+# 4 is not prime
+# ...
+# 19 is prime
+# 20 is not prime
 ```
