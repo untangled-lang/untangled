@@ -1,7 +1,5 @@
 #!/usr/bin/python3
 
-# TODO: nicer diff output
-
 import os
 from os import path
 import subprocess

@@ -95,7 +95,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
   let gep_index i = L.const_int i32_t i in
 
   (* Given a AST type, return a tag code *)
-  (* TODO: support threads and semaphores and arrays here *)
   let rec ocaml_tag = function
         A.Int -> [0]
       | A.Float -> [1]
@@ -1015,7 +1014,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
       StringMap.add name (L.define_function name ftype the_module, fdecl) m in
     List.fold_left function_decl StringMap.empty fdecls in
 
-  (* TODO - Extend map with extra information? For example, message passing? *)
   let thread_decls =
     let thread_decl m tdecl =
       let stname = tdecl.stname and
@@ -1088,7 +1086,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let data = L.build_load data_alloca "data_load" builder in
             let _ = build_tuple data builder (typ, sexpr) in (data, env)
         | SArrayLit sexprs ->
-            (* TODO - Wrap this up *)
             let size = L.const_int i32_t (List.length sexprs) in
             let base_lltype =
               match sexprs with
@@ -1336,7 +1333,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
            * Expression return child queue
            *)
           let { child_queue = self_queue_ptr; _ } = (match arg_gep with
-            (* @TODO - Come back later *)
               None -> raise (Failure "Spawn not allowed inside function")
             | Some arg_gep -> arg_gep) in
 
@@ -1592,7 +1588,6 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (receiver_queue, env) = expr (builder, env) lexpr in
             let (llvalue, env') = expr (builder, env) sexpr in
             let data = (match typ with
-                (* @TODO - Make a copy? *)
                 A.Tuple _ -> llvalue
               | A.Array _ ->
                   let data_alloca = L.build_alloca data_ptr "data_alloca" builder and
