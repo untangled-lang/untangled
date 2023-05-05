@@ -1437,8 +1437,8 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                   | A.Array _ ->
                       let array_struct_malloc = L.build_malloc array_t "array_struct_malloc" builder in
                       let _ = default_array array_struct_malloc typ builder in
-                      (* maybe bitcast *)
-                      let _ = L.build_store array_struct_malloc head_ptr builder in ()
+                      let array_cast = L.build_bitcast array_struct_malloc pointer_t "array_struct_cast" builder in
+                      let _ = L.build_store array_cast head_ptr builder in ()
                   | A.Tuple (ty1, ty2) ->
                       let head_struct_malloc = L.build_malloc data_t "head_struct_malloc" builder in
                       let head_cast = L.build_pointercast head_struct_malloc pointer_t "head_cast" builder in

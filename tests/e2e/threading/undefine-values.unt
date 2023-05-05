@@ -1,5 +1,9 @@
 thread_def Child {
   receive {
+    int i -> {}
+
+    (int[3] arr, float f) -> {}
+
     (int i, float f) -> {
       print("Received undeclared tuple\n");
     }
@@ -10,6 +14,17 @@ thread_def Child {
     int[10] arr -> {
       print("Received undeclared array\n");
     }
+
+    _ -> {}
+  }
+
+  receive {
+    (string x, float f) -> {}
+
+    ((int[3] arr, float f), (string s, (_, thread[5] threads))) -> {
+      print("Received complex tuple\n");
+    }
+
     _ -> {}
   }
 }
@@ -17,8 +32,10 @@ thread_def Child {
 thread_def Main {
   (int, float) tup;
   int[10] arr;
+  ((int[3], float), (string, (int, thread[5]))) complex;
 
   thread t = spawn Child;
   t << tup;
   t << arr;
+  t << complex;
 }
