@@ -160,7 +160,7 @@ stmt:
   | RETURN expr_opt SEMI                    { Return($2)            }
   | BREAK SEMI                              { Break                 }
   | CONTINUE SEMI                           { Continue              }
-  | ID SEND expr SEMI                       { Send($1, $3)          }
+  | expr SEND expr SEMI                       { Send($1, $3)          }
   | receive                                 { $1                    }
 
 stmt_list:

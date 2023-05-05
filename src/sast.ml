@@ -29,7 +29,7 @@ type sstmt =
 | SIf of sexpr * sstmt * sstmt
 | SFor of sstmt * sexpr * sexpr * sstmt
 | SWhile of sexpr * sstmt
-| SSend of string * sexpr
+| SSend of sexpr * sexpr
 | SDecl of sdecl_type
 | SReceive of receive_case list
 and sdecl_type =
@@ -125,7 +125,7 @@ let rec string_of_sstmt statement =
       "for (" ^ string_of_sstmt e1 ^ " " ^ string_of_sexpr e2 ^ "; " ^
       string_of_sexpr e3  ^ ") " ^ string_of_sstmt s
   | SWhile(e, s) -> "while (" ^ string_of_sexpr e ^ ") " ^ string_of_sstmt s
-  | SSend(s, e) -> s ^ " << " ^ (string_of_sexpr e) ^ ";"
+  | SSend(s, e) -> (string_of_sexpr s) ^ " << " ^ (string_of_sexpr e) ^ ";"
   | SDecl(SBaseDecl (t, id, (_, SNoexpr))) -> string_of_typ t ^ " " ^ id ^ ";"
   | SDecl(SBaseDecl (t, id, expr)) -> string_of_typ t ^ " " ^ id ^ " = " ^ (string_of_sexpr expr) ^ ";"
   | SDecl (STupleDecl _ as tup) -> string_of_stuple tup ^ ";"

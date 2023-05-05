@@ -56,7 +56,7 @@ type stmt =
 | If of expr * stmt * stmt
 | For of stmt * expr * expr * stmt
 | While of expr * stmt
-| Send of string * expr
+| Send of expr * expr
 | Decl of decl_type
 | Receive of receive_case list
 and decl_type =
@@ -186,7 +186,7 @@ let rec string_of_stmt statement =
       "for (" ^ string_of_stmt e1 ^ " " ^ string_of_expr e2 ^ "; " ^
       string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
-  | Send(s, e) -> s ^ " << " ^ (string_of_expr e) ^ ";"
+  | Send(s, e) -> (string_of_expr s) ^ " << " ^ (string_of_expr e) ^ ";"
   | Decl(BaseDecl (t, id, Noexpr)) -> string_of_typ t ^ " " ^ id ^ ";"
   | Decl(BaseDecl (t, id, expr)) -> string_of_typ t ^ " " ^ id ^ " = " ^ (string_of_expr expr) ^ ";"
   | Decl(TupleDecl _ as tup) -> string_of_tuple tup ^ ";"

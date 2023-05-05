@@ -143,13 +143,24 @@ let check (tdecls, fdecls) =
           let (typ, _) as sexpr = check_expr envs expr and
               (_, sbody) = check_stmt envs body in
           let _ = check_assign Bool typ expr in (envs, SWhile (sexpr, sbody))
-      | Send (id, expr) ->
-          let typ = lookup id envs in
-          let _ = check_assign Thread typ expr in
-          let sexpr = check_expr envs expr in
-          (envs, SSend (id, sexpr))
+      | Send (lexpr, rexpr) ->
+          let (lt, _) as lsexpr = check_expr envs lexpr in
+          let (rt, _) as rsexpr = check_expr envs rexpr in
+          let _ = check_assign Thread lt lexpr in
+          (match rt with
+            Void -> raise (Failure ("<< expects non-void but received " ^ string_of_expr lexpr))
+            | _ -> (envs, SSend(lsexpr, rsexpr)))
       | Decl (BaseDecl (lt, id, expr)) ->
-          let rec repeat ele len =
+          (match envs with
+            env :: _ ->
+              if StringMap.mem id env then raise (Failure (id ^ " exists in scope"))
+              else let (rt, e') as sexpr = check_expr envs expr in
+              let _ = check_binds "decl" [(lt, id)] in
+              (match e' with
+                | SNoexpr -> (bind id lt envs, SDecl (SBaseDecl (lt, id, sexpr)))
+                | _ -> (bind id lt envs, SDecl (SBaseDecl (check_assign lt rt expr, id, (lt, e')))))
+            | [] -> raise (Failure "Implementation bug: empty environments"))
+          (* let rec repeat ele len =
             match len with
               | 0 -> []
               | _ -> ele :: repeat ele (len - 1) in
@@ -177,7 +188,7 @@ let check (tdecls, fdecls) =
                         |  _ -> sexpr) in
                     (bind id lt envs, SDecl (SBaseDecl (lt, id, sexpr1)))
                 | _ -> (bind id lt envs, SDecl (SBaseDecl (check_assign lt rt expr, id, (lt, e')))))
-            | [] -> raise (Failure "Implementation bug: empty environments"))
+            | [] -> raise (Failure "Implementation bug: empty environments")) *)
       | Decl (TupleDecl (leftTup, rightTup, expr) as tupDecl) ->
           let (res_type, _) as sexpr = check_expr envs expr in
           let rec check_tuple_assign declType ty = match declType with
@@ -293,25 +304,21 @@ let check (tdecls, fdecls) =
       | Binop(e1, op, e2) as e ->
           let (t1, _) as lsexpr = check_expr envs e1 in
           let (t2, _) as rsexpr = check_expr envs e2 in
-
-          if t1 = Semaphore then
-            raise (Failure ("Expected postfix operators for semaphore " ^ string_of_expr e1 ^ " but found " ^ string_of_expr e2))
-          else
-            (* All binary operators, except semaphore, require operands of the same type *)
-            let same = t1 = t2 in
-            (* Determine expression type based on operator and operand types *)
-            let ty = match op with
-              Add | Sub | Mult | Div | Mod | Pow when same && t1 = Int -> Int
-            | Add | Sub | Mult | Div             when same && t1 = Float -> Float
-            | Pow                                when t1 = Float && t2 = Int -> Float
-            | Equality | Neq                     when same               -> Bool
-            | Less | Leq | Greater | Geq         when same && (t1 = Int || t1 = Float) -> Bool
-            | And | Or                           when same && t1 = Bool -> Bool
-            | Add                                when same && t1 = String -> String
-            | _ -> raise (Failure ("illegal binary operator " ^
-                            string_of_typ t1 ^ string_of_op op ^
-                            string_of_typ t2 ^ " in " ^ string_of_expr e))
-            in (ty, SBinop(lsexpr, op, rsexpr))
+          (* All binary operators, except semaphore, require operands of the same type *)
+          let same = t1 = t2 in
+          (* Determine expression type based on operator and operand types *)
+          let ty = match op with
+            Add | Sub | Mult | Div | Mod | Pow when same && t1 = Int -> Int
+          | Add | Sub | Mult | Div             when same && t1 = Float -> Float
+          | Pow                                when t1 = Float && t2 = Int -> Float
+          | Equality | Neq                     when same               -> Bool
+          | Less | Leq | Greater | Geq         when same && (t1 = Int || t1 = Float) -> Bool
+          | And | Or                           when same && t1 = Bool -> Bool
+          | Add                                when same && t1 = String -> String
+          | _ -> raise (Failure ("illegal binary operator " ^
+                          string_of_typ t1 ^ string_of_op op ^
+                          string_of_typ t2 ^ " in " ^ string_of_expr e))
+          in (ty, SBinop(lsexpr, op, rsexpr))
       | Id s -> let t = (lookup s envs) in (t, SId s)
       | Spawn t -> let _ = find_thread_def t in (Thread, SSpawn t)
       | Assign (id, expr) ->
@@ -405,6 +412,11 @@ let check (tdecls, fdecls) =
     | SReturn _ -> true
     | _ -> false
 
+  in let rec end_check = function
+    | SBlock sl -> List.iter end_check sl
+    | SExpr(_ , SCall ("end", _)) -> raise (Failure "function can't call end()")
+    | _ -> ()
+
   (*
    * Check that parent / self is not redeclared / reassigned
    *)
@@ -436,6 +448,7 @@ let check (tdecls, fdecls) =
          *)
         let _ = List.iter loop_check sl in
         let _ = List.iter (fun sstmt -> return_check false fdecl.fname sstmt) sl in
+        let _ = List.iter end_check sl in
         let _ = List.iter spawn_check sl in
         if return_exist sstmt then
           { sfname = fdecl.fname; sformals = fdecl.formals; sbody = sl; sret_type = fdecl.ret_type }

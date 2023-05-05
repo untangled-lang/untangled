@@ -716,6 +716,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let data_t_ptr = L.param tag_compare_func 3 in
     let builder = L.builder_at_end context (L.entry_block tag_compare_func) in
     let index_loaded = L.build_load index_ptr "index_load" builder in
+
     (* let _ = L.build_call printf_func [| L.build_global_stringptr "  checking tag index %d\n" "fmt" builder; index_loaded |] "print_test" builder in *)
     let { tag = data_tag_ptr; head = head_ptr; tail = tail_ptr } = build_data_gep data_t_ptr builder in
     (* Get the integer tag of the first item in the “data” we’re examining *)
@@ -786,7 +787,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
     let pred = L.build_call compare_array_tag_func [| tag_ptr; index_ptr; length; head_cast |] "array_tag_pred" arr_builder in
     let _ = L.build_cond_br pred true_bb false_bb arr_builder in
 
-    (* 7. If the type is a base type, compare the tag array *)
+    (* 7. If the type is a tuple type, compare the tag array *)
     let head_load = L.build_load head_ptr "head_load" recurse_builder in
     let head_cast = L.build_bitcast head_load data_ptr "head_cast" recurse_builder in
     let tail_load =  L.build_load tail_ptr "tail_load" recurse_builder in
@@ -1292,6 +1293,15 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                     | A.Or -> L.build_or
                     | _ -> raise (Failure "Boolean binary operation not supported")
                     )
+                | A.Thread | A.Semaphore | A.Tuple _ | A.Array _ ->
+                  (fun e1 e2 name builder ->
+                    let lpointer = L.build_ptrtoint e1 i64_t (name ^ "_left_cast") builder in
+                    let rpointer = L.build_ptrtoint e2 i64_t (name ^ "_left_cast") builder in
+                    let equal = L.build_icmp L.Icmp.Eq lpointer rpointer "address_cmp" builder in
+                    (match op with
+                      A.Equality -> equal
+                      | A.Neq -> L.build_not equal "negate_address" builder
+                      | _ -> raise (Failure ("Semantic bug: Should have rejected " ^ A.string_of_op op))))
                 | typ -> raise (Failure ("Semantic bug: " ^ A.string_of_typ typ ^ " does not support binop")))
             in (op e1' e2' "binop_result" builder, env'')
         | SIndex (id, sexpr) ->
@@ -1408,7 +1418,102 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (llvalue, env2) = expr (builder, env) sx in
             let alloca = L.build_alloca (lltype_of_typ ty) var_name builder in
             let llvalue =
-              let rec initialize_array array_ty =
+              let default_value_of builder = function
+                | A.Int -> L.const_int i64_t 0
+                | A.Float -> L.const_float float_t 0.0
+                | A.Semaphore | A.Thread -> L.const_null pointer_t
+                | A.Bool -> L.const_int i1_t 0
+                | A.String -> L.build_global_stringptr "" "tmp" builder
+                | A.Void -> raise (Failure "Semantic bug: Can't have void in tuple type")
+                | _ -> raise (Failure "Codegen bug: Should not be here") in
+
+              let rec default_tuple ptr typ builder =
+                let { tag = tag_ptr; head = head_ptr; tail = tail_ptr }
+                  = build_data_gep ptr builder in
+
+                let tag = tag_of_type typ in
+                let _ = L.build_store tag tag_ptr builder in
+                match typ with
+                  | A.Array _ ->
+                      let array_struct_malloc = L.build_malloc array_t "array_struct_malloc" builder in
+                      let _ = default_array array_struct_malloc typ builder in
+                      (* maybe bitcast *)
+                      let _ = L.build_store array_struct_malloc head_ptr builder in ()
+                  | A.Tuple (ty1, ty2) ->
+                      let head_struct_malloc = L.build_malloc data_t "head_struct_malloc" builder in
+                      let head_cast = L.build_pointercast head_struct_malloc pointer_t "head_cast" builder in
+                      let _ = L.build_store head_cast head_ptr builder in
+                      let tail_struct_malloc = L.build_malloc data_t "tail_struct_malloc" builder in
+                      let tail_cast = L.build_pointercast tail_struct_malloc pointer_t "tail_cast" builder in
+                      let _ = L.build_store tail_cast tail_ptr builder in
+                      (* let head_load = L.build_load head_ptr "head_load" builder in
+                      let tail_load = L.build_load tail_ptr "tail_ptr" builder in *)
+                      let _ = default_tuple head_struct_malloc ty1 builder in
+                      let _ = default_tuple tail_struct_malloc ty2 builder in ()
+                  | ty ->
+                      let head_malloc = L.build_malloc (lltype_of_typ ty) "head_malloc" builder and
+                          head_alloca = L.build_alloca (L.pointer_type (lltype_of_typ ty)) "head_alloca" builder in
+                      let llvalue = default_value_of builder ty in
+                      let _ = L.build_store llvalue head_malloc builder in
+                      let _ = L.build_store head_malloc head_alloca builder in
+                      let head_load = L.build_load head_alloca "head_load" builder in
+                      let head_cast = cast_llvalue_to_ptr ty head_load builder in
+                      let _ = L.build_store head_cast head_ptr builder in ()
+              and default_array ptr typ builder =
+                (match typ with
+                  | A.Array (ty, len) ->
+                      let rec build_identifier = function
+                        | A.Tuple (t1, t2) -> 4 :: (build_identifier t1) @ (build_identifier t2)
+                        | A.Array (base_t, length) -> [5; length] @ (build_identifier base_t)
+                        | typ -> ocaml_tag typ in
+
+                      let ocaml_tags = build_identifier typ in
+                      let { size = size_ptr; data_array = data_ptr; tags = tags_ptr; tags_size = tags_size_ptr }
+                        = build_array_gep ptr builder in
+                      let _ = L.build_store (L.const_int i32_t len) size_ptr builder in
+                      let tags_size = L.const_int i32_t (List.length ocaml_tags) in
+                      let _ = L.build_store tags_size tags_size_ptr builder in
+                      let tags_array = L.build_array_malloc i32_t tags_size "tags_array" builder in
+                      let _ = List.mapi (fun i tag ->
+                        let ptr = (L.build_in_bounds_gep tags_array [| L.const_int i32_t i |] "tags_gep" builder)  in
+                        L.build_store (L.const_int i32_t tag) ptr builder
+                      ) ocaml_tags in
+                      let _ = L.build_store tags_array tags_ptr builder in
+                      let array_malloc = L.build_array_malloc (lltype_of_typ ty) (L.const_int i32_t len) "array_malloc" builder in
+                      let array_cast = L.build_pointercast array_malloc pointer_t "array_cast" builder in
+                      let _ = L.build_store array_cast data_ptr builder in
+                      (match ty with
+                        | A.Array _  as ty ->
+                            for i = 0 to len - 1 do
+                              let gep = L.build_in_bounds_gep array_malloc [| L.const_int i32_t i |] ("array_lit_gep " ^ string_of_int i) builder in
+                              let array_struct_ptr = L.build_malloc array_t "array_lit_alloca" builder in
+                              let _ = default_array array_struct_ptr ty builder in
+                              ignore (L.build_store array_struct_ptr gep builder)
+                            done
+                        | A.Tuple _ as ty ->
+                            let data_ptr = L.build_malloc data_t "data_malloc" builder in
+                            let _ = default_tuple data_ptr ty builder in
+                            for i = 0 to len - 1 do
+                              let gep = L.build_in_bounds_gep array_malloc [| L.const_int i32_t i |] ("array_lit_gep " ^ string_of_int i) builder in
+                              (* let cast = L.build_bitcast data_ptr pointer_t "cast" builder in *)
+                              ignore (L.build_store data_ptr gep builder)
+                            done
+                        | _ -> ())
+                  | _ -> ()) in
+              (match (ty, sx) with
+                | (Array _, (_, SNoexpr)) ->
+                    let array_malloc = L.build_malloc array_t "array_malloc" builder in
+                    let _ = default_array array_malloc ty builder in array_malloc
+                | (Tuple _, (_, SNoexpr)) ->
+                    let tuple_malloc = L.build_malloc data_t "tuple_malloc" builder in
+                    (* let { tag = tag_ptr; _ } = build_data_gep tuple_malloc builder in
+                    let _ = L.build_tag  *)
+                    let _ = default_tuple tuple_malloc ty builder in tuple_malloc
+                | _ -> L.build_bitcast llvalue (lltype_of_typ ty) "cast_initialize" builder) in
+
+            let _ = L.build_store llvalue alloca builder in (builder, StringMap.add var_name alloca env2)
+
+              (* let rec initialize_array array_ty =
                 match (array_ty : A.typ) with
                   | Array (ty, len) ->
                       let size = L.const_int i32_t len in
@@ -1448,8 +1553,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                       let _ = L.build_store tag_malloc tags_ptr builder in
                       let _ = L.build_store size size_ptr builder in
                       let _ = L.build_store size tags_size_ptr builder in array_struct_malloc
-                | _ -> L.const_null (lltype_of_typ array_ty) in
-              match ty with
+
+                  | _ -> L.const_null (lltype_of_typ array_ty) in *)
+              (* match ty with
                 | Array _ ->
                     let (_, sx) = sx in
                     (match sx with
@@ -1458,7 +1564,7 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
                 | _ -> L.build_bitcast llvalue (lltype_of_typ ty) "cast_initialize" builder
             in
             let _ = L.build_store llvalue alloca builder in
-            (builder, StringMap.add var_name alloca env2)
+            (builder, StringMap.add var_name alloca env2) *)
         | SDecl (STupleDecl (_, _, sexpr) as tupDecl) ->
             let rec unpack_tuple decl_type tuple_data env =
               let { head = head_ptr; tail = tail_ptr; _ } = build_data_gep tuple_data builder in
@@ -1541,10 +1647,13 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let (f_builder, _) = stmt (f_builder, env, ctx) f_block in
             let _ = L.build_br end_bb f_builder in
             (end_builder, env)
-        | SSend (receiver_name, sexpr) ->
+        | SSend (lexpr, sexpr) ->
             let (typ, _) = sexpr in
-            let receiver_queue_ptr = StringMap.find receiver_name env in
-            let receiver_queue = L.build_load receiver_queue_ptr "receiver_queue_load" builder in
+            (* let receiver_queue_ptr = StringMap.find receiver_name env in
+            let receiver_queue = L.build_load receiver_queue_ptr "receiver_queue_load" builder in *)
+            (* let msg = L.build_global_stringptr "HERE\n" "" builder in
+            let _ = L.build_call printf_func [| string_format_str; msg |] "" builder in *)
+            let (receiver_queue, env) = expr (builder, env) lexpr in
             let (llvalue, env') = expr (builder, env) sexpr in
             let data = (match typ with
                 (* @TODO - Make a copy? *)
@@ -1683,6 +1792,9 @@ let translate ((tdecls : sthread_decl list), (fdecls : sfunc_decl list)) =
             let case_tag_length_ptr = L.build_in_bounds_gep lengths_alloca [| index_loaded |] "length" find_case_builder in
             let case_tag_length = L.build_load case_tag_length_ptr "length_load" find_case_builder in
             (* Did this case match? *)
+
+            (* let debug = L.build_global_stringptr "Made it here\n" "debug" find_case_builder in
+            let _ = L.build_call printf_func [| string_format_str; debug |] "call" find_case_builder in *)
             let case_matched = L.build_call tag_compare_func [| case_tag; case_tag_index_alloca; case_tag_length; message_data_ptr |] "tag_comparison" find_case_builder in
             (* If it did, jump to the switch_bb. If not, we go back to find_case_bb to check the next case. *)
             let _ = L.build_cond_br case_matched switch_bb find_case_bb find_case_builder in
