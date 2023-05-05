@@ -4,15 +4,48 @@ import { FontStyle, getHighlighter, HighlighterOptions } from 'shiki';
 
 const BASE = import.meta.env.DOCS_BASE_PATH ?? '/';
 
+const LOAD_LANGUAGES = [
+  'python', 'bash', 'make', 'markdown', 'c',
+  {
+    id: 'untangled',
+    scopeName: 'source.untangled',
+    aliases: ['untangled'],
+    path: BASE + 'languages/untangled.tmLanguage.json',
+  },
+  {
+    id: 'ocaml',
+    scopeName: 'source.ocaml',
+    aliases: ['ocaml'],
+    path: BASE + 'languages/ocaml/ocaml.json',
+  },
+  {
+    id: 'ocamllex',
+    scopeName: 'source.ocaml.ocamllex',
+    aliases: ['ocamllex'],
+    path: BASE + 'languages/ocaml/ocamllex.json',
+  },
+  {
+    id: 'menhir',
+    scopeName: 'source.ocaml.menhir',
+    aliases: ['menhir', 'ocamlyacc'],
+    path: BASE + 'languages/ocaml/menhir.json',
+  },
+  {
+    id: 'dune-project',
+    scopeName: 'source.dune-project',
+    aliases: ['dune-project'],
+    path: BASE + 'languages/ocaml/dune-project.json',
+  },
+  {
+    id: 'dune',
+    scopeName: 'source.dune',
+    aliases: ['dune'],
+    path: BASE + 'languages/ocaml/dune.json',
+  },
+  // TODO: LLVM
+] as const;
 
-const UNTANGLED_LANGUAGE_DEFINITION = {
-  id: 'untangled',
-  scopeName: 'source.untangled',
-  aliases: ['untangled'],
-  path: BASE + 'languages/untangled.tmLanguage.json',
-} as const;
 
-const LOAD_LANGUAGES = ['ocaml', 'python', 'bash', UNTANGLED_LANGUAGE_DEFINITION] as const;
 const LOAD_THEMES = [
   'poimandres',
   'nord',

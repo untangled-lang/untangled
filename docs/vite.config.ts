@@ -33,6 +33,7 @@ export default defineConfig({
         // Languages
         { src: '../vscode-extension/syntaxes/*', dest: './languages' },
         { src: './node_modules/shiki/languages/*', dest: './languages' },
+        { src: './node_modules/vscode-ocaml-platform/syntaxes/*', dest: './languages/ocaml' },
         // Themes
         { src: './node_modules/shiki/themes/*', dest: './themes' },
         // WASM binaries
