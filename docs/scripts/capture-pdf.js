@@ -1,26 +1,41 @@
-import puppeteer from 'puppeteer';
-import { preview } from 'vite';
 import fs from 'fs/promises';
+import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
 import { stdout } from 'process';
 
+import puppeteer from 'puppeteer';
+import { preview } from 'vite';
+
+
+const cropScriptPath = fileURLToPath(new URL('./crop-pdf.py', import.meta.url));
+const uncroppedPdfPath = fileURLToPath(new URL('../export/uncropped.pdf', import.meta.url));
+const finalPdfPath = fileURLToPath(new URL('../export/untangled.pdf', import.meta.url));
+
+
 // Check the app has been built
+
 const hasDist = await fs.access('dist').then(() => true).catch(() => false);
 if (!hasDist) {
   console.error('Error: run `vite build` before capturing a PDF');
   process.exit(1);
 }
 
+
 // Serve the built app
+
 const previewServer = await preview({
   base: process.env.DOCS_BASE_PATH ?? '/',
   preview: { port: 5174 },
 });
 console.log('Started server');
 
+
 // Load the page
+
 const browser = await puppeteer.launch({ headless: 'new' });
 const page = await browser.newPage();
-await page.goto(previewServer.resolvedUrls.local[0]);
+const url = new URL('/lrm.html', previewServer.resolvedUrls.local[0]);
+await page.goto(url.href);
 console.log('Launched browser');
 await page.waitForSelector('h1');
 console.log('Loaded page');
@@ -57,7 +72,26 @@ await page.pdf({
 stdout.write(' done\n');
 
 
-// Clean up
+// Clean up server and browser
 
 await browser.close();
 previewServer.httpServer.close();
+
+
+// Call out to our Python script to crop the PDF
+
+const cropScript = spawn('python', [cropScriptPath, uncroppedPdfPath, finalPdfPath]);
+cropScript.stdin.write(JSON.stringify(pageHeights.map((ph) => ph / inch)));
+cropScript.stdin.end();
+cropScript.stdout.on('data', (data) => {
+  stdout.write(data);
+});
+await new Promise((resolve, reject) => {
+  cropScript.on('exit', resolve);
+  cropScript.on('error', reject);
+});
+
+
+// Clean up
+
+await fs.rm(uncroppedPdfPath);

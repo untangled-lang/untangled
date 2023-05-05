@@ -71,4 +71,4 @@ docs: docs-build docs-pdf
 clean-docs:
 	-rm -rf docs/node_modules
 	-rm -rf docs/dist
-	-rm -f docs/untangled.pdf
+	-rm -f docs/export/*.pdf
