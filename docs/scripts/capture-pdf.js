@@ -9,7 +9,7 @@ import { preview } from 'vite';
 
 const cropScriptPath = fileURLToPath(new URL('./crop-pdf.py', import.meta.url));
 const uncroppedPdfPath = fileURLToPath(new URL('../export/uncropped.pdf', import.meta.url));
-const finalPdfPath = fileURLToPath(new URL('../export/untangled.pdf', import.meta.url));
+const finalPdfPath = fileURLToPath(new URL('../export/manual.pdf', import.meta.url));
 
 
 // Check the app has been built
@@ -34,7 +34,7 @@ console.log('Started server');
 
 const browser = await puppeteer.launch({ headless: 'new' });
 const page = await browser.newPage();
-const url = new URL('/lrm.html', previewServer.resolvedUrls.local[0]);
+const url = new URL('lrm.html', previewServer.resolvedUrls.local[0]);
 await page.goto(url.href);
 console.log('Launched browser');
 await page.waitForSelector('h1');
