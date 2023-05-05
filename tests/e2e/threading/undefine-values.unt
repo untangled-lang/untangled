@@ -27,15 +27,29 @@ thread_def Child {
 
     _ -> {}
   }
+
+  receive {
+    ((int[3] arr, float f), (string s, (_, thread[5] threads))) -> {
+
+    }
+
+    (int[3], float)[10][10] arr -> {
+      print("Received complex array\n");
+    }
+
+    _ -> {}
+  }
 }
 
 thread_def Main {
   (int, float) tup;
   int[10] arr;
-  ((int[3], float), (string, (int, thread[5]))) complex;
+  ((int[3], float), (string, (int, thread[5]))) complex_tuple;
+  (int[3], float)[10][10] complex_array;
 
   thread t = spawn Child;
   t << tup;
   t << arr;
-  t << complex;
+  t << complex_tuple;
+  t << complex_array;
 }
