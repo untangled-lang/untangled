@@ -38,7 +38,7 @@ const localServerBase = previewServer.resolvedUrls.local[0];
 console.log('Started server');
 
 
-const browser = await puppeteer.launch({ headless: false });
+const browser = await puppeteer.launch({ headless: 'new' });
 console.log('Launched browser');
 
 
@@ -79,7 +79,6 @@ async function pageToPdf(path) {
   console.log(`Capturing PDF for ${path}...`);
   const uncroppedPdfPath = getOutputPath(`${path}-uncropped.pdf`);
   const croppedPdfPath = getOutputPath(`${path}.pdf`);
-  console.log('mkdir 1', dirname(uncroppedPdfPath));
   await fs.mkdir(dirname(uncroppedPdfPath), { recursive: true });
   await page.pdf({
     width: '8.5in',
@@ -128,7 +127,6 @@ const componentPdfPaths = await Promise.all(items.map((path) => pageToPdf(path))
 async function codeToPdf(path) {
   const pagePath = fileURLToPath(new URL(`${path}.html`, new URL('../dist/source/', import.meta.url)));
   const sourcePath = new URL(path, new URL('../../', import.meta.url));
-  console.log('mkdir 2', dirname(pagePath));
   await fs.mkdir(dirname(pagePath), { recursive: true });
 
   // Create the page file
@@ -145,7 +143,6 @@ async function codeToPdf(path) {
 
 
 const a = await codeToPdf('src/ast.ml');
-console.log(a);
 
 
 // Merge the “component” PDFs into the big final report

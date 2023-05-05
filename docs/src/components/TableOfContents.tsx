@@ -58,7 +58,6 @@ function useHeadingSections(afterId?: string): Section[] | null {
     const headings = [...document.querySelectorAll('h1, h2, h3, h4, h5, h6')] as HTMLHeadingElement[];
     if (afterId) {
       const afterIdx = headings.findIndex((heading) => heading.id === afterId);
-      console.log(afterId, afterIdx + 1);
       if (afterIdx !== -1) {
         headings.splice(0, afterIdx + 1);
       }
