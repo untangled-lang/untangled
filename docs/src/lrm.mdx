@@ -93,6 +93,8 @@ either “hello” or “world”.
 <Page>
 ## Syntax and semantics
 
+{/* TODO: - Add special escape character */}
+
 ### Blanks
 
 Spaces, tabs, carriage returns (`\r`), and newlines (`\n`) are considered “blank” characters. Blanks
@@ -206,7 +208,13 @@ identifier that has the same name as one of the [keywords](#keywords).
 
 ### Types
 
+{/*
+  * TODO: Talk about how arrays / threads are initialized with default values when
+  * users declare a tuple without assignments.
+  * TODO: The default vlaues can't have void / thread as part of the types
+  */}
 {/* TODO: “These [booleans, integers, floats, strings] should have been explained in this section. I don't know how any of these types function, or what restrictions they have on them” */}
+{/* TODO: - Talk about undefined behavior if message are sent with undefined values */}
 Untangled includes first-class types for booleans, integers, floats, strings,
 [thread handles](#thread-handles), [semaphores](#semaphores), tuples, and arrays (as well as a void
 type).
@@ -280,6 +288,7 @@ specific value.
   <NT>boolean-literal</NT>
   <NT>tuple-literal</NT>
   <NT>array-literal</NT>
+  <NT>string-literal</NT>
 </Rule>
 
 Numeric literals work as one would expect: they contain sequences of digits and floating-point
@@ -310,6 +319,7 @@ Boolean literals come from the token <T>true</T> or the token <T>false</T>.
   <T>false</T>
 </Rule>
 
+{/* TODO: - We can add double quote inside string with an escape sequence now */}
 String literals start and end with a double quote, and any sequence of characters *besides* a double
 quote can go inside. The entire contents between (not including) the double quotes make up the
 string value.
@@ -318,11 +328,14 @@ string value.
   <><T>"</T> [^<T>"</T>]* <T>"</T></>
 </Rule>
 
+{/* TODO: - Tuple literal can't store a function that returns void */}
 A tuple literal groups exactly two expressions, each of which can have any type.
 
 <Rule name="tuple-literal">
   <><T>(</T> <NT>expr</NT> <T>,</T> <NT>expr</NT> <T>)</T></>
 </Rule>
+
+{/* TODO: - Array literal can't store a function that returns void */}
 
 An array literal includes an arbitrary number of values; all of the expressions inside an array
 literal must have the same type.
@@ -399,7 +412,11 @@ same type.
 
 **For integer and floating-point operands**, <T>+</T>, <T>-</T>, <T>*</T>, and <T>/</T> perform
 standard arithmetic operations (addition, subtraction, multiplication, and division, respectively).
+
 {/* TODO: “How do these differ between integer and floating-point operands? For instance, what does `3 / 2` do?” */}
+{/*
+  * TODO: - ** only supports integer exponent
+  */}
 Additionally, <T>**</T> raises the left operand to the power of the right operand. The comparison
 operators <T>&lt;</T>, <T>&lt;=</T>, <T>&gt;</T>, and <T>&gt;=</T> compare their operands and
 evaluate to a boolean value. For integers, <T>%</T> performs the “modulo” operation.
@@ -410,6 +427,9 @@ evaluate to a boolean value. For integers, <T>%</T> performs the “modulo” op
 operations, respectively.
 
 {/* TODO: “it would have been good to call out specifically which types fall into which categories in this location” */}
+{/*
+  * TODO: - Comparison for address equality with threads / arrays / semaphores
+  */}
 The <T>==</T> and <T>!=</T> perform *value equality* comparisons for [operands that are passed by
 value](#passing-by-value--reference) (like strings, integers, and booleans), and perform *reference
 equality* comparisons between [operands that are passed by reference](#passing-by-value--reference)
@@ -422,6 +442,11 @@ The <T>-</T> prefix operator is negation; it applies to integer and floating-poi
 The <T>!</T> prefix operator is the logical “not” operator; it applies to boolean operands.
 
 ##### Postfix operators
+
+{/*
+  * TODO: - Explain that ++ and -- first decrement the value. This is different than what you would
+  * expect in C
+  */}
 The <T>++</T> and <T>--</T> postfix operators are increment and decrement operators. They apply to
 integer and floating-point operands as you would expect.
 {/* TODO: “Spell this out specifically” */}
@@ -469,6 +494,9 @@ Array access expressions retrieve an element from the specified index of an arra
 inside the brackets must evaluate to an integer. The evaluated type of the array access expression
 is the element type of the array.
 
+{/*
+  * TODO: - Update this to reflect nested indexing, i.e arr[0][0]
+  */}
 <Rule name="array-access">
   <><NT>ident</NT> <T>[</T> <NT>expr</NT> <T>]</T></>
 </Rule>
@@ -516,6 +544,11 @@ expression.
 
 
 #### Function call expressions
+
+{/*
+  * TODO: - Function call can't take void
+  * TODO: - Void function return needs clarification
+  */}
 Function call expressions invoke a function with a specified set of arguments. The expression
 evaluates to the return value of the function.
 
@@ -535,6 +568,9 @@ The type of each [call argument](#nonterminal-call-args) must match the type of 
 same position in the function’s [parameter list](#function-parameter-list). The number of arguments
 must match as well.
 
+{/*
+  * TODO: - How does the features like parent and self relate?
+  */}
 Calling a function executes the sequence of statements in the function body directly in the
 execution sequence of the calling thread. The “current thread” is still the thread that is executing
 the function, for the purpose of features like the [<T>parent</T> and <T>self</T>
@@ -586,6 +622,10 @@ that block.
 
 #### Variable declaration statements
 
+{/*
+  * TODO: - Talk about how we can also do tuple deconstruction
+  * (int i, float f) = (0, 5.0)
+  */}
 <Rule name="variable-decl">
   <><NT.type /><NT.ident />(<T>=</T> <NT.expr />)?</>
 </Rule>
@@ -707,7 +747,7 @@ A for loop is executed as follows:
 <T>break</T> and <T>continue</T> statements can only be used within a <NT>loop</NT>.
 
 The <T>break</T> keyword exits the loop, while <T>continue</T> jumps to the next iteration of the
-oop. Both keywords always refer to the innermost loop that contains them.
+loop. Both keywords always refer to the innermost loop that contains them.
 
 ```untangled
 for (int a = 0; a < 10; a++) { // loop A
@@ -723,6 +763,8 @@ for (int a = 0; a < 10; a++) { // loop A
 ```
 
 ###### Return statements
+
+{/* TODO: - Add semantics that all functions need a return statement enclosed in the top-most block */}
 <Rule name="return">
   <><T>return</T> <NT>expr</NT>? <T>;</T> </>
 </Rule>
@@ -739,6 +781,9 @@ function has a non-void return type. Additionally, all non-void functions must i
 
 #### Message send statements
 
+{/*
+  * TODO: - We can do something like (spawn thread) << 1. So the grammar should be expr << expr
+  */}
 A [thread](#threads) can send messages to any [thread handle](#thread-handles) it has, including the
 built-in [<T>parent</T> keyword](#parent-keyword).
 {/* TODO: “This explanation requires the context of how threads work, so that should come before” */}
@@ -755,6 +800,10 @@ overall semantics of the message system.
 
 #### Receive statements
 
+{/*
+  * TODO: - Receive statement does not have tuple in base pattern
+  * TODO: - Receive statement does not have void as a typ
+  */}
 A [thread](#threads) receives messages from other threads using a <T>receive</T> statement.
 
 <RuleBlock>
@@ -775,6 +824,9 @@ A [thread](#threads) receives messages from other threads using a <T>receive</T>
   </Rule>
 </RuleBlock>
 
+{/*  * TODO: - We're not enforcing exhaustive pattern matching
+  * TODO: -We require that each pattern must have a wildcard
+  */}
 A receive statement consists of an exhaustive list of <NT>pattern</NT>s, each followed by a
 [statement](#nonterminal-stmt). A list of <NT>pattern</NT>s is **exhaustive** if at least one
 pattern [matches](#pattern-matching-semantics) every possible <NT>type</NT> in Untangled. The
@@ -836,6 +888,10 @@ rule (#3), the second element does not match under any of the three rules.
 <Page>
 ### Programs
 
+{/*
+  * @DO - Mention that function-def and thread-def can share names. But thread-def by itself
+  * can't share the same name. Also function-def
+  */}
 The top level of an Untangled program is a set of [function definitions](#function-definitions)
 and [thread procedure definitions](#thread-procedure-definitions).
 
@@ -876,6 +932,7 @@ A function definition has four parts:
 
 1. The **return type** comes first; it indicates the [type](#nonterminal-type) of the value that the
   function will return.
+{/* TODO: - Only within all the function names */}
 2. The **name** of the function (an <NT>ident</NT>) uniquely identifies it.
 3. <a id="function-parameter-list">The **parameters** are a list</a> of (<NT>type</NT>,
    <NT>ident</NT>) pairs which define arguments that must be passed for each invocation of the
@@ -945,6 +1002,9 @@ a specific syntactic construction.
 
 #### Thread lifetime
 
+{/*
+  * TODO: - Add semantics about semantically waiting until all threads complete
+  */}
 Each [thread](#threads) executes completely independently and can continue to run after other
 threads (including its parent) have finished executing.
 
@@ -1013,6 +1073,10 @@ match common Semaphore semantics defined in [literature](https://greenteapress.c
 
 ### Passing by value / reference
 
+{/*
+  * TODO: - Add opaque reference to semaphores
+  * TODO: - Tuple are passed by reference b.c it's a immutable
+  */}
 In message passing and in function calls, every type in Untangled is passed by *value*, with three
 key exceptions:
 1. [Arrays](#nonterminal-array-type) are passed by reference.
@@ -1068,6 +1132,9 @@ each of these constructs.
 
 A **context** is a part of a program in which identifier declarations are contained.
 
+{/*
+  * TODO: - This is true except for parent/self keywords in thread
+  */}
 Context in Untangled is *nested*, meaning that a context is often contained within a larger context.
 When one context is nested inside another, the inner context inherits the declarations of the outer
 context.
@@ -1115,6 +1182,9 @@ definitions](#thread-procedure-definitions) always appear at the top level of a 
 identifiers have **global scope**. These identifiers are usable anywhere in the program, including
 before the definition occurs.
 
+{/*
+  * TODO: - This is not true
+  */}
 Function and thread procedure definitions share a single “global context,” so using the same
 identifier for more than one causes a compiler error.
 
@@ -1166,6 +1236,9 @@ for (; i < 10; i += 2) print(i % 2 == 0);
 
 #### Scope of receive statement pattern identifiers
 
+{/*
+  * TODO: - Talk about scope of a tuple pattern?
+  */}
 Each identifier declared as part of a <NT>pattern</NT> in a [receive statement](#receive-statements)
 belongs to the context created by the pattern matching case, which encapsulates the
 [statement](#nonterminal-stmt) immediately following the <T>-&gt;</T> terminal.
@@ -1214,10 +1287,10 @@ receive {
   <tbody>
     <tr>
       <td>`print`</td>
-      <td>Any value that is not a thread</td>
+      <td>`string`</td>
       <td><T.void/></td>
       <td>
-        Prints out a human-readable representation of the data provided, followed by a newline.
+        Prints the input string to stdout.
       </td>
     </tr>
     <tr>
@@ -1225,25 +1298,18 @@ receive {
       <td></td>
       <td><T.string/></td>
       <td>
-        Blocks the program until a string is provided via standard input and the return keyboard is
-        pressed, at which point it returns that entry
+        Receives the input from stdin and accepts at most 1024 characters.
       </td>
     </tr>
     <tr>
       <td>`make_semaphore`</td>
-      <td>An <T.int/> value to set the semaphore to</td>
+      <td><T.int/></td>
       <td><T.semaphore/></td>
-      <td>Creates a semaphore with an initial value of 0.</td>
-    </tr>
-    <tr>
-      <td>`to_string`</td>
-      <td>A value that has any type other than a thread</td>
-      <td><T.string/></td>
-      <td>Returns a string of a human-readable version of the argument</td>
+      <td>Creates a semaphore with the initial value equal to the argument.</td>
     </tr>
     <tr>
       <td>`int_of_string`</td>
-      <td>A <T.string /></td>
+      <td><T.string /></td>
       <td><T.int/></td>
       <td>
         Returns the integer representation of the string. If the string cannot be parsed as an
@@ -1252,36 +1318,104 @@ receive {
     </tr>
     <tr>
       <td>`float_of_string`</td>
-      <td>A string</td>
+      <td><T.string /></td>
       <td><T.float/></td>
       <td>
-        Returns the floating point representation of the string. If the string cannot be parsed as a
-        floating point number, throws a runtime error.
+        Returns the floating point representation of the string. The behavior is unspecified if
+        the input string can't be parsed as a float.
+      </td>
+    </tr>
+    <tr>
+      <td>`bool_of_string`</td>
+      <td><T.string /></td>
+      <td><T.bool/></td>
+      <td>
+        Returns the boolean representation of a string. If the string cannot be parsed as a boolean,
+        throws a runtime error.
+      </td>
+    </tr>
+    <tr>
+      <td>`string_of_int`</td>
+      <td><T.int /></td>
+      <td><T.string/></td>
+      <td>
+        Returns the string representation of an int.
+      </td>
+    </tr>
+    <tr>
+      <td>`string_of_float`</td>
+      <td><T.float /></td>
+      <td><T.string/></td>
+      <td>
+        Returns the string representation of a float.
+      </td>
+    </tr>
+    <tr>
+      <td>`string_of_bool`</td>
+      <td><T.bool /></td>
+      <td><T.string/></td>
+      <td>
+        Returns the string representation of a bool.
+      </td>
+    </tr>
+    <tr>
+      <td>`floor`</td>
+      <td><T.float /></td>
+      <td><T.int/></td>
+      <td>
+        Returns the floor of a float argument as an integer.
+      </td>
+    </tr>
+    <tr>
+      <td>`ceil`</td>
+      <td><T.float /></td>
+      <td><T.int/></td>
+      <td>
+        Returns the ceil of a float argument as an integer.
+      </td>
+    </tr>
+    <tr>
+      <td>`round`</td>
+      <td><T.float /></td>
+      <td><T.int/></td>
+      <td>
+        Round a float argument to the nearest integer.
+      </td>
+    </tr>
+    <tr>
+      <td>`int_of_float`</td>
+      <td><T.float /></td>
+      <td><T.int/></td>
+      <td>
+        Cast a float to an integer.
+      </td>
+    </tr>
+    <tr>
+      <td>`float_of_int`</td>
+      <td><T.int /></td>
+      <td><T.float/></td>
+      <td>
+        Cast a integer to a float.
       </td>
     </tr>
     <tr>
       <td>`sqrt`</td>
-      <td>An <T.int/> or <T.float/></td>
       <td><T.float/></td>
-      <td>Returns the square root of a given number</td>
-    </tr>
-    <tr>
-      <td>`len`</td>
-      <td>An array of any type</td>
-      <td><T.int/></td>
-      <td>Returns the length of the array</td>
+      <td><T.float/></td>
+      <td>Returns the square root of a given number.</td>
     </tr>
     <tr>
       <td>`exit`</td>
-      <td>An <T.int /> for the status code</td>
+      <td><T.int /></td>
       <td><T.void /></td>
-      <td>Exits the program</td>
+      <td>Exits the program with the input status code.</td>
     </tr>
     <tr>
       <td>`end`</td>
       <td></td>
       <td><T.void /></td>
-      <td>Ends the current thread</td>
+      <td>Ends the current thread execution. The compiler raises an error if
+      `end` is used inside a function.</td>
     </tr>
   </tbody>
 </table>
