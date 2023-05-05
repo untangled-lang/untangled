@@ -65,13 +65,25 @@ export default function Code({
   // If highlight is disabled, or if children is *not* a single string, play dead.
   const highlight = highlightProp ?? useContext(PreWrapContext);
   if (typeof children !== 'string' || !highlight) return <code>{children}</code>;
+
+  const splitLines = children.trim().split('\n');
+  const highlightLines = new Array(splitLines.length)
+    .fill(0)
+    .map((_, i) => i)
+    .filter((lineNum, i) => splitLines[i].startsWith('!! '));
+
+  const code = splitLines.map((line) => {
+    if (line.startsWith('!! ')) return line.slice(3);
+    return line;
+  }).join('\n');
+
   // Highlight string child with shiki
-  const lines = highlighter.codeToThemedTokens(children, language, theme);
+  const lines = highlighter.codeToThemedTokens(code, language, theme);
 
   return (
     <code>
       {lines.map((tokens, lineIdx) => (
-        <span key={lineIdx}>
+        <div key={lineIdx} className={highlightLines.includes(lineIdx) ? 'line highlight' : 'line'}>
           {/* Tokens in this line */}
           {
             tokens.map((token, tokenIdx) => (
@@ -91,7 +103,7 @@ export default function Code({
           }
           {/* Newline between lines */}
           {lineIdx < lines.length - 1 ? '\n' : null}
-        </span>
+        </div>
       ))}
     </code>
   );

@@ -165,6 +165,26 @@ $border-color: color.mix($black, $white, 85%);
 code {
   font-family: fonts.$mono;
   font-variation-settings: 'wght' 100;
+
+  & > .line {
+    margin: 0 calc(-1 * var(--bleed));
+    padding: 0 var(--bleed);
+
+    &.highlight {
+      background: rgb(240 240 255 / 0.1);
+      line-height: 1.4;
+    }
+    &:not(.highlight) + .highlight {
+      padding-top: 0.1rem;
+      margin-top: 0.25rem;
+      // border-top: 1.5px solid rgb(200 200 255 / 0.15);
+    }
+    &.highlight:not(:has(+ .highlight)) {
+      padding-bottom: 0.2rem;
+      margin-bottom: 0.25rem;
+      // border-bottom: 1.5px solid rgb(200 200 255 / 0.15);
+    }
+  }
 }
 
 // Code blocks
