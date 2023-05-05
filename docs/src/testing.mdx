@@ -1,1 +1,35 @@
 # Untangled: Testing
+
+### Methodology
+
+We created a suite of tests of each stage of our compiler process:
+- **Abstract Syntax Tree** tests: check that the scanner and parser successfully produce the AST
+  representation that we expect for a broad range of Untangled programs.
+
+  These tests compare a pretty-printed AST output from the compiler against pregenerated “ground
+  truth” ASTs.
+
+- **Semantic “sast”** tests: extend AST tests to *also* check the types assigned (by the semantic
+  analyzer) to each node in the AST.
+
+  These tests compare a pretty-printed *semantically-checked* AST output from the compiler against
+  pregenerated “ground truth” ASTs.
+
+- **End-to-end** tests: checks that a broad range of Untangled programs will compile correctly and
+  produce the final stdout that we expect.
+
+  These tests compile, link, and execute Untangled programs, capturing their output and comparing
+  it against pregenerated “ground truth” output.
+
+We created a Python script that automatically runs and checks the output of all of our tests.
+- The script also supports nested structures for the tests, to allow organizing tests arbitrarily
+  within each compiler step.
+- The script supports “filtering” tests to run only a subset of tests at a time.
+
+
+### Source programs
+TODO: ask richard if he really wants LLVM output here
+
+
+### Contributors
+All project members contributed equally to the process of writing tests.
