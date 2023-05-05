@@ -1,0 +1,570 @@
+import Code from './components/Code';
+import TableOfContents from './components/TableOfContents';
+
+
+# Untangled: Language Tutorial
+
+<TableOfContents afterId="untangled-language-tutorial" />
+
+
+
+
+## Introduction
+
+Most modern processors have multiple CPU cores that can perform concurrent computations;
+parallelizing work across these cores can yield major performance gains. However, many modern
+programming languages still emphasize single-threaded programming—where they do allow
+multithreading, it is seldom ergonomic.
+
+**Untangled** is a new programming language with first-class support for multithreading. It
+encourages users to write highly parallelized programs by providing safe and easy-to-use primitives
+and abstractions over multithreading.
+
+This tutorial will walk you through the basics of the Untangled language. By the end, you should
+have a good understanding of how to write multithreaded programs in Untangled.
+
+***Note:** this tutorial assumes basic familiarity with programming in a C-style language.*
+
+
+
+
+## Installation
+
+Before we start coding, first we need to make sure that we have everything we need installed!
+
+First, clone the Untangled source from GitHub:
+```bash
+git clone https://github.com/untangled-lang/untangled
+cd untangled
+```
+
+Next, make sure you have `llvm@14.0.6`, and [`opam`](https://opam.ocaml.org/), and a recent version
+of OCaml installed on your system.
+
+Then, use `opam` to install Untangled’s dependencies:
+```bash
+opam install dune
+opam install llvm.14.0.6
+```
+
+Finally, run `make` to build the Untangled compiler for your system.
+
+If all goes well, you’ll see a file called `untangled.exe` appear in the repository root.
+
+
+
+
+## Tutorial
+
+### Hello, world!
+
+Let’s write our first program with Untangled!
+
+To get started, we’ll define a “thread definition” called `Main`. A `Main` thread definition is
+the starting point of all Untangled programs (without it, your program would be invalid).
+
+```untangled
+thread_def Main {
+  print("Hello, world!");
+}
+```
+Save your file as `hello.unt` (“.unt” is the standard file extension for Untangled programs). To
+compile this program, we’ll need to use the executable we built earlier:
+```bash
+./untangled.exe hello.unt -o hello
+```
+If all goes well, you should see an executable file called `hello` in your working directory. Just
+run the file to run your program!
+```bash
+./hello
+# you should see “Hello, world!”
+```
+Congrats on running your first Untangled program!
+
+
+
+
+### A more complex program
+
+Untangled includes many of the language features you’re used to from other programming languages,
+including loops, variables, and functions. To show them off, let’s write a program that checks
+numbers from 2 to 20 for [primality](https://en.wikipedia.org/wiki/Prime_number).
+
+```untangled
+thread_def Main {
+  // Control flow (for loops, conditionals) look like C/C++
+  for (int num = 2; num <= 20; num++) {
+    // Variables are statically typed and mutable
+    bool is_prime = true;
+
+    /* Check whether `num` is a prime number:
+     * If any number 2..num-1 divides `num` evenly, then it’s not prime */
+    for (int divisor = 2; divisor < num; divisor++) {
+      if (num % divisor == 0) is_prime = false;
+    }
+
+    /* Report our results */
+    if (is_prime) {
+      // “print” only takes strings, but the standard library includes
+      // common type conversion functions
+      print(string_of_int(num) + " is prime\n");
+    } else {
+      // Strings support concatenation using “+”
+      print(string_of_int(num) + " is not prime\n");
+    }
+  }
+}
+```
+
+If you compile and run this program as before, you should see a report on which numbers are prime:
+```bash
+./untangled.exe fib.unt -o fib
+./fib
+
+# 2 is prime
+# 3 is prime
+# 4 is not prime
+# ...
+# 19 is prime
+# 20 is not prime
+```
+
+
+
+### Introduction to multithreading
+
+Untangled can definitely run single-threaded programs like the ones we’ve seen so far, but it really
+shines when we throw multithreading into the mix!
+
+Any `thread_def` in an Untangled program defines a reusable “procedure” that can be made to run on
+any number of independent **threads**. In other words, a thread represents a single “instance” or
+invocation of a predefined thread procedure. The operating system balances all running threads to
+run in parallel.
+
+We can define other thread procedures just as easily as we did with `Main`:
+```untangled
+thread_def MyThread {
+  print("Hello from MyThread\n");
+}
+```
+
+However, only the `Main` thread procedure will automatically be run in a thread (the “main thread”).
+In order to run another thread procedure, we’ll need to “spawn” a thread to run it:
+
+```untangled
+thread_def MyThread {
+  print("Hello from MyThread\n");
+}
+
+thread_def Main {
+  // Spawn a thread to run the MyThread procedure
+!!  spawn MyThread;
+}
+```
+
+The program will continue until all threads have finished running.
+
+Different threads can communicate with each other by passing messages. In Untangled, a message can
+be a value of any type. To send a message to a thread, we need a **reference** to the thread, in the
+form of a “thread” value (returned by the spawn keyword).
+
+```untangled
+thread_def MyThread {
+  print("Hello from MyThread\n");
+}
+
+thread_def Main {
+!!   // "t" is the reference to the thread we spawned
+!!   thread t = spawn MyThread;
+!!   // The << operator is used to send a message to the thread
+!!   t << "Hello from Main\n";
+}
+```
+
+The other half of a “message passing” is for the other thread to **receive** the message.
+
+In the `MyThread` procedure, we need to use a `receive` statement. `receive` will block the thread
+until a message arrives.
+
+```untangled
+thread_def MyThread {
+!!   receive {
+!!     // should be "Hello from Main"
+!!     string msg -> print(msg);
+!!     _ -> exit(1);
+!!   }
+}
+
+thread_def Main {
+  // "t" is the reference to the thread we spawned
+  thread t = spawn MyThread;
+  // The << operator is used to send a message to the thread
+  t << "Hello from Main\n";
+}
+```
+
+If we execute the above program, we should see “Hello from Main” printed to the console!
+
+Inside the “receive” statement, a list of *patterns* allows us to execute different code depending
+on what type of message we receive. This is important to ensure we don’t encounter undefined
+behavior if we receive a message of an unexpected type, but it also gives us the flexibility to
+handle multiple kinds of messages at once!
+
+For example, the following program can handle both integer and string messages at the same time:
+
+```untangled
+thread_def MyThread {
+!!   receive {
+!!     string s -> print("I got a string: " + s + "\n");
+!!     int i -> print("I got an int: " + string_of_int(i) + "\n");
+!!     _ -> exit(1);
+!!   }
+}
+
+thread_def Main {
+  thread t1 = spawn MyThread;
+  thread t2 = spawn MyThread;
+  t1 << "hello";
+  t2 << 3;
+}
+```
+
+Untangled automatically runs the *first* statement in the `receive` block whose pattern matches the
+type of the received message. So, in this example, t1 will print `I got a string: hello` and t2
+will print `I got an int: 3`.
+
+
+
+### A multithreaded program
+
+Now, using what we’ve learned, let’s rewrite our “primes” program to take advantage of multithreaded
+parallelism!
+
+```untangled
+thread_def PrimeCalculator {
+  // A message will tell us which number we should check
+  int num;
+  receive {
+    int n -> num = n;
+    _ -> exit(1);
+  }
+
+  // Do our calculation (checking primality)
+  bool is_prime = true;
+  for (int divisor = 2; divisor < num; divisor++) {
+    if (num % divisor == 0) is_prime = false;
+  }
+
+  // Print the results
+  if (is_prime) {
+    print(string_of_int(num) + " is prime\n");
+  } else {
+    print(string_of_int(num) + " is not prime\n");
+  }
+}
+
+thread_def Main {
+  // Spawn 20 threads to check numbers 1 to 20
+  for (int num = 2; num <= 20; num++) {
+    thread t = spawn PrimeCalculator;
+    t << num;
+  }
+}
+```
+
+Here, instead of checking each of our candidate numbers in a single thread (as before), we spawn a
+separate thread to check each number. As a result, the computer checks all the numbers at the same
+time!
+
+In fact, if you compile and run this program, you might see the results appear out of order:
+```text
+2 is prime
+5 is prime
+4 is not prime
+7 is prime
+3 is prime
+8 is not prime
+9 is not prime
+6 is not prime
+...
+```
+This output demonstrates that the threads run in parallel, because the threads (all working
+simultaneously) finish in an
+unpredictable order.
+
+
+
+### Tuples
+
+Sometimes, the nondeterministic order of message sends in parallel threads can be problematic.
+
+Let’s say, for example, we each PrimeCalculator thread to send its results back to the Main thread.
+Since the order in which each result is computed is nondeterministic, we’d need to communicate both
+(**1**) whether the value is prime and (**2**) to which number each boolean result corresponds. We
+might think to send these two pieces of information as separate messages, but we have no guarantee
+that they would arrive together—another thread’s message could reasonably arrive in between!
+
+In order to address this common problem, we commonly use **tuple** types for messages. A tuple in
+Untangled groups exactly two values together (but to include more values, tuples can be nested).
+
+```untangled
+// Define a tuple
+(int, (string, bool)) x = (5, ("hi", true));
+// Unpack a tuple’s values
+(int i, (string s, bool b)) = x;
+// Show the unpacked values
+print(string_of_int(i) + " " + s + " " + string_of_bool(b));
+// prints “5 hi true”
+```
+
+To see how tuples can solve the problem discussed above, we can modify our parallel prime-checking
+program to send results back to the main thread:
+
+```untangled
+thread_def PrimeCalculator {
+  int num;
+  receive {
+    int n -> num = n;
+    _ -> exit(1);
+  }
+
+  bool is_prime = true;
+  for (int divisor = 2; divisor < num; divisor++) {
+    if (num % divisor == 0) is_prime = false;
+  }
+
+  // the “parent” keyword automatically refers to the thread that spawned
+  // this one
+!!   parent << (num, is_prime);
+}
+
+thread_def Main {
+  // Spawn 20 threads to check numbers 1 to 20
+  for (int num = 2; num <= 20; num++) {
+    thread t = spawn PrimeCalculator;
+    t << num;
+  }
+
+!!   // Receive and print the results
+!!   for (int num = 2; num <= 20; num++) {
+!!     receive {
+!!       (int n, bool is_prime) -> {
+!!         if (is_prime) {
+!!           print(string_of_int(n) + " is prime\n");
+!!         } else {
+!!           print(string_of_int(n) + " is not prime\n");
+!!         }
+!!       }
+!!       _ -> exit(1);
+!!     }
+!!   }
+}
+```
+This program behaves the same as before, but now Main is printing the results instead of
+PrimeCalculator. This demonstrates the utility of tuples for sending compound messages as a unit.
+
+
+
+### Arrays
+
+Sometimes, message passing isn’t the most ergonomic way to communicate between threads. While almost
+every type of value in Untangled is immutable, Untangled **arrays** are passed by reference and
+their values are mutable.
+
+This means multiple threads can write to the same array, and the changes will be visible to all
+threads.
+
+```untangled
+thread_def PrimeCalculator {
+  int num;
+  receive { int n -> num = n; _ -> exit(1); }
+
+  bool is_prime = true;
+  for (int divisor = 2; divisor < num; divisor++) {
+    if (num % divisor == 0) is_prime = false;
+  }
+
+  // Wait to receive the “results” array, and store the result we found
+!!   receive { bool[21] results -> results[num] = is_prime; _ -> exit(1); }
+  // Signal our success to the parent thread, so that it can know when
+  // it’s safe to read the results array.
+  parent << "done";
+}
+
+thread_def Main {
+!!   // Create the array to hold the results
+!!   bool[21] results_arr;
+
+  // Spawn 20 threads to check numbers 1 to 20
+  for (int num = 2; num <= 20; num++) {
+    thread t = spawn PrimeCalculator;
+    t << num;
+!!     // Give the thread the results array
+!!     t << results_arr;
+  }
+
+  // Wait for the threads to tell us they’re finished
+  for (int num = 2; num <= 20; num++) {
+    receive { string x -> {} _ -> exit(1); }
+  }
+
+  // Print the results
+  for (int num = 2; num <= 20; num++) {
+    print(string_of_int(num) + ": " + string_of_bool(
+!!       results_arr[num]
+    ) + "\n");
+  }
+}
+```
+
+This program still calculates all the prime numbers, but now each thread stores its result in an
+array instead of sending a message back to Main. Finally, Main prints all the results in order (even
+when the results themselves are computed out of order)! And, Main doesn’t have to sort the
+results—each thread organizes their own result.
+
+
+
+### Semaphores
+
+Sometimes, operations on shared mutable memory can be subject to unexpected race conditions. For
+example, consider the following program:
+```untangled
+thread_def Incrementor {
+  // Receive an array (shared memory)
+  receive {
+!!     // Mutate the shared memory
+!!     int[1] a -> a[0] += 1;
+    _ -> exit(1);
+  }
+  // Signal we’re done
+  parent << "done";
+}
+
+thread_def Main {
+!!   // Create a block of shared memory
+!!   int[1] arr = [0];
+  // Spawn 10000 threads that try to increment the shared memory simultaneously
+  for (int i = 0; i < 10000; i++) {
+    thread t = spawn Incrementor;
+    t << arr;
+  }
+  // Wait for all threads to signal done
+  for (int i = 0; i < 10000; i++) {
+    receive { string s -> {} _ -> exit(1); }
+  }
+!!   // See what result we got
+!!   print(string_of_int(arr[0]) + "\n");
+}
+```
+If we compile and run this program, we will likely *not* see “10000” printed, counter to what we
+might expect:
+```bash
+./untangled.exe increment-race.unt -o increment-race
+./increment-race
+# 9988
+./increment-race
+# 9967
+```
+
+This is because behind the scenes, <Code highlight className="language-untangled">a[0] += 0</Code>
+performs at least three CPU instructions:
+1. **Load** the value from memory
+2. **Add** 1 to the value
+3. **Stores** the result in memory
+
+When multiple threads perform these operations at the same time (as in the above program), it’s
+possible that these operations are interleaved between threads. For example, the following ordering
+of events is possible between two hypothetical threads that run at the same time:
+
+1. Thread 1 **load**s “100”
+2. Thread 2 **load**s “100”
+3. Thread 1 **add**s 1, to get “101”
+4. Thread 1 **store**s 101 in memory
+5. Thread 2 **add**s 1 to the value it loaded, to get “101”
+6. Thread 2 **stores** 101 in memory
+
+Each thread executes its own operations in order (load, add, store), but when racing against another
+thread, the results can differ from what we expect.
+
+In order to prevent these kinds of race conditions, Untangled programs can use the built-in
+**semaphore** type to guard access to shared resources. A **semaphore** is a special opaque object
+that holds an integer value, and carries the following semantics:
+1. A semaphore supports **increment** and **decrement** operations *atomically* (no data races can
+   occur between two threads competing to perform these operations).
+2. If a thread decrements a semaphore and the resulting value is negative, the thread blocks
+   until...
+3. ...another thread increments the semaphore.
+
+We can take advantage of semaphores’ special “blocking” behavior and atomicity guarantees in order
+to guard access to shared resources. Let’s rewrite our above program, this time using a semaphore
+to ensure “mutually exclusive” access to the shared memory resource:
+
+```untangled
+thread_def Incrementor {
+  // Receive the semaphore
+  semaphore sem;
+  receive {
+!!     semaphore s -> sem = s;
+    _ -> exit(1);
+  }
+  // Receive the array (shared memory)
+  receive {
+    int[1] a -> {
+!!       // “lock” the semaphore
+!!       // if another thread gets there first, we’ll wait
+!!       sem--;
+!!       // Access shared memory only once we get past the “lock”
+!!       a[0] += 1;
+!!       // Allow another thread to enter the protected section of code
+!!       sem++;
+    }
+    _ -> {}
+  }
+  // Signal we’re done
+  parent << "done";
+}
+
+thread_def Main {
+  // Create a block of shared memory
+  int[1] arr = [0];
+!!   // Create the semaphore that will guard access
+!!   semaphore shared_sem = make_semaphore(1);
+
+  for (int i = 0; i < 10000; i++) {
+    thread t = spawn Incrementor;
+!!     t << shared_sem;
+    t << arr;
+  }
+
+  // Wait for all threads to signal done
+  for (int i = 0; i < 10000; i++) {
+    receive { string s -> {} _ -> exit(1); }
+  }
+  // See what result we got
+  print(string_of_int(arr[0]) + "\n");
+}
+```
+
+Now that access to shared memory is enforced to be mutually exclusive, the program prints 10000
+every time we run it:
+
+```bash
+./untangled.exe increment-no-race.unt -o increment-no-race
+./increment-no-race
+# 10000
+./increment-no-race
+# 10000
+```
+
+The data race is fixed using semaphores!
+
+
+
+
+## Conclusion
+
+You made it! Thanks for following the official Untangled tutorial. We hope you enjoyed it!
+
+For more about the language, consult the Language Reference Manual. {/* TODO: link */}
+
+Have fun!&nbsp;&nbsp;🪡&nbsp;🧵

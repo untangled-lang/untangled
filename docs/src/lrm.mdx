@@ -8,61 +8,15 @@ import TableOfContents from './components/TableOfContents';
 # Untangled: Language Reference Manual
 
 <div className="print-only browser-cta">
-  [View this document in your browser](https://untangled-lang.github.io/untangled/)
+  [View this document in your browser](https://untangled-lang.github.io/untangled/lrm.html)
 </div>
-
-<div className="authors">
-  <span>Luke Deen Taylor</span> <a href="mailto:luke.taylor@tufts.edu">luke.taylor@tufts.edu</a>
-  <span>Nick Doan</span> <a href="mailto:hdoan02@tufts.edu">hdoan02@tufts.edu</a>
-  <span>Duru Uğurlu</span> <a href="mailto:duru.ugurlu@tufts.edu">duru.ugurlu@tufts.edu</a>
-  <span>Caleb Ledi</span> <a href="mailto:cledi01@tufts.edu">cledi01@tufts.edu</a>
-  <span>Chloe Lam</span> <a href="mailto:clam08@tufts.edu">clam08@tufts.edu</a>
-</div>
-
-**Untangled** is a new programming language with first-class support for multithreading. It
-encourages users to write highly parallelized programs by providing safe and easy-to-use primitives
-and abstractions over multithreading.
-
-<figure>
-  ```untangled
-  thread_def SumWorker {
-    receive { int x -> int target = x; _ -> exit(1); }
-    // Compute the sum of the first `target` integers
-    int sum = 0;
-    for (int i = 0; i < target; i++) sum += i;
-    // Send the result back
-    parent << sum;
-  }
-
-  thread_def Main {
-    thread my_worker_1 = spawn SumWorker;
-    thread my_worker_2 = spawn SumWorker;
-    my_worker_1 << 100000;
-    my_worker_2 << 42;
-
-    // Main thread is free to do something else here...
-
-    for (int i = 0; i < 2; i++) {
-      receive { int x -> int result = x; _ -> exit(1); };
-      print(result);
-    }
-  }
-  ```
-  <figcaption>
-    A simple program demonstrating multithreaded computation in Untangled. The `Main` thread
-    continues running while two `SumWorker` threads perform a CPU-heavy computation (the sum of the
-    first 100,000 natural numbers, and the sum of the first 42 natural numbers, respectively).
-  </figcaption>
-</figure>
 
 This document serves as an authoritative reference for the Untangled language. It fully specifies
 the language, including the syntax and semantics of all language features and built-in functions.
-</Page>
 
 
 
 
-<Page>
 ## Table of contents
 
 <TableOfContents afterId="table-of-contents" />
