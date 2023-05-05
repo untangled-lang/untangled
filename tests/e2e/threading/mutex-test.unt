@@ -6,7 +6,6 @@ thread_def First {
   }
   print("First\n");
   sem++;
-  parent << 0;
 }
 
 thread_def Second {
@@ -17,7 +16,6 @@ thread_def Second {
   }
   sem--;
   print("Second\n");
-  parent << 0;
 }
 
 thread_def Main {
@@ -29,6 +27,4 @@ thread_def Main {
   }
   thread f = spawn First;
   f << sem;
-  receive {_ -> {}}
-  receive {_ -> {}}
 }
