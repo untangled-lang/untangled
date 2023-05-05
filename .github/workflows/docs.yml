@@ -53,7 +53,7 @@ jobs:
         env:
           DOCS_BASE_PATH: '/untangled/'
       - name: Generate PDF
-        run: npm run pdf && mv export/manual.pdf dist
+        run: npm run pdf && mv export/*.pdf dist
         env:
           DOCS_BASE_PATH: '/untangled/'
       - name: Upload artifact
