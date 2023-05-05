@@ -379,3 +379,62 @@ thread_def Main {
 ```
 This program behaves the same as before, but now Main is printing the results instead of
 PrimeCalculator. This demonstrates the utility of tuples for sending compound messages as a unit.
+
+
+
+### 6. Arrays
+
+Sometimes, message passing isn’t the most ergonomic way to communicate between threads. While almost
+every type of value in Untangled is immutable, Untangled **arrays** are passed by reference and
+their values are mutable.
+
+This means multiple threads can write to the same array, and the changes will be visible to all
+threads.
+
+```untangled
+thread_def PrimeCalculator {
+  int num;
+  receive { int n -> num = n; _ -> exit(1); }
+
+  bool is_prime = true;
+  for (int divisor = 2; divisor < num; divisor++) {
+    if (num % divisor == 0) is_prime = false;
+  }
+
+  // Wait to receive the “results” array, and store the result we found
+!!   receive { bool[21] results -> results[num] = is_prime; _ -> exit(1); }
+  // Signal our success to the parent thread, so that it can know when
+  // it’s safe to read the results array.
+  parent << "done";
+}
+
+thread_def Main {
+!!   // Create the array to hold the results
+!!   bool[21] results_arr;
+
+  // Spawn 20 threads to check numbers 1 to 20
+  for (int num = 2; num <= 20; num++) {
+    thread t = spawn PrimeCalculator;
+    t << num;
+!!     // Give the thread the results array
+!!     t << results_arr;
+  }
+
+  // Wait for the threads to tell us they’re finished
+  for (int num = 2; num <= 20; num++) {
+    receive { string x -> {} _ -> exit(1); }
+  }
+
+  // Print the results
+  for (int num = 2; num <= 20; num++) {
+    print(string_of_int(num) + ": " + string_of_bool(
+!!       results_arr[num]
+    ) + "\n");
+  }
+}
+```
+
+This program still calculates all the prime numbers, but now each thread stores its result in an
+array instead of sending a message back to Main. Finally, Main prints all the results in order (even
+when the results themselves are computed out of order)! And, Main doesn’t have to sort the
+results—each thread organizes their own result.
