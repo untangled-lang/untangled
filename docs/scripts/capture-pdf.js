@@ -8,12 +8,13 @@ import { preview } from 'vite';
 
 
 const cropScriptPath = fileURLToPath(new URL('./crop-pdf.py', import.meta.url));
+const mergeScriptPath = fileURLToPath(new URL('./merge-pdfs.py', import.meta.url));
 
-/**
- * Get an absolute path in the export directory
- * @param {string} path
- */
-const exportPath = (path) => fileURLToPath(new URL(path, new URL('../export/', import.meta.url)));
+/** Get an absolute path in the output directory
+ *  @param {string} path */
+const getOutputPath = (path) => fileURLToPath(new URL(path, new URL('../export/', import.meta.url)));
+const finalPdfPath = getOutputPath('final-report.pdf');
+
 
 
 // Check the app has been built
@@ -73,8 +74,8 @@ async function pageToPdf(path) {
 
   // Capture the PDF
   console.log(`Capturing PDF for ${path}...`);
-  const uncroppedPdfPath = exportPath(`${path}-uncropped.pdf`);
-  const croppedPdfPath = exportPath(`${path}.pdf`);
+  const uncroppedPdfPath = getOutputPath(`${path}-uncropped.pdf`);
+  const croppedPdfPath = getOutputPath(`${path}.pdf`);
   await page.pdf({
     width: '8.5in',
     // add extra padding to make sure we’re not wrapping. note we’re going to crop it away later
@@ -100,14 +101,33 @@ async function pageToPdf(path) {
   // Clean up
   await fs.rm(uncroppedPdfPath);
   console.log(`Captured ${path}`);
+
+  return croppedPdfPath
 }
 
 
-await Promise.all([
-  pageToPdf('tutorial.html'),
-  pageToPdf('lrm.html'),
-]);
+// Generate all the “component” PDFs we need
 
+const items = [
+  'tutorial.html',
+  'lrm.html',
+];
+const componentPdfPaths = await Promise.all(items.map(pageToPdf));
+
+
+// Merge the “component” PDFs into the big final report
+
+console.log(`Merging generated PDFs...`);
+const mergeScript = spawn('python', [mergeScriptPath, ...componentPdfPaths, finalPdfPath]);
+mergeScript.stdout.on('data', (data) => { stdout.write(data); }); // make Python script’s output visible for debugging
+await new Promise((resolve, reject) => {
+  mergeScript.on('exit', resolve);
+  mergeScript.on('error', reject);
+});
+
+
+
+console.log('done!');
 
 // Clean up server and browser
 
