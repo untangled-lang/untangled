@@ -1,1 +1,4 @@
 docs/** linguist-documentation=false
+docs/**/*.mdx linguist-detectable=true
+docs/**/*.mdx linguist-language=Markdown
+docs/**/*.mdx linguist-documentation=false
