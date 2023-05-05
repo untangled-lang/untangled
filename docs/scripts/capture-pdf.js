@@ -122,11 +122,10 @@ const componentPdfPaths = await Promise.all(items.map((path) => pageToPdf(path))
 
 /**
  * Capture a source code file to a PDF
- * @param {string | URL} path The path (from the repository root) to the source code file to capture
+ * @param {string} sourcePath - The path (from the repository root) to the source code file to capture
  */
-async function codeToPdf(path) {
-  const pagePath = fileURLToPath(new URL(`${path}.html`, new URL('../dist/source/', import.meta.url)));
-  const sourcePath = new URL(path, new URL('../../', import.meta.url));
+async function codeToPdf(sourcePath) {
+  const pagePath = fileURLToPath(new URL(`${sourcePath}.html`, new URL('../dist/source/', import.meta.url)));
   await fs.mkdir(dirname(pagePath), { recursive: true });
 
   // Create the page file
@@ -136,7 +135,7 @@ async function codeToPdf(path) {
     'ocaml', // TODO: be flexible
   );
 
-  return pageToPdf(new URL(path, 'http://example.com/source/').pathname.slice(1));
+  return pageToPdf(new URL(sourcePath, 'http://example.com/source/').pathname.slice(1));
 }
 
 // Generate PDFs of code
