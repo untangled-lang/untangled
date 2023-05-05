@@ -1,9 +1,13 @@
 # Ignore all files in tests folders by default (but not the folders themselves)
-# This excludes outputs and compiler artifacts
+# This makes sure we’re excluding outputs and compiler artifacts
 /*/*
 !/*/*/
 /*/*/*
 !/*/*/*/
+/*/*/*/*
+!/*/*/*/*/
+/*/*/*/*/*
+!/*/*/*/*/*/
 # *Don't* ignore ground truths and untangled source files
 !**/*.gt
 !**/*.unt
