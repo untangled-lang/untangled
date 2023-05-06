@@ -32,6 +32,7 @@ body {
 
 #root-container {
   padding: 4.5rem 0;
+  & > h1:first-child { margin-top: 0; }
   & > :last-child { margin-bottom: 0; }
 }
 
@@ -485,5 +486,8 @@ div.authors {
     clip-path: inset(50%);
     overflow: hidden;
     opacity: 0;
+  }
+  #root-container {
+    padding: 0;
   }
 }
