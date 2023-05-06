@@ -1,6 +1,6 @@
 import React from 'react';
 
-const BASE = import.meta.env.DOCS_BASE_PATH ?? '/';
+const BASE = import.meta.env.VITE_DOCS_BASE_PATH ?? '/';
 
 export default function HomeLink() {
   return (

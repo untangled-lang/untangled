@@ -2,7 +2,7 @@ import React, { useContext, createContext } from 'react';
 import { FontStyle, getHighlighter, HighlighterOptions } from 'shiki';
 
 
-const BASE = import.meta.env.DOCS_BASE_PATH ?? '/';
+const BASE = import.meta.env.VITE_DOCS_BASE_PATH ?? '/';
 
 const LOAD_LANGUAGES = [
   'python', 'bash', 'make', 'markdown', 'c',

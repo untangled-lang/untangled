@@ -32,7 +32,7 @@ if (!hasDist) {
 // Serve the built app
 
 const previewServer = await preview({
-  base: process.env.DOCS_BASE_PATH ?? '/',
+  base: process.env.VITE_DOCS_BASE_PATH ?? '/',
   preview: { port: 5174 },
 });
 const localServerBase = previewServer.resolvedUrls.local[0];

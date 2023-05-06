@@ -24,7 +24,7 @@ export default defineConfig({
       },
     },
   },
-  base: process.env.DOCS_BASE_PATH ?? '/',
+  base: process.env.VITE_DOCS_BASE_PATH ?? '/',
   plugins: [
     { enforce: 'pre', ...mdx({ rehypePlugins: [rehypeSlug] }) },
     react({ include: /\.(mdx|js|jsx|ts|tsx)$/ }),
