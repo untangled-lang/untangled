@@ -1,7 +1,8 @@
 import fs from 'fs/promises';
+import { globby } from 'globby';
 import { dirname } from 'path';
-import { spawn } from 'child_process';
 import { fileURLToPath } from 'url';
+import { spawn } from 'child_process';
 import { stdout } from 'process';
 
 import puppeteer from 'puppeteer';
@@ -45,23 +46,27 @@ console.log('Launched browser');
 const inch = 96;
 /**
  * Capture a webpage to a piece of the PDF
- * @param {string | URL} path The path on the website to capture
+ * @param {string} pagePath The path on the website to capture
  */
-async function pageToPdf(path) {
-  console.log(`Capturing page ${path}...`);
+async function pageToPdf(pagePath) {
+  console.log(`Capturing PDF for ${pagePath}`);
+  if (pagePath.startsWith('/')) pagePath = pagePath.slice(1);
   // Load the web page
   const page = await browser.newPage();
-  const url = new URL(path, localServerBase);
+  page.on('console', (msg) => console.log('[PAGE LOG]', msg.text()));
+  page.on('pageerror', (error) => console.log('[PAGE ERROR]', error.message));
+  const url = new URL(pagePath, localServerBase);
   await page.goto(url.href);
   await page.waitForSelector('#root-container *');
-  console.log(`Loaded ${path}`);
 
   // Set up the page
   await page.emulateMediaType('print');
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  await page.waitForNetworkIdle({ idleTime: 200 });
   const zoom = 0.66;
   // @ts-ignore
   await page.evaluate((z) => document.documentElement.style.zoom = z, zoom);
+  await new Promise((resolve) => setTimeout(resolve, 500));
 
   // Measure the height of each page of the PDF
   const pageHeights = await page.evaluate((z) => {
@@ -76,9 +81,9 @@ async function pageToPdf(path) {
   }, zoom);
 
   // Capture the PDF
-  console.log(`Capturing PDF for ${path}...`);
-  const uncroppedPdfPath = getOutputPath(`${path}-uncropped.pdf`);
-  const croppedPdfPath = getOutputPath(`${path}.pdf`);
+  const outFileName = pagePath.endsWith('.html') ? pagePath.slice(0, -5) : pagePath;
+  const uncroppedPdfPath = getOutputPath(`${outFileName}-uncropped.pdf`);
+  const croppedPdfPath = getOutputPath(`${outFileName}.pdf`);
   await fs.mkdir(dirname(uncroppedPdfPath), { recursive: true });
   await page.pdf({
     width: '8.5in',
@@ -92,7 +97,6 @@ async function pageToPdf(path) {
   await page.close();
 
   // Call out to our Python script to crop the PDF pages
-  console.log(`Cropping PDF for ${path}...`);
   const cropScript = spawn('python', [cropScriptPath, uncroppedPdfPath, croppedPdfPath]);
   cropScript.stdin.write(JSON.stringify(pageHeights.map((ph) => ph / inch)));
   cropScript.stdin.end();
@@ -104,20 +108,10 @@ async function pageToPdf(path) {
 
   // Clean up
   await fs.rm(uncroppedPdfPath);
-  console.log(`Captured ${path}`);
+  console.log(`Captured ${pagePath}`);
 
   return croppedPdfPath
 }
-
-
-// Generate all the “component” PDFs we need
-
-const items = [
-  'tutorial.html',
-  'lrm.html',
-];
-const componentPdfPaths = await Promise.all(items.map((path) => pageToPdf(path)));
-
 
 
 /**
@@ -126,28 +120,54 @@ const componentPdfPaths = await Promise.all(items.map((path) => pageToPdf(path))
  */
 async function codeToPdf(sourcePath) {
   const pagePath = fileURLToPath(new URL(`${sourcePath}.html`, new URL('../dist/source/', import.meta.url)));
+  console.log(pagePath);
   await fs.mkdir(dirname(pagePath), { recursive: true });
 
   // Create the page file
   await renderHighlighted(
     sourcePath,
     pagePath,
-    'ocaml', // TODO: be flexible
   );
 
-  return pageToPdf(new URL(sourcePath, 'http://example.com/source/').pathname.slice(1));
+  return pageToPdf(new URL(`${sourcePath}.html`, 'http://example.com/source/').pathname.slice(1));
 }
 
-// Generate PDFs of code
+
+// Generate all the “component” docs PDFs we need
+
+const items = [
+  'tutorial.html',
+  'lrm.html',
+];
+const componentPdfPaths = await Promise.all(items.map((path) => pageToPdf(path)));
 
 
-const a = await codeToPdf('src/ast.ml');
+// Generate PDFs of source files
+
+/** @param {string | string[]} g */
+const globForFiles = (g) => globby(g, { cwd: new URL('../../', import.meta.url), gitignore: true });
+const codeFiles = [
+  'README.md',
+  'Makefile',
+  'dune-project',
+  'src/dune',
+  ...await globForFiles('src/**/*.ml'),
+  ...await globForFiles('src/**/*'),
+].filter((p, i, arr) => arr.indexOf(p) === i); // remove duplicates
+console.log('Rendering source code files: ', codeFiles);
+
+const codePdfPaths = await Promise.all(codeFiles.map((path) => codeToPdf(path)));
 
 
 // Merge the “component” PDFs into the big final report
 
 console.log(`Merging generated PDFs...`);
-const mergeScript = spawn('python', [mergeScriptPath, ...componentPdfPaths, finalPdfPath]);
+const mergeScript = spawn('python', [
+  mergeScriptPath,
+  ...componentPdfPaths,
+  ...codePdfPaths,
+  finalPdfPath,
+]);
 mergeScript.stdout.on('data', (data) => { stdout.write(data); }); // make Python script’s output visible for debugging
 await new Promise((resolve, reject) => {
   mergeScript.on('exit', resolve);
