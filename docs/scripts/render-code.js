@@ -29,6 +29,7 @@ export default async function renderHighlighted(srcPath, outFile) {
     'md': 'markdown',
     'dune': 'dune',
     'dune-project': 'dune-project',
+    'll': 'llvm',
   }[ext];
   if (!language) throw new Error(`Could not identify language for file ${srcPath}`);
 

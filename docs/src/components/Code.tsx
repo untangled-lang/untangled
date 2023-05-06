@@ -42,7 +42,12 @@ const LOAD_LANGUAGES = [
     aliases: ['dune'],
     path: BASE + 'languages/ocaml/dune.json',
   },
-  // TODO: LLVM
+  {
+    id: 'llvm',
+    scopeName: 'source.llvm',
+    aliases: ['llvvm'],
+    path: BASE + 'languages/llvm.tmLanguage.json',
+  },
 ] as const;
 
 

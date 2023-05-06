@@ -30,6 +30,7 @@ export default defineConfig({
     react({ include: /\.(mdx|js|jsx|ts|tsx)$/ }),
     viteStaticCopy({
       targets: [
+        { src: './public/**/*', dest: './' },
         // Languages
         { src: '../vscode-extension/syntaxes/*', dest: './languages' },
         { src: './node_modules/shiki/languages/*', dest: './languages' },
