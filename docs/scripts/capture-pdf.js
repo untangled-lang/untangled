@@ -144,7 +144,22 @@ pieces.push(pageToPdf('project.html'));
 pieces.push(pageToPdf('architecture.html'));
 pieces.push(pageToPdf('testing.html'));
 
-// TODO: test inputs/outputs
+// Demo program inputs/outputs
+const demoPaths = (await globby([
+  'demo-programs/*.unt',
+  'demo-programs/*.ll',
+], {
+  cwd: new URL('../../', import.meta.url),
+  gitignore: false,
+}))
+  .sort((a, b) => {
+    const [aName, aExt] = a.split('.');
+    const [bName, bExt] = b.split('.');
+    if (aName === bName) return aExt === 'unt' ? -1 : 1;
+    return aName.localeCompare(bName);
+  });
+console.log('Rendering demo program input/outputs:', demoPaths);
+pieces.push(...demoPaths.map((path) => codeToPdf(path)));
 
 pieces.push(pageToPdf('lessons.html'));
 
