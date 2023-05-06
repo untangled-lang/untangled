@@ -202,44 +202,44 @@ The following integration tests are currently included:
 
 #### Threading
 
-1.`tests/e2e/threading/basic-spawn.unt` - spawns a thread, which prints the string "HELLO"
+1. `tests/e2e/threading/basic-spawn.unt` - spawns a thread, which prints the string "HELLO"
 2. `tests/e2e/threading/send-and-receive.unt` - spawns a thread and send to child thread literals
-    primitives `string`, `int`, `boolean`, `float`, and `tuple`. The child thread that it receives
-    the message from the message queue by printing out the received value in order.
+   primitives `string`, `int`, `boolean`, `float`, and `tuple`. The child thread that it receives
+   the message from the message queue by printing out the received value in order.
 3. `tests/e2e/threading/send-child-float.unt` - spawns a thread and send the child a float. The
-    child receives the integer and prints it
+   child receives the integer and prints it
 4. `tests/e2e/threading/send-child-tuple.unt` - spawns a thread and send the child a tuple. The
-    child receives the tuple and prints it
+   child receives the tuple and prints it
 5. `tests/e2e/threading/send-parent.unt` - spawns a child thread which sends a
-    message to its parent. The parent receives the message and prints it
+   message to its parent. The parent receives the message and prints it
 6. `tests/e2e/threading/array-variable-send-receive.unt` - Spawns a thread and sends 3 different
-    representations of arrays. Checks to see that all three match the correct receive case
+   representations of arrays. Checks to see that all three match the correct receive case
 7. `tests/e2e/threading/end-thread.unt` - Checks whether the end function in a thread will only end
-    its corresponding thread's execution.
-8. `tests/e2e/threading/exit-from-thread.unt` - Checks that an exit function will end the execution
-    of the entire program.
+   its corresponding thread's execution.
+8. j`tests/e2e/threading/exit-from-thread.unt` - Checks that an exit function will end the execution
+   of the entire program.
 9. `tests/e2e/threading/mutex-test.unt` - Checks that the semaphore actually locks by changing the
-    order of a print sequence.
+   order of a print sequence.
 10. `tests/e2e/threading/mutexed-array.unt` - Checks that asemaphore can be used toeliminate data
-    races. (matched with `tests/e2e/threading/unmutexed-array.unt`)
+   races. (matched with `tests/e2e/threading/unmutexed-array.unt`)
 11. `tests/e2e/threading/nested-receive.unt` - Checks whether it is possible to nest receive
-    statements.
+   statements.
 12. `tests/e2e/threading/self-send-self.unt` -Checs that a thread can send a message to itself.
 13. `tests/e2e/threading/send-array-tuple-second.unt` - Checks pattern matching on a tuple that
-    contains an array
+   contains an array
 14. `tests/e2e/threading/send-child-array.unt` - Checks that a child thread can safely send an array
-    containing value to its parent
+   containing value to its parent
 15. `tests/e2e/threading/send-child-int.unt` - spawns a thread and send the child an integer. The
-    child receives the integer and prints it
+   child receives the integer and prints it
 16. `tests/e2e/threading/send-child-string.unt` - Checks that sending a string does work
 17. `tests/e2e/threading/send-other.unt` - Checks that sending threads works properly
 18. `tests/e2e/threading/send-self.unt` - Checks that sending the self thread works as expected
 19. `tests/e2e/threading/send-semaphore.unt` - Checks that sending a semaphore works as expected and
-    sends a reference that can be used frommultiple places
+   sends a reference that can be used frommultiple places
 20. `tests/e2e/threading/tuple-variable-send-receive.unt` - Checks that all 3 different ways of
-    sending tuples works with pattern matching
+   sending tuples works with pattern matching
 21. `tests/e2e/threading/undefine-values.unt` - Checks that undefined values do not break our
-    pattern matching algorithm
+   pattern matching algorithm
 22. `tests/e2e/threading/unmutexed-array.unt` - Replicates the data race conditions (corresponds to
     the `tests/e2e/threading/mutexed-array.unt`)
 23. `tests/e2e/threading/wildcard-pattern.unt` - Tests that the wilcard patterns within tuples work.

@@ -321,7 +321,6 @@ let check (tdecls, fdecls) =
       | Id s -> let t = (lookup s envs) in (t, SId s)
       | Spawn t -> let _ = find_thread_def t in (Thread, SSpawn t)
       | Assign (id, expr) ->
-          (* TODO: Should threas be able to override parent / self *)
           let lt = lookup id envs
           and (rt, sexpr) = check_expr envs expr
           in (check_assign lt rt expr, SAssign (id, (lt, sexpr)))
@@ -442,9 +441,6 @@ let check (tdecls, fdecls) =
     let (_, sstmt) = check_stmt [env] (Block fdecl.body)
     in match sstmt with
       SBlock (sl) ->
-        (*
-         * TODO: Prevent functions from spawning thread?
-         *)
         let _ = List.iter loop_check sl in
         let _ = List.iter (fun sstmt -> return_check false fdecl.fname sstmt) sl in
         let _ = List.iter end_check sl in

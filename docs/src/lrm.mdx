@@ -29,25 +29,23 @@ the language, including the syntax and semantics of all language features and bu
 <PageBreak />
 ## Definitions
 
+A [**thread procedure definition**](#thread-procedure-definitions) is a predefined sequence of
+statements that can be executed in one or more threads.
+
 <a id="threads">
   A **thread** refers to an operating system thread, which is an isolated execution context for
   Untangled instructions.
 </a>
 
-A [**thread procedure definition**](#thread-procedure-definitions) refers to a predefined sequence
-of statements that can be executed in one or more threads.
+<a id="thread-handles">A value of type **thread**</a> is an opaque
+[resource handle](https://en.wikipedia.org/wiki/Handle_(computing)) to a single running instance of
+a thread definition. A single **thread** runs a thread procedure corresponding to the thread
+procedure definition it was spawned with.
 
-{/* TODO: “This definition is pretty difficult to read, would love if this was broken down a bit simpler.” */}
-<a id="thread-handles">A **thread handle**</a> refers to a value of [type](#types) <T>thread</T>; it
-is an opaque [resource handle](https://en.wikipedia.org/wiki/Handle_(computing)) to a single running
-thread.
-
-{/* TODO: This definition is not given in context. At this point, I don't know what an expression or statement is in your language, so this semantic detail could definitely wait until those things are defined. */}
 <a id="current-thread">
-  Every statement or expression evaluated in an Untangled program belongs to a single thread, which
-  is called the **current thread**.
+  Every statement or expression being evaluated in an Untangled program “belongs” to a single
+  thread, which is called the **current thread**.
 </a>
-
 
 
 
@@ -94,7 +92,6 @@ either “hello” or “world”.
 <PageBreak />
 ## Syntax and semantics
 
-{/* TODO: - Add special escape character */}
 
 ### Blanks
 
@@ -210,14 +207,12 @@ identifier that has the same name as one of the [keywords](#keywords).
 ### Types
 
 {/*
-  * TODO: Talk about how arrays / threads are initialized with default values when
+  * DID SMT TODO: Talk about how arrays / threads are initialized with default values when
   * users declare a tuple without assignments.
-  * TODO: The default vlaues can't have void / thread as part of the types
   */}
 {/* TODO: “These [booleans, integers, floats, strings] should have been explained in this section. I don't know how any of these types function, or what restrictions they have on them” */}
-{/* TODO: - Talk about undefined behavior if message are sent with undefined values */}
 Untangled includes first-class types for booleans, integers, floats, strings,
-[thread handles](#thread-handles), [semaphores](#semaphores), tuples, and arrays (as well as a void
+[threads](#thread-handles), [semaphores](#semaphores), tuples, and arrays (as well as a void
 type).
 
 <RuleBlock>
@@ -252,6 +247,22 @@ type).
   </Rule>
 </RuleBlock>
 
+#### Passing by value / reference
+
+{/*
+  * TODO: - Add opaque reference to semaphores
+  * DID SMT TODO: - Tuple are passed by reference b.c it's a immutable
+  */}
+In message passing and in function calls, every type in Untangled is passed by *value*, with three
+key exceptions:
+1. [Arrays](#nonterminal-array-type) are passed by reference.
+2. [Semaphores](#semaphores) are passed by reference; if they were not they would not be useful,
+   since semaphore-based synchronization between threads inherently requires two threads to hold a
+   reference to the same semaphore.
+3. [Threads](#thread-handles) are opaque, and Untangled makes no guarantees about whether
+   they are passed by value or by reference. When passed, a thread will refer to the same
+   thread as before.
+4. [Tuples](#nonterminal-tuple-type) are also passed by reference, however they are immutable.
 
 
 <PageBreak />
@@ -319,26 +330,35 @@ Boolean literals come from the token <T>true</T> or the token <T>false</T>.
   <T>false</T>
 </Rule>
 
+{/* TODO: - Add special escape character */}
 {/* TODO: - We can add double quote inside string with an escape sequence now */}
-String literals start and end with a double quote, and any sequence of characters *besides* a double
-quote can go inside. The entire contents between (not including) the double quotes make up the
-string value.
+String literals start and end with a double quote that is not `\"`. The entire
+contents between (not including) the double quotes make up the string value. The
+following characters are special escape sequences in Untangled:
+
+* `\n` inserts a newline
+* `\r` inserts a carriage return
+* `\b` inserts a backspace
+* `\t` inserts a tab
+* `\\` inserts a backslash character
+* `\"` inserts a double quote
 
 <Rule name="string-literal">
   <><T>"</T> [^<T>"</T>]* <T>"</T></>
 </Rule>
 
-{/* TODO: - Tuple literal can't store a function that returns void */}
-A tuple literal groups exactly two expressions, each of which can have any type.
+{/* DID SMT TODO: - Tuple literal can't store a function that returns void */}
+A tuple literal groups exactly two expressions, each of which can evaluate to
+any type, except the void type.
 
 <Rule name="tuple-literal">
   <><T>(</T> <NT>expr</NT> <T>,</T> <NT>expr</NT> <T>)</T></>
 </Rule>
 
-{/* TODO: - Array literal can't store a function that returns void */}
+{/* DID SMT TODO: - Array literal can't store a function that returns void */}
 
-An array literal includes an arbitrary number of values; all of the expressions inside an array
-literal must have the same type.
+An array literal can have up to 2^31 - 1 values; every expressions inside an array
+literal must evaluate to the same type. The only type an array cannot store is the void type.
 
 <RuleBlock>
   <Rule name="array-literal">
@@ -355,11 +375,8 @@ literal must have the same type.
 #### Identifier expressions
 
 Identifier expressions refer to variables. An identifier expression returns the value of the
-variable it refers to.
+variable it refers to. Trying to access the contents of an uninitialized value causes undefined behavior.
 {/* TODO: “The identifier syntax would have been good to include here, rather than before. It's a bit jarring to have in two places, when you need both sections to fully understand” */}
-
-Some [keywords](#keywords) are also [built-in identifiers](#built-in-identifiers) given special
-values in identifier expressions.
 
 
 #### Operator expressions
@@ -407,19 +424,23 @@ defined; for other types, the compiler will throw an error.
 </RuleBlock>
 
 ##### Infix operators
+
 For infix operators, the left-hand expression and the right-hand expression must evaluate to the
 same type.
 
 **For integer and floating-point operands**, <T>+</T>, <T>-</T>, <T>*</T>, and <T>/</T> perform
 standard arithmetic operations (addition, subtraction, multiplication, and division, respectively).
-
-{/* TODO: “How do these differ between integer and floating-point operands? For instance, what does `3 / 2` do?” */}
+For integer division, if the resulting value is not a whole value, it will be truncated.
+For example `3 / 2` would yield `1`.
+{/* DID SMT TODO: “How do these differ between integer and floating-point operands? For instance, what does `3 / 2` do?” */}
 {/*
-  * TODO: - ** only supports integer exponent
+  * DID SMT TODO: - ** only supports integer exponent
   */}
-Additionally, <T>**</T> raises the left operand to the power of the right operand. The comparison
-operators <T>&lt;</T>, <T>&lt;=</T>, <T>&gt;</T>, and <T>&gt;=</T> compare their operands and
-evaluate to a boolean value. For integers, <T>%</T> performs the “modulo” operation.
+Additionally, integer types can use the <T>\*\*</T> and <T>%</T> operators. <T>\*\*</T> raises the
+left operand to the power of the right operand. <T>%</T> performs the “modulo” operation.
+
+The comparison operators <T>&lt;</T>, <T>&lt;=</T>, <T>&gt;</T>, and <T>&gt;=</T> compare their operands and
+evaluate to a boolean value.
 
 **For string operands**, the <T>+</T> operator does string concatenation.
 
@@ -499,6 +520,7 @@ is the element type of the array.
   */}
 <Rule name="array-access">
   <><NT>ident</NT> <T>[</T> <NT>expr</NT> <T>]</T></>
+  <><NT>array-access</NT><T>[</T><NT>expr</NT><T>]</T></>
 </Rule>
 
 
@@ -580,6 +602,7 @@ identifiers](#built-in-identifiers) and the [`receive` statement](#receive-state
 
 
 #### Thread spawn expressions
+
 A thread spawn expression starts a new thread to run a given
 [thread procedure](#thread-procedure-definitions), and evaluates to a value of type `thread` (a
 [thread handle](#thread-handles)).
@@ -621,17 +644,33 @@ that block.
 
 #### Variable declaration statements
 
-{/*
-  * TODO: - Talk about how we can also do tuple deconstruction
-  * (int i, float f) = (0, 5.0)
-  */}
-<Rule name="variable-decl">
-  <><NT.type /><NT.ident />(<T>=</T> <NT.expr />)?</>
-</Rule>
+<RuleBlock>
+  <Rule name="variable-decl">
+    <><NT>base-decl</NT>(<T>=</T><NT.expr />)?</>
+    <><T>(</T><NT>tuple-decl</NT>,<NT>tuple-decl</NT><T>)</T><T>=</T><NT.expr /></>
+  </Rule>
 
-A variable declaration binds an identifier to a type and, optionally, assigns a value to this new
-variable. When a declaration includes an assignment, the type of the expression must match the
+  <Rule name="base-decl">
+    <><NT.type /><NT.ident /></>
+  </Rule>
+
+  <Rule name="tuple-decl">
+    <><NT>base-decl</NT></>
+    <><T>(</T><NT>tuple-decl</NT>,<NT>tuple-decl</NT><T>)</T></>
+  </Rule>
+</RuleBlock>
+
+A <NT>base-decl</NT> construct binds an identifier to a type and, optionally, assigns a value to
+this new variable. When a declaration includes an assignment, the type of the expression must match the
 declared type of the variable.
+
+{/* TODO - Need help explaining this */}
+A <NT>tuple-decl</NT> construct is used for “tuple unpacking”—it counts as a “declaration” for each
+of the “components” declared on the left hand side, and each of those declarations is assigned
+the value from the corresponding component of the tuple on the right hand side.
+
+The expression on the right side must be a tuple whose structure matches the “unpacking” on the left
+hand side.
 
 See also: [Scope](#scope)
 
@@ -784,16 +823,21 @@ function has a non-void return type. Additionally, all non-void functions must i
   * TODO: - We can do something like (spawn thread) << 1. So the grammar should be expr << expr
   */}
 A [thread](#threads) can send messages to any [thread handle](#thread-handles) it has, including the
-built-in [<T>parent</T> keyword](#parent-keyword).
+built-in <T>parent</T> and <T>self</T> [keyword](#parent-keyword).
+
 {/* TODO: “This explanation requires the context of how threads work, so that should come before” */}
 
+The expression to the left of the <T>&lt;&lt;</T> must evaluate to a <T.thread /> type.
+
 The expression to the right of the <T>&lt;&lt;</T> operator is the “message” to be sent. A message
-can be a value of any type. See [Message passing](#message-passing) for an explanation of the
-overall semantics of the message system.
+can be a value of any type except void type. See [Message
+passing](#message-passing) for an explanation of the overall semantics of the
+message system.
 
 <Rule name="message-send">
-  <><NT>ident</NT> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></>
-  <><T>parent</T> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></>
+  <><NT>expr</NT> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></>
+  {/* <><T>parent</T> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></>
+  <><T>self</T> <T>&lt;&lt;</T> <NT>expr</NT> <T>;</T></> */}
 </Rule>
 
 
@@ -817,19 +861,20 @@ A [thread](#threads) receives messages from other threads using a <T>receive</T>
   </Rule>
 
   <Rule name="pattern">
-    <><NT>type</NT> <NT>ident</NT></>
-    <><T>_</T></>
+    <>[<T>int</T> <T>float</T> <T>bool</T> <T>semaphore</T> <T>array-type</T>
+    <T>thread</T> <T>string</T>] <NT>ident</NT></> <><T>_</T></>
     <><T>(</T> <NT>pattern</NT> <T>,</T> <NT>pattern</NT> <T>)</T> </>
   </Rule>
 </RuleBlock>
 
-{/*  * TODO: - We're not enforcing exhaustive pattern matching
-  * TODO: -We require that each pattern must have a wildcard
-  */}
-A receive statement consists of an exhaustive list of <NT>pattern</NT>s, each followed by a
-[statement](#nonterminal-stmt). A list of <NT>pattern</NT>s is **exhaustive** if at least one
-pattern [matches](#pattern-matching-semantics) every possible <NT>type</NT> in Untangled. The
-compiler checks this constraint for each receive statement.
+
+A receive statement consists of an exhaustive list of <NT>pattern</NT>s, each
+followed by a [statement](#nonterminal-stmt). A list of <NT>pattern</NT>s is
+**exhaustive** if at least one pattern [matches](#pattern-matching-semantics)
+every possible <NT>type</NT> in Untangled. Each receive statement must contain
+a <T>_</T> wildcard statement and each <NT.pattern /> in a
+receive statement must be unique.
+
 
 Executing a receive statement performs the following steps:
 1. Pop the first message from the current thread’s [message queue](#the-message-queue).
@@ -929,9 +974,11 @@ definitions](#thread-procedure-definitions), which define a sequence of statemen
 A function definition has four parts:
 
 1. The **return type** comes first; it indicates the [type](#nonterminal-type) of the value that the
-  function will return.
+  function will return. The function return type is the only part in an Untangled program that is
+  allowed to have a void type.
 {/* TODO: - Only within all the function names */}
-2. The **name** of the function (an <NT>ident</NT>) uniquely identifies it.
+2. The **name** of the function (an <NT>ident</NT>) that uniquely identifies it among all other defined
+  functions and [built-in functions](#built-in-functions).
 3. <a id="function-parameter-list">The **parameters** are a list</a> of (<NT>type</NT>,
    <NT>ident</NT>) pairs which define arguments that must be passed for each invocation of the
    function.
@@ -948,6 +995,8 @@ int min (int num1, int num2) {
 }
 ```
 
+A function body cannot contain the following thread specific statements:
+[receiving](#receive-statements) and [spawning](#thread-spawn-expressions) a new thread.
 
 #### Thread procedure definitions
 
@@ -956,10 +1005,9 @@ started on a new thread, at any time, by any part of a program, using a
 [<T>spawn</T> expression](#thread-spawn-expressions).
 
 A thread procedure definition has two parts:
-1. The **name** of the thread procedure uniquely identifies it for use with the
-   [spawn](#thread-spawn-expressions) keyword.
-2. The **body** is a list of statements that a newly spawned thread will run.
-{/* TODO: ^ “You already define semantics for a block! You should rely on that here, since they are the same” */}
+1. The **name** of the thread procedure uniquely identifies it among all the
+  thread definitions for use with the [spawn](#thread-spawn-expressions) keyword.
+2. The **body** is a [block](#blocks) that a newly spawned thread will run.
 
 ```untangled
 /* The Max thread procedure expects to receive two numbers, and then sends a
@@ -999,9 +1047,6 @@ a specific syntactic construction.
 
 #### Thread lifetime
 
-{/*
-  * TODO: - Add semantics about semantically waiting until all threads complete
-  */}
 Each [thread](#threads) executes completely independently and can continue to run after other
 threads (including its parent) have finished executing.
 
@@ -1011,6 +1056,7 @@ the [<T>end</T> built-in function](#built-in-functions) is called.
 A thread cannot be resumed after it has exited. A message sent to a thread after it has exited will
 effectively be dropped.
 
+The Untangled program doesn't terminate until all threads have completed executing.
 
 #### The Main thread
 
@@ -1068,21 +1114,7 @@ match common Semaphore semantics defined in [literature](https://greenteapress.c
 
 
 
-### Passing by value / reference
 
-{/*
-  * TODO: - Add opaque reference to semaphores
-  * TODO: - Tuple are passed by reference b.c it's a immutable
-  */}
-In message passing and in function calls, every type in Untangled is passed by *value*, with three
-key exceptions:
-1. [Arrays](#nonterminal-array-type) are passed by reference.
-2. [Semaphores](#semaphores) are passed by reference; if they were not they would not be useful,
-   since semaphore-based synchronization between threads inherently requires two threads to hold a
-   reference to the same semaphore.
-3. [Thread handles](#thread-handles) are opaque, and Untangled makes no guarantees about whether
-   they are passed by value or by reference. When passed, a thread handle will refer to the same
-   thread as before.
 
 ```untangled
 void referenceFunc(int[4] arr) { arr[0] = 0; }
@@ -1142,6 +1174,9 @@ However, an identifier *may* be redeclared in a nested context, even if it is al
 outer context. In this case, the inner declaration “shadows” the outer declaration for the duration
 of its scope, hiding the outer declaration.
 
+`parent` and `self` are special keywords that can never be redeclared or reassign within a thread
+body.
+
 <figure>
   ```untangled
   int foo() {
@@ -1180,10 +1215,10 @@ identifiers have **global scope**. These identifiers are usable anywhere in the 
 before the definition occurs.
 
 {/*
-  * TODO: - This is not true
+  * DID SMT TODO: - This is not true
   */}
-Function and thread procedure definitions share a single “global context,” so using the same
-identifier for more than one causes a compiler error.
+Function and thread procedures are inherently different and therefore can have the same name.
+However it is not possible for functions and threads to share names within themselves.
 
 
 #### Scope of variable declaration statements
