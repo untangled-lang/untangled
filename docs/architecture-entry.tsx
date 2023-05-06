@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import ArchitecturalDesign from './src/architectural-design.mdx';
+import Architecture from './src/architecture.mdx';
 import Code, { CodeConfig, CodeWrapper } from './src/components/Code';
 import Link from './src/components/Link';
 
@@ -11,7 +11,7 @@ if (!root) throw new Error('React root element not found');
 ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <CodeConfig theme="poimandres">
-      <ArchitecturalDesign components={{ code: Code, pre: CodeWrapper, a: Link }} />
+      <Architecture components={{ code: Code, pre: CodeWrapper, a: Link }} />
     </CodeConfig>
   </React.StrictMode>
 );

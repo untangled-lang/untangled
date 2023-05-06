@@ -1,0 +1,230 @@
+import HomeLink from './components/HomeLink';
+import BlockDiagram from './diagrams/architecture.svg';
+import ArrayStructure from './diagrams/ArrayStructure.svg'
+import ArrayEx from './diagrams/foo.svg'
+import SemaphoreStructure from './diagrams/SemaphoreStructure.svg'
+import TupleStructure from './diagrams/TupleStructure.svg'
+import TupleEx from './diagrams/bar.svg'
+import PatternMatching from './diagrams/PatternMatching.svg'
+import DataTStructure from './diagrams/DataTStructure.svg'
+
+
+<HomeLink />
+
+# Untangled: Architecture
+
+### Architecture Block Diagram
+
+
+<div style={{ marginTop: '3rem', marginBottom: "4rem"}}>
+  <BlockDiagram />
+</div>
+
+### Interesting Features and Their Implementations
+
+#### Tags
+
+In Untangled, every type has a corresponding tag value. Here are the corresponding tag values:
+
+* `int` 0
+* `float` 1
+* `string` 2
+* `bool` 3
+* `tuple` 4
+* `array` 5
+* `thread` 6
+* `semaphore` 7
+
+The tagging for tuple and array are arrays are more complicated, and they happen during the
+creation of these data types, which we will discuss in their respective sections.
+
+#### Arrays
+
+This feature was implemented by Duru, Luke, Nick, and Caleb.
+
+Arrays in Untangled have static size and the llvm representation is a struct pointer as follows:
+
+<div style={{ marginTop: '3rem', marginBottom: "4rem"}}>
+  <ArrayStructure />
+</div>
+
+The `data_array` is a void pointer to a heap array containing the values. `size` indicates the
+number of elements inside the `data_array`. `tags` is a pointer which points to a heap array containing
+the tag values for the array. `tags_size` is an integer value holding the length of the `tags`.
+{/* int[6] foo = [4, 5, 6, 2, 1, 12]; */}
+
+The `tags` array always stores 5 as the first element to indicate that it's an array, and the
+next element indicates the size of `data_array`. The remaining tag values correspond to the tags
+of the array's element type.
+
+Here is an example of how `int[6] foo = [4, 5, 6, 2, 1, 12];` is represented.
+
+<div style={{ marginTop: '3rem', marginBottom: "4rem"}}>
+  <ArrayEx />
+</div>
+
+{/*
+  let array_t = L.struct_type context [| i32_t; pointer_t; L.pointer_type i32_t; i32_t |] in
+
+  size : L.llvalue;
+  data_array : L.llvalue;
+  tags : L.llvalue;
+  tags_size : L.llvalue;
+ */}
+
+#### Semaphores
+
+This feature was implemented by Duru and Nick.
+
+The llvm representation for a semaphore is a struct pointer as follows:
+
+<div style={{ marginTop: '3rem', marginBottom: "4rem"}}>
+  <SemaphoreStructure />
+</div>
+
+`mutex` is pointer to a C opaque mutex. The `mutex` is used whenever a thread reads or writes to
+`count`.
+
+For a `--` operation on a semaphore, the program checks if `count` is positive. If
+the `count` is positive, it decrements the `count` value and allows the thread to continue executing.
+If the `count` is 0, the program jumps to a waiting state and continuously checks whether the
+`count` is positive.
+
+For a `++` operation on a semaphore, the program increments the `count` value.
+
+#### Tuples
+
+This feature was implemented by Duru, Nick, and Caleb.
+
+The llvm representation of a tuple struct is as follows:
+
+<div style={{ marginTop: '3rem', marginBottom: "4rem"}}>
+  <TupleStructure />
+</div>
+
+The llvm representation of a tuple is the same as a message to simplify the process of message passing.
+In a tuple, `head` and `tail` points to other `data_t` structs, corresponding to the first and second
+element of the tuple, respectively. This structure grows recursively if the first or second element
+is another tuple.
+
+Here is an example of how `((bool, int), string) bar = ((true, 1), "hello");` is represented.
+
+<div style={{ marginTop: '3rem', marginBottom: "4rem"}}>
+  <TupleEx />
+</div>
+{/*
+  also for message...
+  let data_t = L.struct_type context [| i32_t; pointer_t; pointer_t |] in
+
+  tag : L.llvalue;
+  head : L.llvalue;
+  tail : L.llvalue;
+*/}
+
+#### Thread
+
+{/*
+  let arg_t = L.struct_type context [| pointer_t; pointer_t; queue_ptr; queue_ptr |] in
+
+  parent_queue : L.llvalue;
+  child_queue : L.llvalue;
+ */}
+
+##### Overview
+
+The llvm representation of a `thread_def` follows the signature of a routine
+from `pthread.h` in C, which is a function that accepts a `void *` argument and
+returns a `void *` value.
+
+In Untangled, every instance of `thread_def` implicitly accepts a struct pointer
+which contains the `parent_queue` and the `child_queue` and returns a null
+pointer. The `parent_queue` is a pointer to the message queue of the procedure
+that calls the current thread; the `child_queue` is a pointer to the message
+queue generated for the current thread.
+
+Every time a new thread is spawned, the current thread initializes a new struct pointer. The
+`parent_queue` of the struct points to the current's thread `child_queue` and the `child_queue`
+points to a newly generated queue. The child thread is executed by using the `pthread_create` routine
+from C. The `spawn` keyword returns a reference to the new queue struct.
+
+The initial execution of `thread_def Main` behaves differently compared to other spawned threads.
+At compilation time, the program generates a `main` function as the entry point for the llvm code
+and initializes a struct pointer as argument to `thread_def Main`. The `parent_queue` and `child_queue`
+of the struct points to the same queue generated in `main`. The Untangled program is executed when
+`main` calls `thread_def Main`.
+
+##### Thread Joining
+
+Untangled programs implicitly waits for all threads to finish executing before exiting.
+
+The program allocates a global counter to indicate the number of running
+threads, which starts at 1, and a global mutex. The global mutex is used to lock write
+operations on the global counter. Every time a new thread is spawned, the
+current thread increments the global counter by 1. When a thread finishes
+executing, it decrements the global counter by 1. The `main` function returns
+when the global counter equals to 0, which indicates that all running threads,
+including the initial `thread_def Main` instance, have finished executing.
+
+##### Message Queue
+
+This feature was implemented by Nick.
+
+The message queue is a dynamic data structure written in llvm to support message
+passing between threads. In llvm, the queue is represented as a struct which contains its
+size, capacity, a pointer to an array of messages, and a mutex.
+
+When a thread sends a message, the program pushes the message onto the queue. If the queue is full,
+the program resizes the queue by doubling the capacity of the array. The
+compiler pops a message from the queue in a receive statement if the queue is not empty.
+
+The program uses the mutex stored within each queue to prevent data race on queue operations.
+
+{/*
+  let array_t = L.struct_type context [| i32_t; pointer_t; L.pointer_type i32_t; i32_t |] in
+
+  size : L.llvalue;
+  cap : L.llvalue;
+  array : L.llvalue;
+  mutex : L.llvalue;
+*/}
+
+##### Message Passing
+
+This feature was implemented by Duru, Luke, Nick, and Caleb.
+
+When a thread sends a message, the value is stored in a `data_t` struct, with the exception of a
+tuple type, which is already represented as a reference to `data_t`.
+
+<div style={{ marginTop: '3rem', marginBottom: "4rem"}}>
+  <DataTStructure />
+</div>
+
+The `tag` field a `data_t` struct stores the value's corresponding tag number. For all data
+types, except tuple, the `head` points to the message value and the `tail` is a null pointer.
+After the `data_t` has been constructed, the reference to `data_t` is pushed onto the queue of
+the receiving thread.
+
+
+##### Generating Tags
+
+This feature was implemented by Duru, Luke, Nick, and Caleb.
+
+During compilation time, an array of tag values are constructed for each pattern
+in the receive block. The tags are generated through a recursive analysis of the pattern types.
+
+Here is an example of what that would look like:
+
+<div style={{ marginTop: '3rem', marginBottom: "4rem"}}>
+  <PatternMatching />
+</div>
+
+##### Pattern Matching
+
+This feature was implemented by Duru, Luke, Nick, and Caleb.
+
+When a message is received, the program iterates through the array of tag values to find a matching
+tag. Once a tag has been matched, the program switches on the index of the matched
+tag values in the array to jump to the corresponding statement.
+
+In a switch statement, the `wild card` pattern has a tag value of -1, which can match any tag
+value.
