@@ -133,42 +133,48 @@ async function codeToPdf(sourcePath) {
 }
 
 
-// Generate all the “component” docs PDFs we need
+// Generate all the “component” PDFs we need
 
-const items = [
-  'index.html',
-  'tutorial.html',
-  'lrm.html',
-];
-const componentPdfPaths = await Promise.all(items.map((path) => pageToPdf(path)));
+/** @type {Promise<string>[]} */
+const pieces = [];
+pieces.push(pageToPdf('index.html'));
+pieces.push(pageToPdf('tutorial.html'));
+pieces.push(pageToPdf('lrm.html'));
+pieces.push(pageToPdf('project.html'));
+pieces.push(pageToPdf('architecture.html'));
+pieces.push(pageToPdf('testing.html'));
 
+// TODO: test inputs/outputs
 
-// Generate PDFs of source files
+pieces.push(pageToPdf('lessons.html'));
 
-/** @param {string | string[]} g */
-const globForFiles = (g) => globby(g, { cwd: new URL('../../', import.meta.url), gitignore: true });
-const codeFiles = [
+// appendix: source code
+
+const compilerSourcePaths = [
   'README.md',
+  // Build system
   'Makefile',
   'dune-project',
   'src/dune',
-  ...await globForFiles('src/**/*.ml'),
-  ...await globForFiles('src/**/*'),
+  // OCaml sources (in “order” of compiler steps)
+  'src/untangled.ml',
+  'src/scanner.mll',
+  'src/parser.mly',
+  'src/ast.ml',
+  'src/sast.ml',
+  'src/semant.ml',
+  'src/codegen.ml',
+  // everything we missed
+  ...await globby('src/**/*', { cwd: new URL('../../', import.meta.url), gitignore: true }),
 ].filter((p, i, arr) => arr.indexOf(p) === i); // remove duplicates
-console.log('Rendering source code files: ', codeFiles);
-
-const codePdfPaths = await Promise.all(codeFiles.map((path) => codeToPdf(path)));
+console.log('Rendering source code files: ', compilerSourcePaths);
+pieces.push(...compilerSourcePaths.map((path) => codeToPdf(path)));
 
 
 // Merge the “component” PDFs into the big final report
 
 console.log(`Merging generated PDFs...`);
-const mergeScript = spawn('python', [
-  mergeScriptPath,
-  ...componentPdfPaths,
-  ...codePdfPaths,
-  finalPdfPath,
-]);
+const mergeScript = spawn('python', [mergeScriptPath, ...await Promise.all(pieces), finalPdfPath]);
 mergeScript.stdout.on('data', (data) => { stdout.write(data); }); // make Python script’s output visible for debugging
 await new Promise((resolve, reject) => {
   mergeScript.on('exit', resolve);
