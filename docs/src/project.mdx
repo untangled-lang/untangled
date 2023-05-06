@@ -10,30 +10,46 @@ import HomeLink from './components/HomeLink';
 We planned our tasks and timeline around the the class’s assignment deadlines throughout the
 semester.
 
-We tracked incomplete tasks using markdown to-do lists checked in to our codebase.
+We closely referenced the original Language Reference Manual while implementing the “semantic
+checking” phase of the compiler. For semantic rules we had missed in our LRM definitions, we either
+held group discussions, or relied on our understanding of common semantics in programming languages
+like C.
 
-Throughout the project, in order to identify areas we needed to work on, we attempted to run
-programs from our original proposal (and other example programs, e.g. from the draft of the Language
-Reference Manual). Observing what functionality was missing or broken showed us what we still needed
-to work on!
+In implementing the “code generation” phase of the compiler, we first focused on the most basic
+features (printing, `string_of_*` conversions, and binary operations for testing purposes). Next, we
+implemented threading, and message passing for primitive types—core language features of Untangled!
+After we had validated message passing for primitive types, we worked on message passing for tuples
+and arrays—this required us to rewrite a lot of our implementation to account for user-defined
+types.
+
+Finally, we revisited the original Language Reference Manual to identify missing features and
+discrepancies with our compiler implementation.
+
+Throughout the project, we regularly met to brainstorm tasks, and kept track of outstanding tasks
+using a to do list in text files in our code. In general, we didn’t assign specific responsibilities
+to specific group members; instead, we all worked independently to identify missing features and
+necessary improvements. Then, we would either communicate the necessary task to the rest of the
+team, or take the initiative to implement it ourselves!
 
 
 ### Implementation timeline
 
-- Feb 13: **First commit**
-- Feb 21: **Scanner/Parser/AST implemented**
-- Feb 28: **Language Reference Manual draft finished**
-- Mar 26: **First “hello world” program runs**
-- April 10: **First Untangled thread spawned**
-- April 11: **Basic control flow (if, while, etc.)**
-- April 18: **First message passing between threads**
-- April 27: **Arrays and tuples initial implementation**
-- May 2: **Semaphores**
-- May 3: **String escape sequences**
+- Jan 31: **Brainstormed language domain**
+- Feb 13: **Set up Github repository**
+- Feb 21: **Implemented Scanner/Parser/AST**
+- Feb 28: **Finished the first draft of the Language Reference Manual**
+- Mar 26: **Executed the first “hello world” program**
+- April 10: **Spawned Untangled threads**
+- April 11: **Added control flow statements and simple binary operations**
+- April 18: **Implemented primitive types message passing**
+- April 27: **Added array and tuple data types**
+- May 2: **Completed semaphores**
+- May 3: **Linked remaining builtin functions with C and added string escape sequences**
+- May 4: **Semantic checker completed**
+- May 4: **Completed complex types message passing**
 - May 5: **Docs completed**
+- May 5: **Code generation completed**
 - May 5: **Final commit**
-
-
 
 ### Team member responsibilities & contributions
 
@@ -44,7 +60,7 @@ contributions to call out are as follows:
 - Major contributions to code generation
 - Significant contributions to every phase of compiler implementation (scanner, parser, AST,
   semantic checking)
-- Authored first draft of test script
+- Authored first draft of the test script
 - Led development of multithreading features
   - Semaphores
   - Message passing
@@ -69,9 +85,10 @@ contributions to call out are as follows:
 - Contributed to build system (makefiles, compiler CLI, etc.)
 
 **Duru**
-- Major contributor to docs content (tutorial, language reference manual)
+- Major contributor to docs content (tutorial, language reference manual, architecture docs, etc.)
 - Major contributions to code generation
   - Message passing
+  - Tag generation
   - Large conceptual features, big bug fixes and refactors
 - Significant contributions to every phase of compiler implementation (scanner, parser, AST,
   semantic checking)
