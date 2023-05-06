@@ -13,34 +13,38 @@ import DataTStructure from './diagrams/DataTStructure.svg'
 
 # Untangled: Architecture
 
-### Architecture Block Diagram
-
 
 <div style={{ marginTop: '3rem', marginBottom: "4rem"}}>
   <BlockDiagram />
 </div>
 
-### Interesting Features and Their Implementations
 
-#### Tags
 
-In Untangled, every type has a corresponding tag value. Here are the corresponding tag values:
 
-* `int` 0
-* `float` 1
-* `string` 2
-* `bool` 3
-* `tuple` 4
-* `array` 5
-* `thread` 6
-* `semaphore` 7
+## Interesting language features
 
-The tagging for tuple and array are arrays are more complicated, and they happen during the
-creation of these data types, which we will discuss in their respective sections.
+### Runtime value “type tags”
 
-#### Arrays
+In Untangled, every type has a corresponding integer “tag” value. Each Untangled type has a
+corresponding tag, as follows:
 
-This feature was implemented by Duru, Luke, Nick, and Caleb.
+- `int` 0
+- `float` 1
+- `string` 2
+- `bool` 3
+- `tuple` 4
+- `array` 5
+- `thread` 6
+- `semaphore` 7
+
+In the case of tuples and arrays, tags have a more complicated “nested” structure, which we will
+discuss below.
+
+
+
+### Arrays
+
+*Implemented by Duru, Luke, Nick, and Caleb*
 
 Arrays in Untangled have static size and the llvm representation is a struct pointer as follows:
 
@@ -63,18 +67,11 @@ Here is an example of how `int[6] foo = [4, 5, 6, 2, 1, 12];` is represented.
   <ArrayEx />
 </div>
 
-{/*
-  let array_t = L.struct_type context [| i32_t; pointer_t; L.pointer_type i32_t; i32_t |] in
 
-  size : L.llvalue;
-  data_array : L.llvalue;
-  tags : L.llvalue;
-  tags_size : L.llvalue;
- */}
 
-#### Semaphores
+### Semaphores
 
-This feature was implemented by Duru and Nick.
+*Implemented by Duru and Nick*
 
 The llvm representation for a semaphore is a struct pointer as follows:
 
@@ -92,9 +89,11 @@ If the `count` is 0, the program jumps to a waiting state and continuously check
 
 For a `++` operation on a semaphore, the program increments the `count` value.
 
-#### Tuples
 
-This feature was implemented by Duru, Nick, and Caleb.
+
+### Tuples
+
+*Implemented by Duru, Nick, and Caleb*.
 
 The llvm representation of a tuple struct is as follows:
 
@@ -112,25 +111,12 @@ Here is an example of how `((bool, int), string) bar = ((true, 1), "hello");` is
 <div style={{ marginTop: '3rem', marginBottom: "4rem"}}>
   <TupleEx />
 </div>
-{/*
-  also for message...
-  let data_t = L.struct_type context [| i32_t; pointer_t; pointer_t |] in
 
-  tag : L.llvalue;
-  head : L.llvalue;
-  tail : L.llvalue;
-*/}
 
-#### Thread
 
-{/*
-  let arg_t = L.struct_type context [| pointer_t; pointer_t; queue_ptr; queue_ptr |] in
+### Threads
 
-  parent_queue : L.llvalue;
-  child_queue : L.llvalue;
- */}
-
-##### Overview
+#### Overview
 
 The llvm representation of a `thread_def` follows the signature of a routine
 from `pthread.h` in C, which is a function that accepts a `void *` argument and
@@ -153,9 +139,10 @@ and initializes a struct pointer as argument to `thread_def Main`. The `parent_q
 of the struct points to the same queue generated in `main`. The Untangled program is executed when
 `main` calls `thread_def Main`.
 
-##### Thread Joining
 
-Untangled programs implicitly waits for all threads to finish executing before exiting.
+#### Thread Joining
+
+Untangled programs implicitly wait for all threads to finish executing before exiting.
 
 The program allocates a global counter to indicate the number of running
 threads, which starts at 1, and a global mutex. The global mutex is used to lock write
@@ -165,9 +152,10 @@ executing, it decrements the global counter by 1. The `main` function returns
 when the global counter equals to 0, which indicates that all running threads,
 including the initial `thread_def Main` instance, have finished executing.
 
-##### Message Queue
 
-This feature was implemented by Nick.
+#### Message queue
+
+*Implemented by Nick*
 
 The message queue is a dynamic data structure written in llvm to support message
 passing between threads. In llvm, the queue is represented as a struct which contains its
@@ -179,18 +167,10 @@ compiler pops a message from the queue in a receive statement if the queue is no
 
 The program uses the mutex stored within each queue to prevent data race on queue operations.
 
-{/*
-  let array_t = L.struct_type context [| i32_t; pointer_t; L.pointer_type i32_t; i32_t |] in
 
-  size : L.llvalue;
-  cap : L.llvalue;
-  array : L.llvalue;
-  mutex : L.llvalue;
-*/}
+#### Message passing
 
-##### Message Passing
-
-This feature was implemented by Duru, Luke, Nick, and Caleb.
+*Implemented by Duru, Luke, Nick, and Caleb.*
 
 When a thread sends a message, the value is stored in a `data_t` struct, with the exception of a
 tuple type, which is already represented as a reference to `data_t`.
@@ -205,9 +185,9 @@ After the `data_t` has been constructed, the reference to `data_t` is pushed ont
 the receiving thread.
 
 
-##### Generating Tags
+#### Generating tags
 
-This feature was implemented by Duru, Luke, Nick, and Caleb.
+*Implemented by Duru, Luke, Nick, and Caleb.*
 
 During compilation time, an array of tag values are constructed for each pattern
 in the receive block. The tags are generated through a recursive analysis of the pattern types.
@@ -218,9 +198,10 @@ Here is an example of what that would look like:
   <PatternMatching />
 </div>
 
-##### Pattern Matching
 
-This feature was implemented by Duru, Luke, Nick, and Caleb.
+#### Pattern matching
+
+*Implemented by Duru, Luke, Nick, and Caleb.*
 
 When a message is received, the program iterates through the array of tag values to find a matching
 tag. Once a tag has been matched, the program switches on the index of the matched
