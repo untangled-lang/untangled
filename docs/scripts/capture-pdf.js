@@ -142,6 +142,7 @@ pieces.push(pageToPdf('tutorial.html'));
 pieces.push(pageToPdf('lrm.html'));
 pieces.push(pageToPdf('project.html'));
 pieces.push(pageToPdf('architecture.html'));
+pieces.push(pageToPdf('lessons.html'));
 pieces.push(pageToPdf('testing.html'));
 
 // Demo program inputs/outputs
@@ -160,8 +161,6 @@ const demoPaths = (await globby([
   });
 console.log('Rendering demo program input/outputs:', demoPaths);
 pieces.push(...demoPaths.map((path) => codeToPdf(path)));
-
-pieces.push(pageToPdf('lessons.html'));
 
 // appendix: source code
 
