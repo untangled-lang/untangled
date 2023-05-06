@@ -136,6 +136,7 @@ async function codeToPdf(sourcePath) {
 // Generate all the “component” docs PDFs we need
 
 const items = [
+  'index.html',
   'tutorial.html',
   'lrm.html',
 ];

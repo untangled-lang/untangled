@@ -491,3 +491,51 @@ div.authors {
     padding: 0;
   }
 }
+
+
+
+.cover-page {
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+  margin-left: -2rem;
+  margin-right: -2rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  @media print {
+    padding-top: 6rem;
+    padding-bottom: 6rem;
+  }
+
+  & > * {
+    width: 34rem;
+  }
+
+  h1 {
+    margin: 1.5em 0 0;
+  }
+
+  hr {
+    margin: 4rem 0;
+  }
+
+  .authors {
+    justify-content: center;
+    span { text-align: left; }
+    a { text-align: right; }
+    margin: 0;
+  }
+
+  .browser-cta {
+    margin: 3rem 0 0;
+    p { margin: 0; }
+  }
+
+  p {
+    text-align: justify;
+    text-align-last: center;
+    hyphens: auto;
+  }
+}
