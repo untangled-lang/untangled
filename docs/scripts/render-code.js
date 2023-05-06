@@ -12,6 +12,11 @@ const template = (await fs.readFile(templatePath, 'utf-8'));
 export default async function renderHighlighted(srcPath, outFile) {
   const fileUrl = new URL(srcPath, new URL('../../', import.meta.url));
   const sourceCode = await fs.readFile(fileUrl, 'utf-8');
+  const sourceCodeEscaped = sourceCode
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
 
   const filename = /** @type {string} */ (srcPath.split('/').at(-1));
   const ext = /** @type {string} */ (filename.split('.').at(-1));
@@ -30,6 +35,6 @@ export default async function renderHighlighted(srcPath, outFile) {
   const html = template
     .replace('{{SOURCE_PATH}}', srcPath)
     .replace('{{LANGUAGE}}', language)
-    .replace('{{SOURCE}}', sourceCode);
+    .replace('{{SOURCE}}', sourceCodeEscaped);
   await fs.writeFile(outFile, html);
 }
